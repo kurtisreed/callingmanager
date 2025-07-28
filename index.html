@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calling Manager</title>
+    <link rel="stylesheet" href="styles.css">
+    
+</head>
+
+<body>
+    <div class="overlay" id="popup-overlay" onclick="closePopup()"></div>
+    <div class="overlay" id="add-member-overlay" onclick="closeAddMemberModal()"></div>
+    <div class="overlay" id="add-calling-overlay" onclick="closeAddCallingModal()"></div>
+    
+    
+    <div id="auth-container">
+    <form id="auth-form">
+        <h2>Kimberly 1st Calling Manager</h2>
+        <label for="pin">Enter PIN:</label>
+        <input type="password" id="pin" name="pin" required autocomplete="new-pin">
+        <button type="submit">Submit</button>
+    </form>
+    <div id="auth-message"></div> <!-- To display any messages (success/error) -->
+</div>
+
+<div id="app-content" style="display: none;">
+    <!-- Main Tabs -->
+    <div class="tabs">
+        <button class="tablinks" id="tab1-title" onclick="openTab(event, 'Tab1')">Callings Overview</button>
+        <button class="tablinks" id="tab2-title" onclick="openTab(event, 'Tab2')">Assign/Release Callings</button>
+        <button class="tablinks" id="tab3-title" onclick="openTab(event, 'Tab3')">Information</button>
+    </div>
+
+    <!-- Context-sensitive sub-bar -->
+    <div class="sub-bar">
+        <div id="subbar-Tab1" class="subcontent">
+            <!-- Options for Tab 1 -->
+            <button class="toggle-btn additional-btn" onclick="toggleVisibility('Additional', this)">Additional</button>
+            <button class="toggle-btn ym-btn" onclick="toggleVisibility('AP', this)">AP</button>
+            <button class="toggle-btn bishopric-btn" onclick="toggleVisibility('Bishopric', this)">Bishopric</button>
+            <button class="toggle-btn elders-btn" onclick="toggleVisibility('EQ', this)">EQ</button>
+            <button class="toggle-btn mission-btn" onclick="toggleVisibility('Missionaries', this)">Mission</button>
+            <button class="toggle-btn music-btn" onclick="toggleVisibility('Music', this)">Music</button>
+            <button class="toggle-btn primary-btn" onclick="toggleVisibility('Primary', this)">Primary</button>
+            <button class="toggle-btn rs-btn" onclick="toggleVisibility('RS', this)">RS</button>
+            
+            <button class="toggle-btn ss-btn" onclick="toggleVisibility('SS', this)">SS</button>
+            <button class="toggle-btn stake-btn" onclick="toggleVisibility('Stake', this)">Stake</button>  
+            <button class="toggle-btn wos-btn" onclick="toggleVisibility('Work', this)">WoS</button> 
+            <button class="toggle-btn yw-btn" onclick="toggleVisibility('YW', this)">YW</button>
+             
+             
+            
+            <button class="toggle-btn clear-all-btn" onclick="clearAll()">Clear All</button>
+            <button class="toggle-btn show-all-btn" onclick="showAll()">Show All</button>
+        </div>
+        
+        <div id="subbar-Tab2" class="subcontent">
+            <!-- Options for Tab 2 -->
+
+        </div>
+        
+        <div id="subbar-Tab3" class="subcontent">
+            <!-- Options for Tab 3 -->
+                <button class="toggle-btn members-btn" id="members-btn">Members</button>
+                <button class="toggle-btn callings-btn" id="callings-btn">Callings</button>
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div id="Tab1" class="tabcontent">
+        <div class="large-box" id="large-box">
+
+
+   
+        </div>
+    </div>
+    
+    <div id="Tab2" class="tabcontent">
+        <div class="large-box">
+        
+            <form id="calling-form">
+                <h2 class="form-title">Assign and Release Callings</h2>
+            
+                <label for="member">Member:</label>
+                <select name="member_id" id="member-select" required>
+                    <option value="">Select a Member</option> <!-- Blank by default -->
+                    <!-- Members will be populated dynamically -->
+                </select>
+            
+                <div id="member-callings-container"></div> <!-- Table for current callings -->
+            
+                <label for="calling">Calling:</label>
+                <select name="calling_id" id="calling-select" required>
+                    <option value="">Select a Calling</option> <!-- Blank by default -->
+                    <!-- Callings will be populated dynamically -->
+                </select>
+                
+                <div id="calling-members-container"></div> <!-- Table for members with this calling -->
+
+                <div>
+                <label for="date_set_apart">Date of change:</label>
+                <input type="date" name="date_set_apart" id="date-set-apart" required>
+                </div>
+                
+                <div>
+                <button type="submit">Assign Calling</button>
+                <button type="button" id="release-only-btn">Release Only</button>
+                </div>
+                <div id="form-response"></div>
+            </form>
+
+
+
+        </div>    
+    </div>
+
+    <div id="Tab3" class="tabcontent">
+        <div class="information-box">
+
+            <div id="information-container">
+                <!-- Form content will be dynamically generated here based on the selected tab -->
+            </div>
+            
+            
+        </div>
+    </div>
+</div>
+
+<!-- Calling candidates Popup Modal -->
+<div id="popup-modal" class="modal">
+    <span class="close-btn" onclick="closePopup()">x</span>
+    <div class="modal-content">
+        <h2 id="popup-title"></h2>
+        <h4>Filters:</h4>
+        <!-- Filter container to hold gender and age filters side by side -->
+        <div class="filter-container">
+            
+            <label for="gender-filter">Gender</label>
+            <select id="gender-filter" onchange="applyFilters()">
+                <option value="">All</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+            </select>
+            
+            <label for="age-filter">Age</label>
+            <select id="age-filter" onchange="applyFilters()">
+                <option value="">All</option>
+                <option value="under_18">Under 18</option>
+                <option value="18_plus">18+</option>
+            </select>
+        </div>
+        
+        <label for="callingDropdown">Candidates:</label>
+        <select id="callingDropdown">
+            <option value="">Select a Candidate</option>
+        </select>
+        
+        <div id="selectionList"></div>
+        <label for="candidate-notes">Notes:</label>
+        <textarea id="candidate-notes" class="custom-textarea"></textarea>
+    </div>
+</div>
+
+<!-- Add New Member Modal -->
+<div id="add-member-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeAddMemberModal()">&times;</span>
+        <h2>Add New Member</h2>
+
+        <label for="first-name-input">First Name:</label>
+        <input type="text" id="first-name-input" />
+
+        <label for="last-name-input">Last Name:</label>
+        <input type="text" id="last-name-input" />
+
+        <label for="gender-input">Gender:</label>
+        <select id="gender-input">
+            <option value="">Select Gender</option>
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+        </select>
+
+        <label for="birthdate-input">Birthdate:</label>
+        <input type="date" id="birthdate-input" />
+
+        <button id="save-member-btn" class="toggle-btn save-btn" onclick="saveNewMember()">Save</button>
+    </div>
+</div>
+
+<!-- Add New Calling Modal -->
+<div id="add-calling-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeAddCallingModal()">&times;</span>
+        <h2>Add New Calling</h2>
+
+        <label for="calling-name-input">Calling Name:</label>
+        <input type="text" id="calling-name-input" />
+
+        <label for="calling-organization-input">Organization:</label>
+        <select id="calling-organization-input">
+                <option value="Aaronic Priesthood Quorums">Aaronic Priesthood Quorums</option>
+                <option value="Additional Callings">Additional Callings</option>
+                <option value="Bishopric">Bishopric</option>
+                <option value="Elders Quorum">Elders Quorum</option>
+                <option value="Facilities">Facilities</option>
+                <option value="Full-Time Missionaries">Full-Time Missionaries</option>
+                <option value="History">History</option>
+                <option value="Music">Music</option>
+                <option value="Primary">Primary</option>
+                <option value="Relief Society">Relief Society</option>
+                <option value="Stake">Stake</option>
+                <option value="Sunday School">Sunday School</option>
+                <option value="Technology">Technology</option>
+                <option value="Temple and Family History">Temple and Family History</option>
+                <option value="Ward Missionaries">Ward Missionaries</option>
+                <option value="Welfare and Self-Reliance">Welfare and Self-Reliance</option>
+                <option value="Young Women">Young Women</option>
+        </select>
+
+        <label for="calling-grouping-input">Grouping:</label>
+        <select id="calling-grouping-input">
+            <option value="AP Advisors">AP Advisors</option>
+            <option value="AP Class Presidency">AP Class Presidency</option>
+            <option value="Additional Callings">Additional Callings</option>
+            <option value="Bishopric">Bishopric</option>
+            <option value="Elders Quorum">Elders Quorum</option>
+            <option value="Full-Time Missionaries">Full-Time Missionaries</option>
+            <option value="Music">Music</option>
+            <option value="Primary Teachers">Primary Teachers</option>
+            <option value="Primary Other">Primary Other</option>
+            <option value="Primary Presidency">Primary Presidency</option>
+            <option value="RS Other">RS Other</option>
+            <option value="RS Presidency">RS Presidency</option>
+            <option value="Stake">Stake</option>
+            <option value="SS Teachers">SS Teachers</option>
+            <option value="SS Other">SS Other</option>
+            <option value="SS Presidency">SS Presidency</option>
+            <option value="Work of Salvation">Work of Salvation</option>
+            <option value="YW Class Presidency">YW Class Presidency</option>
+            <option value="YW Presidency">YW Presidency</option>
+        </select>
+
+
+        <label for="calling-priority-input">Priority:</label>
+        <input type="text" value="0" id="calling-priority-input" />
+
+        <button id="save-calling-btn" class="toggle-btn save-btn" onclick="saveNewCalling()">Save</button>
+    </div>
+</div>
+
+
+    <script src="script.js"></script>
+</body>
+
+</html>
