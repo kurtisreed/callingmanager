@@ -51,6 +51,20 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('.tablinks').click(); // Simulate click on first tab to load content
 });
 
+document.addEventListener('DOMContentLoaded', function() {
+    // Select all toggle buttons in the sub-bar for Tab1
+    document.querySelectorAll('#subbar-Tab1 .toggle-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            // Get the organization from the button's class or a data attribute
+            // Example: use a data-org attribute for clarity
+            const org = btn.getAttribute('data-org');
+            if (org) {
+                toggleVisibility(org, btn);
+            }
+        });
+    });
+});
+
 
 function handleDataForTab(tabName, data) {
 
