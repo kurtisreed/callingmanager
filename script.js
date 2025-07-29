@@ -66,13 +66,48 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-function handleDataForTab(tabName, data) {
+function populateMembers(selectedMemberId = '') {
+    fetch('get_members.php')
+        .then(response => response.json())
+        .then(data => {
+            const memberSelect = document.getElementById('member-select');
+            memberSelect.innerHTML = '<option value="">Select a Member</option>';
+            data.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member.member_id;
+                option.textContent = `${member.first_name} ${member.last_name}`;
+                memberSelect.appendChild(option);
+            });
+            // Set the value after options are loaded
+            if (selectedMemberId) memberSelect.value = selectedMemberId;
+        })
+        .catch(error => console.error('Error fetching members:', error));
+}
 
+function populateCallings(selectedCallingId = '') {
+    fetch('get_callings.php')
+        .then(response => response.json())
+        .then(data => {
+            const callingSelect = document.getElementById('calling-select');
+            callingSelect.innerHTML = '<option value="">Select a Calling</option>';
+            data.forEach(calling => {
+                const option = document.createElement('option');
+                option.value = calling.calling_id;
+                option.textContent = calling.calling_name;
+                callingSelect.appendChild(option);
+            });
+            // Set the value after options are loaded
+            if (selectedCallingId) callingSelect.value = selectedCallingId;
+        })
+        .catch(error => console.error('Error fetching callings:', error));
+}
+
+// Update handleDataForTab to use the new functions:
+function handleDataForTab(tabName, data) {
     if (tabName === 'Tab2') {
-        // Use data in Tab2 as needed, like filling a form or selecting an option
-        document.getElementById('member-select').value = data.memberId || '';
+        populateMembers(data.memberId || '');
         fetchCurrentCallings(data.memberId);
-        document.getElementById('calling-select').value = data.callingId || '';
+        populateCallings(data.callingId || '');
         fetchCallingMembers(data.callingId);
     }
 }
@@ -330,6 +365,7 @@ function closePopup() {
     document.getElementById('popup-modal').style.display = 'none';
     
     saveCallingComments(callingId);
+    buildSmallBoxes(); // Rebuild the small boxes to reflect any changes
 }
 
 // Function to add member to possible callings
