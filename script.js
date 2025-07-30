@@ -46,10 +46,49 @@ function openTab(evt, tabName, data = null) {
     }    
 }
 
-// Load default tab on page load
-document.addEventListener('DOMContentLoaded', function () {
+// Global flag to track authentication status
+let isUserAuthenticated = false;
+
+// Helper function for authenticated API calls
+function authenticatedFetch(url, options = {}) {
+    if (!isUserAuthenticated) {
+        console.log('API call blocked: User not authenticated');
+        return Promise.reject(new Error('User not authenticated'));
+    }
+    
+    return fetch(url, options)
+        .then(response => {
+            // Check if the response indicates an authentication error
+            if (response.status === 401) {
+                console.log('Authentication expired, redirecting to login');
+                isUserAuthenticated = false;
+                location.reload(); // Reload to show login form
+                throw new Error('Authentication expired');
+            }
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return response;
+        })
+        .catch(error => {
+            console.error('API call failed:', error);
+            throw error;
+        });
+}
+
+// Load default tab only after authentication
+function initializeApplication() {
+    isUserAuthenticated = true;
+    
+    // Now it's safe to load the default tab and data
     document.querySelector('.tablinks').click(); // Simulate click on first tab to load content
-});
+    
+    // Initialize dropdowns for Tab2
+    populateMembers();
+    populateCallings();
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     // Select all toggle buttons in the sub-bar for Tab1
@@ -67,6 +106,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 function populateMembers(selectedMemberId = '') {
+    // Check authentication before making request
+    if (!isUserAuthenticated) {
+        console.log('Cannot populate members: User not authenticated');
+        return;
+    }
+    
     fetch('get_members.php')
         .then(response => response.json())
         .then(data => {
@@ -85,6 +130,12 @@ function populateMembers(selectedMemberId = '') {
 }
 
 function populateCallings(selectedCallingId = '') {
+    // Check authentication before making request
+    if (!isUserAuthenticated) {
+        console.log('Cannot populate callings: User not authenticated');
+        return;
+    }
+    
     fetch('get_callings.php')
         .then(response => response.json())
         .then(data => {
@@ -179,6 +230,12 @@ let currentDropdownEventListener = null; // Track the current event listener
 let allCandidates = []; // Store all candidates initially
 
 function showPopup(title, callingId) {
+    // Check authentication before making request
+    if (!isUserAuthenticated) {
+        console.log('Cannot show popup: User not authenticated');
+        return;
+    }
+    
     // Set the modal title
     document.getElementById('popup-title').textContent = title + " Candidates";
     const popupTitle = document.getElementById("popup-title"); // or use querySelector if you need
@@ -230,6 +287,12 @@ function showPopup(title, callingId) {
 
 // load the comments about callings
 function loadCallingComments(callingId) {
+    // Check authentication before making request
+    if (!isUserAuthenticated) {
+        console.log('Cannot load calling comments: User not authenticated');
+        return;
+    }
+    
     // Ensure callingId is provided
     if (!callingId) {
         console.error("No calling ID provided.");
@@ -262,6 +325,12 @@ function loadCallingComments(callingId) {
 
 
 function saveCallingComments(callingId) {
+    // Check authentication before making request
+    if (!isUserAuthenticated) {
+        console.log('Cannot save calling comments: User not authenticated');
+        return;
+    }
+    
     // Get the comments from the textarea
     const comments = document.getElementById('candidate-notes').value;
 
@@ -370,6 +439,12 @@ function closePopup() {
 
 // Function to add member to possible callings
 function addToPossibleCallings(memberId, callingId) {
+    // Check authentication before making request
+    if (!isUserAuthenticated) {
+        console.log('Cannot add to possible callings: User not authenticated');
+        return;
+    }
+    
     fetch('add_possible_calling.php', {
         method: 'POST',
         headers: {
@@ -487,6 +562,18 @@ function removeFromConsideration(possibleCallingsId, callingId) {
 
 function buildSmallBoxes() {
     const largeBox = document.getElementById('large-box');
+    
+    // Check if user is authenticated before making requests
+    if (!isUserAuthenticated) {
+        largeBox.innerHTML = `
+            <div style="text-align: center; padding: 50px; color: #666;">
+                <h3>Welcome to Calling Manager</h3>
+                <p>Please log in to view and manage callings data.</p>
+            </div>
+        `;
+        return;
+    }
+    
     largeBox.innerHTML = '<p>Loading callings...</p>';
 
     fetch('get_all_overview_data.php')
@@ -667,9 +754,8 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => console.error('Error fetching callings:', error));
     }
 
-    // Populate member and calling dropdowns as before
-    populateMembers();
-    populateCallings();
+    // Note: populateMembers() and populateCallings() are now called 
+    // in initializeApplication() after authentication
     
     // Set the default date for the Date Set Apart field
     const dateSetApartField = document.getElementById('date-set-apart');
@@ -774,6 +860,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Fetch and display current callings of the selected member
 function fetchCurrentCallings(memberId) {
+    // Check authentication before making request
+    if (!isUserAuthenticated) {
+        console.log('Cannot fetch current callings: User not authenticated');
+        return;
+    }
+    
     fetch(`get_member_callings.php?member_id=${encodeURIComponent(memberId)}`)
         .then(response => response.json())
         .then(data => {
@@ -914,6 +1006,12 @@ document.getElementById('calling-select').addEventListener('change', function() 
 
 // Fetch and display members associated with the selected calling
 function fetchCallingMembers(callingId) {
+    // Check authentication before making request
+    if (!isUserAuthenticated) {
+        console.log('Cannot fetch calling members: User not authenticated');
+        return;
+    }
+    
     fetch(`get_calling_members.php?calling_id=${encodeURIComponent(callingId)}`)
         .then(response => response.json())
         .then(data => {
@@ -1590,6 +1688,15 @@ function saveNewCalling() {
 function openAddMemberModal() {
     document.getElementById('add-member-modal').style.display = 'block';
     document.getElementById('add-member-overlay').style.display = 'block';
+    
+    // Setup validation for member form if not already done
+    const memberForm = document.querySelector('#add-member-modal form');
+    if (memberForm && !memberForm.hasValidator) {
+        new FormValidator(memberForm)
+            .setRules(ValidationRules.member)
+            .enableRealTimeValidation();
+        memberForm.hasValidator = true;
+    }
 }
 
 // Function to close the Add New Member modal
@@ -1635,6 +1742,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const authForm = document.getElementById('auth-form');
     const appContent = document.getElementById('app-content');
     const authMessage = document.getElementById('auth-message');
+    
+    // Setup client-side validation for auth form
+    const authValidator = new FormValidator(authForm)
+        .setRules(ValidationRules.pin)
+        .enableRealTimeValidation();
 
     authForm.addEventListener('submit', function(event) {
         event.preventDefault();
@@ -1660,6 +1772,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Show the application content and hide the auth form
                 appContent.style.display = 'block';
                 document.getElementById('auth-container').style.display = 'none';
+                
+                // Initialize the application with data loading
+                initializeApplication();
             } else {
                 // Handle different types of authentication failures
                 if (data.error === 'Too many failed attempts') {
