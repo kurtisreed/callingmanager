@@ -1,2 +1,51 @@
-db_connect.php
-db_connection.php
+# Environment variables - NEVER commit these!
+.env
+.env.local
+.env.production
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+*.log
+error_log
+access_log
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# PHP specific
+composer.phar
+vendor/
+
+# Backup files
+*.bak
+*.backup
+
+# Cache files
+cache/
+*.cache
+
+# Old ignore entries (these files should now be safe to commit)
+# db_connect.php
+# db_connection.php

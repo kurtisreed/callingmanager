@@ -1,4 +1,10 @@
 <?php
+// Require authentication for this endpoint
+require_once __DIR__ . '/auth_required.php';
+
+// Log this access for auditing
+logUserActivity('load_calling_comments', ['risk_level' => 'medium', 'file' => 'load_calling_comments.php']);
+
 require_once 'db_connect.php'; // Make sure this path is correct
 
 // Check if calling_id is provided in the POST request

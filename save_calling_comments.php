@@ -1,4 +1,10 @@
 <?php
+// Require authentication for this endpoint
+require_once __DIR__ . '/auth_required.php';
+
+// Log this high-risk access for auditing
+logUserActivity('save_calling_comments', ['risk_level' => 'high', 'file' => 'save_calling_comments.php']);
+
 header('Content-Type: application/json');
 require_once 'db_connect.php'; // Make sure this path is correct
 

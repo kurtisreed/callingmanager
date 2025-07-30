@@ -1,4 +1,10 @@
 <?php
+// Require authentication for this endpoint
+require_once __DIR__ . '/auth_required.php';
+
+// Log this high-risk access for auditing
+logUserActivity('update_callings', ['risk_level' => 'high', 'file' => 'update_callings.php']);
+
 header('Content-Type: application/json');
 require_once 'db_connect.php'; // Make sure this path is correct
 $data = json_decode(file_get_contents('php://input'), true);

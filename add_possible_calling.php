@@ -1,4 +1,10 @@
 <?php
+// Require authentication for this endpoint
+require_once __DIR__ . '/auth_required.php';
+
+// Log this high-risk access for auditing
+logUserActivity('add_possible_calling', ['risk_level' => 'high', 'file' => 'add_possible_calling.php']);
+
 require_once 'db_connect.php'; // Make sure this path is correct
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

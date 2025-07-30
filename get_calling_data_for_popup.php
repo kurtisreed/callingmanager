@@ -1,4 +1,10 @@
 <?php
+// Require authentication for this endpoint
+require_once __DIR__ . '/auth_required.php';
+
+// Log this access for auditing
+logUserActivity('get_calling_data_for_popup', ['risk_level' => 'medium', 'file' => 'get_calling_data_for_popup.php']);
+
 require_once 'db_connect.php'; // Make sure this path is correct
 
 // Query to fetch member names and their current callings with dates

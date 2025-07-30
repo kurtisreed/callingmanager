@@ -582,7 +582,7 @@ function buildSmallBoxes() {
         });
 }
 
-// This function remains the same and works perfectly.
+// attaches popup listeners to each box title
 function attachPopupListeners() {
     const titles = document.querySelectorAll('.box-title');
     titles.forEach(title => {
@@ -1639,7 +1639,17 @@ document.addEventListener('DOMContentLoaded', function() {
     authForm.addEventListener('submit', function(event) {
         event.preventDefault();
 
+        // Clear previous messages
+        authMessage.textContent = '';
+        authMessage.className = '';
+
         const formData = new FormData(authForm);
+        const submitButton = authForm.querySelector('button[type="submit"]');
+        
+        // Disable submit button during request
+        submitButton.disabled = true;
+        submitButton.textContent = 'Checking...';
+
         fetch('authenticate.php', {
             method: 'POST',
             body: formData
@@ -1651,10 +1661,47 @@ document.addEventListener('DOMContentLoaded', function() {
                 appContent.style.display = 'block';
                 document.getElementById('auth-container').style.display = 'none';
             } else {
-                authMessage.textContent = 'Invalid PIN. Please try again.';
+                // Handle different types of authentication failures
+                if (data.error === 'Too many failed attempts') {
+                    authMessage.textContent = data.message || 'Account temporarily locked due to too many failed attempts.';
+                    authMessage.className = 'error-message locked';
+                    
+                    // Optionally disable the form for a period
+                    if (data.locked_until) {
+                        submitButton.textContent = `Locked (${data.locked_until}m)`;
+                        setTimeout(() => {
+                            submitButton.disabled = false;
+                            submitButton.textContent = 'Submit';
+                        }, data.locked_until * 60 * 1000); // Convert minutes to milliseconds
+                    }
+                } else if (data.attempts_remaining !== undefined) {
+                    authMessage.textContent = data.message || `Invalid PIN. ${data.attempts_remaining} attempts remaining.`;
+                    authMessage.className = 'warning-message';
+                    
+                    if (data.attempts_remaining <= 1) {
+                        authMessage.className = 'error-message warning';
+                    }
+                } else {
+                    authMessage.textContent = data.message || 'Invalid PIN. Please try again.';
+                    authMessage.className = 'error-message';
+                }
+                
+                // Clear the PIN field for security
+                document.getElementById('pin').value = '';
             }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+            console.error('Authentication error:', error);
+            authMessage.textContent = 'Connection error. Please try again.';
+            authMessage.className = 'error-message';
+        })
+        .finally(() => {
+            // Re-enable submit button (unless locked)
+            if (!submitButton.textContent.includes('Locked')) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Submit';
+            }
+        });
     });
 });
 

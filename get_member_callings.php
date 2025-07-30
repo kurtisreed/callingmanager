@@ -1,4 +1,10 @@
 <?php
+// Require authentication for this endpoint
+require_once __DIR__ . '/auth_required.php';
+
+// Log this access for auditing
+logUserActivity('get_member_callings', ['risk_level' => 'medium', 'file' => 'get_member_callings.php']);
+
 require_once 'db_connect.php'; // Make sure this path is correct
 
 $member_id = $_GET['member_id'];

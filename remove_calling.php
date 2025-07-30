@@ -1,4 +1,10 @@
 <?php
+// Require authentication for this endpoint
+require_once __DIR__ . '/auth_required.php';
+
+// Log this high-risk access for auditing
+logUserActivity('remove_calling', ['risk_level' => 'high', 'file' => 'remove_calling.php']);
+
 require_once 'db_connect.php'; // Make sure this path is correct
 
 // Check if member_id is sent
