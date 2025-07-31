@@ -2,15 +2,17 @@ body {
     font-family: Arial, sans-serif;
 }
 
-.tabs {
-    display: flex;
-    justify-content: center;
+.tabs-container {
     background-color: #333;
 }
 
-.tabs button {
+.desktop-tabs {
+    display: flex;
+    justify-content: center;
+}
+
+.tabs button, .desktop-tabs button {
     background-color: inherit;
-    float: left;
     border: none;
     outline: none;
     cursor: pointer;
@@ -18,6 +20,85 @@ body {
     transition: 0.3s;
     color: white;
     font-size: 18px;
+    white-space: nowrap;
+}
+
+/* Mobile Navigation */
+.mobile-nav {
+    display: none;
+    position: relative;
+}
+
+.mobile-menu-btn {
+    background-color: #333;
+    border: none;
+    color: white;
+    padding: 14px 16px;
+    font-size: 16px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.hamburger-icon {
+    font-size: 18px;
+    margin-right: 10px;
+}
+
+.current-tab-text {
+    flex: 1;
+    text-align: center;
+}
+
+.mobile-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #333;
+    border-top: 1px solid #555;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.mobile-dropdown.show {
+    display: block;
+}
+
+.mobile-tablink {
+    background-color: #333;
+    border: none;
+    color: white;
+    padding: 16px 20px;
+    font-size: 16px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    border-bottom: 1px solid #555;
+    transition: background-color 0.3s;
+}
+
+.mobile-tablink:hover {
+    background-color: #444;
+}
+
+.mobile-tablink:last-child {
+    border-bottom: none;
+}
+
+/* Show mobile nav on small screens */
+@media (max-width: 768px) {
+    .desktop-tabs {
+        display: none;
+    }
+    
+    .mobile-nav {
+        display: block;
+    }
 }
 
 .tabs button.active {
@@ -1148,6 +1229,16 @@ textarea:focus {
 }
 
 @media (max-width: 768px) {
+    body {
+        font-size: 14px;
+    }
+    
+    .information-box {
+        width: 98%;
+        padding: 15px;
+        margin: 2px auto;
+    }
+    
     .search-column {
         flex-direction: column;
         gap: 15px;
@@ -1156,9 +1247,85 @@ textarea:focus {
     .action-buttons {
         flex-direction: column;
         align-items: center;
+        gap: 10px;
     }
     
     .action-btn {
-        width: 200px;
+        width: 100%;
+        max-width: 250px;
+        padding: 14px 20px;
+        font-size: 16px;
+    }
+    
+    .section-header h3 {
+        font-size: 16px;
+    }
+    
+    /* Make form inputs more touch-friendly */
+    input[type="text"], 
+    input[type="date"], 
+    select, 
+    textarea {
+        padding: 12px;
+        font-size: 16px;
+        min-height: 44px;
+        box-sizing: border-box;
+    }
+    
+    /* Table improvements for mobile */
+    table {
+        font-size: 14px;
+        width: 100%;
+        overflow-x: auto;
+        display: block;
+        white-space: nowrap;
+    }
+    
+    table thead,
+    table tbody,
+    table tr {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+    }
+    
+    table th,
+    table td {
+        padding: 8px 4px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+}
+
+@media (max-width: 480px) {
+    .information-box {
+        padding: 10px;
+    }
+    
+    .action-btn {
+        padding: 12px 16px;
+        font-size: 14px;
+    }
+    
+    input[type="text"], 
+    input[type="date"], 
+    select, 
+    textarea {
+        padding: 10px;
+        font-size: 14px;
+    }
+    
+    .section-header h3 {
+        font-size: 14px;
+    }
+    
+    table {
+        font-size: 12px;
+    }
+    
+    table th,
+    table td {
+        padding: 6px 2px;
+        font-size: 12px;
     }
 }

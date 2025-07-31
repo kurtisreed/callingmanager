@@ -26,11 +26,28 @@
 
 <div id="app-content" style="display: none;">
     <!-- Main Tabs -->
-    <div class="tabs">
-        <button class="tablinks" id="tab1-title" onclick="openTab(event, 'Tab1')">Callings Overview</button>
-        <button class="tablinks" id="tab2-title" onclick="openTab(event, 'Tab2')">Assign/Release Callings</button>
-        <button class="tablinks" id="tab3-title" onclick="openTab(event, 'Tab3')">Member Information</button>
-        <button class="tablinks" id="tab4-title" onclick="openTab(event, 'Tab4')">Calling Information</button>
+    <div class="tabs-container">
+        <!-- Desktop Tabs -->
+        <div class="tabs desktop-tabs">
+            <button class="tablinks" id="tab1-title" onclick="openTab(event, 'Tab1')">Callings Overview</button>
+            <button class="tablinks" id="tab2-title" onclick="openTab(event, 'Tab2')">Assign/Release Callings</button>
+            <button class="tablinks" id="tab3-title" onclick="openTab(event, 'Tab3')">Member Information</button>
+            <button class="tablinks" id="tab4-title" onclick="openTab(event, 'Tab4')">Calling Information</button>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div class="mobile-nav">
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+                <span class="hamburger-icon">☰</span>
+                <span class="current-tab-text">Callings Overview</span>
+            </button>
+            <div class="mobile-dropdown" id="mobile-dropdown">
+                <button class="mobile-tablink" onclick="openTab(event, 'Tab1')">Callings Overview</button>
+                <button class="mobile-tablink" onclick="openTab(event, 'Tab2')">Assign/Release Callings</button>
+                <button class="mobile-tablink" onclick="openTab(event, 'Tab3')">Member Information</button>
+                <button class="mobile-tablink" onclick="openTab(event, 'Tab4')">Calling Information</button>
+            </div>
+        </div>
     </div>
 
     <!-- Context-sensitive sub-bar -->

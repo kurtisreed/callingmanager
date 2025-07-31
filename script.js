@@ -53,8 +53,51 @@ function openTab(evt, tabName, data = null) {
     
     if (tabName === 'Tab4') {
         loadCallingsForm();
-    }    
+    }
+    
+    // Update mobile menu current tab text
+    updateMobileTabText(tabName);    
 }
+
+// Function to toggle mobile menu
+function toggleMobileMenu() {
+    const dropdown = document.getElementById('mobile-dropdown');
+    dropdown.classList.toggle('show');
+}
+
+// Function to update mobile tab text
+function updateMobileTabText(tabName) {
+    const currentTabText = document.querySelector('.current-tab-text');
+    if (currentTabText) {
+        const tabTexts = {
+            'Tab1': 'Callings Overview',
+            'Tab2': 'Assign/Release Callings', 
+            'Tab3': 'Member Information',
+            'Tab4': 'Calling Information'
+        };
+        currentTabText.textContent = tabTexts[tabName] || 'Menu';
+    }
+}
+
+// Close mobile menu when clicking outside
+document.addEventListener('click', function(event) {
+    const mobileNav = document.querySelector('.mobile-nav');
+    const dropdown = document.getElementById('mobile-dropdown');
+    
+    if (mobileNav && dropdown && !mobileNav.contains(event.target)) {
+        dropdown.classList.remove('show');
+    }
+});
+
+// Override mobile tab links to close dropdown
+document.addEventListener('DOMContentLoaded', function() {
+    const mobileTabLinks = document.querySelectorAll('.mobile-tablink');
+    mobileTabLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            document.getElementById('mobile-dropdown').classList.remove('show');
+        });
+    });
+});
 
 // Function to initialize Tab 2 search functionality
 function initializeTab2Search() {
