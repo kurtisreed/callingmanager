@@ -38,13 +38,17 @@ function openTab(evt, tabName, data = null) {
     }
     
     if (tabName === 'Tab2') {
-        document.getElementById('member-select').value = "";
-        document.getElementById('calling-select').value = "";
+        // Only clear dropdowns if we're not coming from a calling process with data
+        if (!data || !data.fromProcess) {
+            document.getElementById('member-select').value = "";
+            document.getElementById('calling-select').value = "";
+        }
         document.getElementById('member-callings-container').innerHTML = "";
         document.getElementById('calling-members-container').innerHTML = "";
         
         // Initialize search functionality for Tab 2
-        initializeTab2Search();
+        // Don't refresh data if we're coming from calling process (it will wipe our selections)
+        initializeTab2Search(data && data.fromProcess);
     }
     
     if (tabName === 'Tab3') {
@@ -53,6 +57,10 @@ function openTab(evt, tabName, data = null) {
     
     if (tabName === 'Tab4') {
         loadCallingsForm();
+    }
+    
+    if (tabName === 'Tab5') {
+        loadCallingProcessPage();
     }
     
     // Update mobile menu current tab text
@@ -73,7 +81,8 @@ function updateMobileTabText(tabName) {
             'Tab1': 'Callings Overview',
             'Tab2': 'Assign/Release Callings', 
             'Tab3': 'Member Information',
-            'Tab4': 'Calling Information'
+            'Tab4': 'Calling Information',
+            'Tab5': 'Calling Process'
         };
         currentTabText.textContent = tabTexts[tabName] || 'Menu';
     }
@@ -100,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Function to initialize Tab 2 search functionality
-function initializeTab2Search() {
+function initializeTab2Search(skipRefresh = false) {
     // Set up member search
     const memberSearchInput = document.getElementById('member-search-tab2');
     if (memberSearchInput && !memberSearchInput.hasAttribute('data-listener-added')) {
@@ -123,8 +132,10 @@ function initializeTab2Search() {
     if (memberSearchInput) memberSearchInput.value = '';
     if (callingSearchInput) callingSearchInput.value = '';
     
-    // Force refresh of dropdowns to ensure data is available
-    refreshTab2Data();
+    // Only refresh data if not skipping (to preserve dropdown selections from calling process)
+    if (!skipRefresh) {
+        refreshTab2Data();
+    }
 }
 
 // Function to refresh Tab 2 data
@@ -287,16 +298,19 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-function populateMembers(selectedMemberId = '') {
+function populateMembers(selectedMemberId = '', callback = null) {
     // Check authentication before making request
     if (!isUserAuthenticated) {
         console.log('Cannot populate members: User not authenticated');
         return;
     }
     
+    console.log('PopulateMembers called with selectedMemberId:', selectedMemberId);
+    
     fetch('get_members.php')
         .then(response => response.json())
         .then(data => {
+            console.log('Members data received:', data.length, 'members');
             const memberSelect = document.getElementById('member-select');
             memberSelect.innerHTML = '<option value="">Select a Member</option>';
             data.forEach(member => {
@@ -305,22 +319,54 @@ function populateMembers(selectedMemberId = '') {
                 option.textContent = `${member.first_name} ${member.last_name}`;
                 memberSelect.appendChild(option);
             });
-            // Set the value after options are loaded
-            if (selectedMemberId) memberSelect.value = selectedMemberId;
+            
+            console.log('Member dropdown populated, setting value to:', selectedMemberId);
+            
+            // Set the value and trigger selection logic if needed
+            if (selectedMemberId) {
+                memberSelect.value = selectedMemberId;
+                console.log('Member dropdown value set. Current value:', memberSelect.value);
+                console.log('Selected index:', memberSelect.selectedIndex);
+                
+                if (memberSelect.selectedIndex > 0) {
+                    const memberName = memberSelect.options[memberSelect.selectedIndex].text;
+                    console.log('Member name from selected option:', memberName);
+                    
+                    // Force the member selection logic to run with delay
+                    setTimeout(() => {
+                        fetchCurrentCallings(selectedMemberId, memberName);
+                    }, 100);
+                    
+                    // Also try dispatching the event
+                    memberSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                } else {
+                    console.error('Member not found in dropdown options');
+                }
+                
+                if (callback) callback();
+            } else if (callback) {
+                callback();
+            }
         })
-        .catch(error => console.error('Error fetching members:', error));
+        .catch(error => {
+            console.error('Error fetching members:', error);
+            if (callback) callback();
+        });
 }
 
-function populateCallings(selectedCallingId = '') {
+function populateCallings(selectedCallingId = '', callback = null) {
     // Check authentication before making request
     if (!isUserAuthenticated) {
         console.log('Cannot populate callings: User not authenticated');
         return;
     }
     
+    console.log('PopulateCallings called with selectedCallingId:', selectedCallingId);
+    
     fetch('get_callings.php')
         .then(response => response.json())
         .then(data => {
+            console.log('Callings data received:', data.length, 'callings');
             const callingSelect = document.getElementById('calling-select');
             callingSelect.innerHTML = '<option value="">Select a Calling</option>';
             data.forEach(calling => {
@@ -329,20 +375,116 @@ function populateCallings(selectedCallingId = '') {
                 option.textContent = calling.calling_name;
                 callingSelect.appendChild(option);
             });
-            // Set the value after options are loaded
-            if (selectedCallingId) callingSelect.value = selectedCallingId;
+            
+            console.log('Calling dropdown populated, setting value to:', selectedCallingId);
+            
+            // Set the value and trigger selection logic if needed
+            if (selectedCallingId) {
+                callingSelect.value = selectedCallingId;
+                console.log('Calling dropdown value set. Current value:', callingSelect.value);
+                console.log('Selected index:', callingSelect.selectedIndex);
+                
+                if (callingSelect.selectedIndex > 0) {
+                    const callingName = callingSelect.options[callingSelect.selectedIndex].text;
+                    console.log('Calling name from selected option:', callingName);
+                    
+                    // Force the calling selection logic to run with delay
+                    setTimeout(() => {
+                        fetchCallingMembers(selectedCallingId, callingName);
+                    }, 200); // Start after member logic has had time to run
+                    
+                    // Also try dispatching the event
+                    callingSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                } else {
+                    console.error('Calling not found in dropdown options');
+                }
+                
+                if (callback) callback();
+            } else if (callback) {
+                callback();
+            }
         })
-        .catch(error => console.error('Error fetching callings:', error));
+        .catch(error => {
+            console.error('Error fetching callings:', error);
+            if (callback) callback();
+        });
 }
 
 // Update handleDataForTab to use the new functions:
 function handleDataForTab(tabName, data) {
     if (tabName === 'Tab2') {
-        populateMembers(data.memberId || '');
-        fetchCurrentCallings(data.memberId);
-        populateCallings(data.callingId || '');
-        fetchCallingMembers(data.callingId);
+        console.log('HandleDataForTab called with data:', data);
+        console.log('Member ID:', data.memberId, 'Calling ID:', data.callingId);
+        
+        // Store process information if coming from calling process
+        if (data.fromProcess && data.processId) {
+            window.callingProcessData = {
+                processId: data.processId,
+                fromProcess: true
+            };
+        } else {
+            // Clear any existing process data
+            window.callingProcessData = null;
+        }
+        
+        // Simple, direct approach - just populate dropdowns and simulate user selections
+        if (data.memberId && data.callingId && data.memberName && data.callingName) {
+            simulateUserSelections(data.memberId, data.callingId, data.memberName, data.callingName);
+        } else {
+            // Fallback to old approach if we don't have all the data
+            populateMembers(data.memberId || '');
+            populateCallings(data.callingId || '');
+        }
     }
+}
+
+// New function: Simulate exactly what happens when a user makes selections
+function simulateUserSelections(memberId, callingId, memberName, callingName) {
+    console.log('Simulating user selections:', {memberId, callingId, memberName, callingName});
+    
+    // Step 1: Populate both dropdowns without any events or callbacks
+    Promise.all([
+        populateDropdownOnly('member-select', 'get_members.php', memberId, 'member_id', (m) => `${m.first_name} ${m.last_name}`),
+        populateDropdownOnly('calling-select', 'get_callings.php', callingId, 'calling_id', (c) => c.calling_name)
+    ]).then(() => {
+        console.log('Both dropdowns populated, now simulating user actions');
+        
+        // Step 2: Do exactly what the user selection would do
+        // This is what happens when user selects a member:
+        fetchCurrentCallings(memberId, memberName);
+        
+        // This is what happens when user selects a calling:
+        fetchCallingMembers(callingId, callingName);
+        
+        // This is what happens after both selections:
+        setTimeout(() => {
+            updateChangesPreview();
+            console.log('User simulation complete');
+        }, 300);
+    });
+}
+
+// Helper function to populate dropdown without events
+function populateDropdownOnly(selectId, endpoint, selectedValue, valueField, textFunction) {
+    return fetch(endpoint)
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById(selectId);
+            select.innerHTML = `<option value="">Select a ${selectId.includes('member') ? 'Member' : 'Calling'}</option>`;
+            
+            data.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item[valueField];
+                option.textContent = textFunction(item);
+                select.appendChild(option);
+            });
+            
+            if (selectedValue) {
+                select.value = selectedValue;
+                console.log(`${selectId} set to:`, selectedValue, 'Selected index:', select.selectedIndex);
+            }
+        })
+        .catch(error => console.error(`Error populating ${selectId}:`, error));
 }
 
 
@@ -725,8 +867,41 @@ function loadSelectionList(newCalling) {
 
 //function to handle the green checkmarks
 function confirmSelection(memberId, callingId) {
-    closePopup();
-    openTab(null, 'Tab2', { memberId, callingId });
+    // Add the calling to the process instead of direct assignment
+    addToCallingProcess(memberId, callingId);
+}
+
+// Function to add calling to the process system
+function addToCallingProcess(memberId, callingId) {
+    const data = {
+        member_id: memberId,
+        calling_id: callingId,
+        proposed_by: 'User Selection',
+        notes: 'Added from candidate selection'
+    };
+
+    fetch('add_calling_process.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert(`✓ ${result.message}\n\nThe calling has been added to the process and can be managed in the Calling Process tab.`);
+            closePopup();
+            // Optionally redirect to the calling process tab
+            openTab(null, 'Tab5');
+        } else {
+            alert(`Error: ${result.message}`);
+        }
+    })
+    .catch(error => {
+        console.error('Error adding to calling process:', error);
+        alert('An error occurred while adding the calling to the process. Please try again.');
+    });
 }
 
 
@@ -1037,6 +1212,12 @@ function makeProposedChanges() {
     .then(response => response.text())
     .then(data => {
         document.getElementById('form-response').textContent = data;
+        
+        // If this was from a calling process and the assignment was successful, remove the process
+        if (window.callingProcessData && window.callingProcessData.fromProcess && data.includes('successfully')) {
+            removeCompletedCallingProcess(window.callingProcessData.processId);
+        }
+        
         // Reset form and clear containers
         if (memberSelect) memberSelect.value = '';
         if (callingSelect) callingSelect.value = '';
@@ -1044,10 +1225,35 @@ function makeProposedChanges() {
         document.getElementById('member-callings-container').innerHTML = '';
         document.getElementById('calling-members-container').innerHTML = '';
         updateChangesPreview();
+        
+        // Clear process data
+        window.callingProcessData = null;
     })
     .catch(error => {
         console.error('Error making changes:', error);
         document.getElementById('form-response').textContent = 'An error occurred while making changes.';
+    });
+}
+
+// Function to remove a completed calling process after successful assignment
+function removeCompletedCallingProcess(processId) {
+    fetch('cancel_calling_process.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id: processId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Calling process removed successfully after assignment completion');
+        } else {
+            console.error('Failed to remove calling process:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error removing calling process:', error);
     });
 }
 
@@ -1974,6 +2180,342 @@ function loadCallingsForm() {
     callingSearchInput.addEventListener('input', filterCallings);
     
     fetchCallings(); // Populate dropdown
+}
+
+// Function to load the Calling Process page
+function loadCallingProcessPage() {
+    const container = document.getElementById('calling-process-container');
+    container.innerHTML = `
+        <div class="two-column-layout">
+            <!-- Left Column: Controls -->
+            <div class="left-column">
+                <!-- Filter Section -->
+                <div class="section-header">
+                    <h3>🔍 Filter Process</h3>
+                </div>
+                <div class="search-section">
+                    <div class="search-column">
+                        <div class="filter-field">
+                            <label for="process-status-filter">Status:</label>
+                            <select id="process-status-filter">
+                                <option value="">All Statuses</option>
+                                <option value="approved">Approved</option>
+                                <option value="interviewed">Interviewed</option>
+                                <option value="sustained">Sustained</option>
+                                <option value="set_apart">Set Apart</option>
+                            </select>
+                        </div>
+                        <div class="search-field">
+                            <label for="process-search-input">Search:</label>
+                            <input type="text" id="process-search-input" placeholder="Member or calling name..." />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Section -->
+                <div class="section-header">
+                    <h3>📊 Process Stats</h3>
+                </div>
+                <div class="details-section">
+                    <div id="process-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Approved:</span>
+                            <span class="stat-value" id="stat-approved">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Interviewed:</span>
+                            <span class="stat-value" id="stat-interviewed">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Sustained:</span>
+                            <span class="stat-value" id="stat-sustained">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Set Apart:</span>
+                            <span class="stat-value" id="stat-set-apart">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column: Process Table -->
+            <div class="right-column">
+                <div class="section-header">
+                    <h3>📋 Callings in Process</h3>
+                </div>
+                <div class="details-section">
+                    <div id="calling-process-table-container">
+                        <table id="calling-process-table">
+                            <thead>
+                                <tr>
+                                    <th>Member</th>
+                                    <th>Proposed Calling</th>
+                                    <th>Progress</th>
+                                    <th>Proposed Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="process-table-body">
+                                <tr>
+                                    <td colspan="5" class="no-data">Loading calling processes...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add event listeners
+    const statusFilter = document.getElementById('process-status-filter');
+    const searchInput = document.getElementById('process-search-input');
+    
+    if (statusFilter) {
+        statusFilter.addEventListener('change', filterCallingProcesses);
+    }
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', filterCallingProcesses);
+    }
+    
+    // Load the calling processes
+    fetchCallingProcesses();
+}
+
+// Function to fetch calling processes from server
+function fetchCallingProcesses() {
+    fetch('get_calling_processes.php')
+        .then(response => response.json())
+        .then(data => {
+            displayCallingProcesses(data);
+            updateProcessStats(data);
+        })
+        .catch(error => {
+            console.error('Error fetching calling processes:', error);
+            const tbody = document.getElementById('process-table-body');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="5" class="error">Error loading calling processes.</td></tr>';
+            }
+        });
+}
+
+// Function to display calling processes in the table
+function displayCallingProcesses(processes) {
+    const tbody = document.getElementById('process-table-body');
+    if (!tbody) return;
+    
+    if (processes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="no-data">No callings currently in process.</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = processes.map(process => `
+        <tr>
+            <td>${process.member_name}</td>
+            <td>${process.calling_name}</td>
+            <td>${createProgressIndicator(process.status)}</td>
+            <td>${formatDate(process.proposed_date)}</td>
+            <td>
+                <div class="process-actions">
+                    ${createActionButtons(process)}
+                </div>
+            </td>
+        </tr>
+    `).join('');
+    
+    // Add event listeners for action buttons
+    addProcessActionListeners();
+}
+
+// Function to create visual progress indicator
+function createProgressIndicator(status) {
+    const steps = ['approved', 'interviewed', 'sustained', 'set_apart'];
+    const stepLabels = ['Approved', 'Interviewed', 'Sustained', 'Set Apart'];
+    const currentIndex = steps.indexOf(status);
+    
+    return `
+        <div class="progress-indicator">
+            ${steps.map((step, index) => `
+                <div class="progress-step ${index <= currentIndex ? 'completed' : 'pending'}">
+                    <div class="step-icon">${index <= currentIndex ? '✓' : '○'}</div>
+                    <div class="step-label">${stepLabels[index]}</div>
+                </div>
+            `).join('<div class="step-connector"></div>')}
+        </div>
+    `;
+}
+
+// Function to create action buttons based on current status
+function createActionButtons(process) {
+    const nextActions = {
+        'approved': 'Mark Interviewed',
+        'interviewed': 'Mark Sustained',
+        'sustained': 'Mark Set Apart',
+        'set_apart': 'Complete Process'
+    };
+    
+    const nextAction = nextActions[process.status];
+    if (!nextAction) return '';
+    
+    return `
+        <button class="action-btn save-btn process-advance-btn" 
+                data-id="${process.id}" 
+                data-status="${process.status}"
+                data-member-id="${process.member_id}"
+                data-calling-id="${process.calling_id}"
+                data-member-name="${process.member_name}"
+                data-calling-name="${process.calling_name}">
+            ${nextAction}
+        </button>
+        <button class="action-btn remove-btn process-cancel-btn" 
+                data-id="${process.id}">
+            Cancel
+        </button>
+    `;
+}
+
+// Function to add event listeners to action buttons
+function addProcessActionListeners() {
+    // Advance buttons
+    document.querySelectorAll('.process-advance-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const currentStatus = this.dataset.status;
+            
+            // Handle "Complete Process" differently - redirect to Assign/Release tab
+            if (currentStatus === 'set_apart') {
+                const processData = {
+                    id: id,
+                    memberId: this.dataset.memberId,
+                    callingId: this.dataset.callingId,
+                    memberName: this.dataset.memberName,
+                    callingName: this.dataset.callingName
+                };
+                completeCallingProcess(processData);
+            } else {
+                advanceCallingProcess(id, currentStatus);
+            }
+        });
+    });
+    
+    // Cancel buttons  
+    document.querySelectorAll('.process-cancel-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            if (confirm('Are you sure you want to cancel this calling process?')) {
+                cancelCallingProcess(id);
+            }
+        });
+    });
+}
+
+// Function to advance a calling through the process
+function advanceCallingProcess(id, currentStatus) {
+    const nextStatusMap = {
+        'approved': 'interviewed',
+        'interviewed': 'sustained', 
+        'sustained': 'set_apart'
+    };
+    
+    const nextStatus = nextStatusMap[currentStatus];
+    if (!nextStatus) return;
+    
+    fetch('update_calling_process.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            id: id,
+            status: nextStatus,
+            date: new Date().toISOString().substr(0, 10)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            fetchCallingProcesses(); // Refresh the table
+        } else {
+            alert('Error updating process: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error advancing process:', error);
+        alert('An error occurred while updating the process.');
+    });
+}
+
+// Function to complete a calling process by redirecting to Assign/Release tab
+function completeCallingProcess(processData) {
+    if (confirm(`Complete the calling process for ${processData.memberName} → ${processData.callingName}?\n\nThis will take you to the Assign/Release Callings tab where you can finalize the assignment.`)) {
+        // Redirect to Tab2 with pre-filled member and calling
+        openTab(null, 'Tab2', { 
+            memberId: processData.memberId, 
+            callingId: processData.callingId,
+            memberName: processData.memberName,
+            callingName: processData.callingName,
+            fromProcess: true,
+            processId: processData.id
+        });
+    }
+}
+
+// Function to cancel a calling process
+function cancelCallingProcess(id) {
+    fetch('cancel_calling_process.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id: id })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            fetchCallingProcesses(); // Refresh the table
+        } else {
+            alert('Error canceling process: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error canceling process:', error);
+        alert('An error occurred while canceling the process.');
+    });
+}
+
+// Function to update process statistics
+function updateProcessStats(processes) {
+    const stats = {
+        approved: 0,
+        interviewed: 0,
+        sustained: 0,
+        set_apart: 0
+    };
+    
+    processes.forEach(process => {
+        if (stats.hasOwnProperty(process.status)) {
+            stats[process.status]++;
+        }
+    });
+    
+    document.getElementById('stat-approved').textContent = stats.approved;
+    document.getElementById('stat-interviewed').textContent = stats.interviewed;
+    document.getElementById('stat-sustained').textContent = stats.sustained;
+    document.getElementById('stat-set-apart').textContent = stats.set_apart;
+}
+
+// Function to filter calling processes
+function filterCallingProcesses() {
+    // This will be implemented to filter the displayed processes
+    // For now, just refresh the data
+    fetchCallingProcesses();
+}
+
+// Helper function to format dates
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
 }
 
 // Global variables to store data for filtering

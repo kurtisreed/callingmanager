@@ -1328,4 +1328,292 @@ textarea:focus {
         padding: 6px 2px;
         font-size: 12px;
     }
+    
+    /* Calling process ultra-small screen optimizations */
+    #calling-process-table-container {
+        margin: 0 -10px;
+        border-radius: 0;
+    }
+    
+    #calling-process-table {
+        min-width: 600px;
+        font-size: 11px;
+    }
+    
+    #calling-process-table th,
+    #calling-process-table td {
+        padding: 6px 4px;
+        font-size: 11px;
+    }
+    
+    #calling-process-table th {
+        font-size: 10px;
+        padding: 8px 4px;
+    }
+    
+    .progress-indicator {
+        padding: 10px 2px;
+        gap: 5px;
+    }
+    
+    .step-icon {
+        width: 18px;
+        height: 18px;
+        font-size: 10px;
+    }
+    
+    .step-label {
+        font-size: 8px;
+    }
+    
+    .stat-item {
+        padding: 4px 0;
+        font-size: 13px;
+    }
+    
+    .stat-value {
+        font-size: 11px;
+        padding: 2px 4px;
+    }
+    
+    .process-actions .action-btn {
+        padding: 10px 12px;
+        font-size: 12px;
+    }
+}
+
+/* Calling Process Styles */
+
+/* Table container styling */
+#calling-process-table-container {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background-color: white;
+}
+
+#calling-process-table {
+    width: 100%;
+    min-width: 800px; /* Minimum width to ensure readability */
+    border-collapse: collapse;
+    margin: 0;
+    background-color: white;
+}
+
+#calling-process-table th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    padding: 12px 8px;
+    text-align: left;
+    border-bottom: 2px solid #dee2e6;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+#calling-process-table td {
+    padding: 12px 8px;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+#calling-process-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.progress-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 10px 5px;
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-width: 60px;
+}
+
+.step-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.progress-step.completed .step-icon {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.progress-step.pending .step-icon {
+    background-color: #e0e0e0;
+    color: #666;
+}
+
+.step-label {
+    font-size: 10px;
+    font-weight: bold;
+    color: #333;
+}
+
+.step-connector {
+    width: 20px;
+    height: 2px;
+    background-color: #e0e0e0;
+    margin: 0 2px;
+    align-self: center;
+    margin-top: -10px;
+}
+
+.progress-step.completed + .step-connector {
+    background-color: #4CAF50;
+}
+
+/* Process Stats */
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    font-weight: bold;
+    color: #333;
+}
+
+.stat-value {
+    background-color: #f0f0f0;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: bold;
+    min-width: 24px;
+    text-align: center;
+}
+
+/* Table styles for no data / error states */
+.no-data, .error {
+    text-align: center;
+    font-style: italic;
+    color: #666;
+    padding: 20px;
+}
+
+.error {
+    color: #f44336;
+}
+
+/* Process action buttons */
+.process-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.process-actions .action-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    min-width: auto;
+}
+
+/* Mobile responsiveness for progress indicator and calling process */
+@media (max-width: 768px) {
+    .progress-indicator {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .step-connector {
+        width: 2px;
+        height: 20px;
+        margin: 2px 0;
+        align-self: center;
+        margin-top: 0;
+    }
+    
+    .progress-step {
+        min-width: auto;
+    }
+    
+    .step-label {
+        font-size: 9px;
+    }
+    
+    .process-actions {
+        flex-direction: column;
+    }
+    
+    .process-actions .action-btn {
+        width: 100%;
+    }
+    
+    /* Calling process specific mobile improvements */
+    #calling-process-table-container {
+        border-radius: 4px;
+        margin: 0 -10px; /* Extend to container edges on small screens */
+    }
+    
+    #calling-process-table {
+        min-width: 700px;
+        font-size: 13px;
+    }
+    
+    #calling-process-table th,
+    #calling-process-table td {
+        padding: 8px 6px;
+        white-space: nowrap;
+    }
+    
+    #calling-process-table th {
+        font-size: 12px;
+    }
+    
+    /* Process stats mobile layout */
+    .stat-item {
+        padding: 6px 0;
+        font-size: 14px;
+    }
+    
+    .stat-value {
+        font-size: 12px;
+        padding: 3px 6px;
+    }
+    
+    /* Search and filter sections on mobile */
+    .search-section input,
+    .search-section select {
+        font-size: 16px; /* Prevent zoom on iOS */
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+    
+    /* Process progress mobile improvements */
+    .progress-indicator {
+        padding: 15px 5px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .step-icon {
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+    }
 }
