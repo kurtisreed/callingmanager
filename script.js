@@ -43,7 +43,146 @@ function openTab(evt, tabName, data = null) {
         document.getElementById('member-callings-container').innerHTML = "";
         document.getElementById('calling-members-container').innerHTML = "";
         
+        // Initialize search functionality for Tab 2
+        initializeTab2Search();
+    }
+    
+    if (tabName === 'Tab3') {
+        loadMembersForm();
+    }
+    
+    if (tabName === 'Tab4') {
+        loadCallingsForm();
     }    
+}
+
+// Function to initialize Tab 2 search functionality
+function initializeTab2Search() {
+    // Set up member search
+    const memberSearchInput = document.getElementById('member-search-tab2');
+    if (memberSearchInput && !memberSearchInput.hasAttribute('data-listener-added')) {
+        memberSearchInput.addEventListener('input', function() {
+            filterTab2Members();
+        });
+        memberSearchInput.setAttribute('data-listener-added', 'true');
+    }
+    
+    // Set up calling search
+    const callingSearchInput = document.getElementById('calling-search-tab2');
+    if (callingSearchInput && !callingSearchInput.hasAttribute('data-listener-added')) {
+        callingSearchInput.addEventListener('input', function() {
+            filterTab2Callings();
+        });
+        callingSearchInput.setAttribute('data-listener-added', 'true');
+    }
+    
+    // Clear search inputs
+    if (memberSearchInput) memberSearchInput.value = '';
+    if (callingSearchInput) callingSearchInput.value = '';
+    
+    // Force refresh of dropdowns to ensure data is available
+    refreshTab2Data();
+}
+
+// Function to refresh Tab 2 data
+function refreshTab2Data() {
+    // Refresh member data
+    fetch('get_members.php')
+        .then(response => response.json())
+        .then(data => {
+            allTab2MembersData = data;
+            displayTab2Members(data);
+        })
+        .catch(error => console.error('Error refreshing members:', error));
+    
+    // Refresh calling data  
+    fetch('get_callings.php')
+        .then(response => response.json())
+        .then(data => {
+            allTab2CallingsData = data;
+            displayTab2Callings(data);
+        })
+        .catch(error => console.error('Error refreshing callings:', error));
+}
+
+// Function to display members in Tab 2 dropdown
+function displayTab2Members(membersData) {
+    const memberSelect = document.getElementById('member-select');
+    if (!memberSelect) return;
+    
+    memberSelect.innerHTML = '<option value="">Select a Member</option>';
+    
+    membersData.forEach(member => {
+        const option = document.createElement('option');
+        option.value = member.member_id;
+        
+        // Add status indicator
+        const statusBadge = getStatusBadge(member.status);
+        option.textContent = `${member.first_name} ${member.last_name} ${statusBadge}`;
+        
+        memberSelect.appendChild(option);
+    });
+}
+
+// Function to filter Tab 2 members based on search
+function filterTab2Members() {
+    const searchTerm = document.getElementById('member-search-tab2').value.toLowerCase();
+    
+    // If no data is available yet, don't filter
+    if (!allTab2MembersData || allTab2MembersData.length === 0) {
+        console.log('No member data available for filtering');
+        return;
+    }
+    
+    let filteredData = allTab2MembersData;
+    
+    if (searchTerm) {
+        filteredData = filteredData.filter(member => 
+            (member.first_name || '').toLowerCase().includes(searchTerm) ||
+            (member.last_name || '').toLowerCase().includes(searchTerm) ||
+            `${member.first_name || ''} ${member.last_name || ''}`.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    displayTab2Members(filteredData);
+}
+
+// Function to display callings in Tab 2 dropdown
+function displayTab2Callings(callingsData) {
+    const callingSelect = document.getElementById('calling-select');
+    if (!callingSelect) return;
+    
+    callingSelect.innerHTML = '<option value="">Select a Calling</option>';
+    
+    callingsData.forEach(calling => {
+        const option = document.createElement('option');
+        option.value = calling.calling_id;
+        option.textContent = calling.calling_name;
+        callingSelect.appendChild(option);
+    });
+}
+
+// Function to filter Tab 2 callings based on search
+function filterTab2Callings() {
+    const searchTerm = document.getElementById('calling-search-tab2').value.toLowerCase();
+    
+    // If no data is available yet, don't filter
+    if (!allTab2CallingsData || allTab2CallingsData.length === 0) {
+        console.log('No calling data available for filtering');
+        return;
+    }
+    
+    let filteredData = allTab2CallingsData;
+    
+    if (searchTerm) {
+        filteredData = filteredData.filter(calling => 
+            (calling.calling_name || '').toLowerCase().includes(searchTerm) ||
+            (calling.organization || '').toLowerCase().includes(searchTerm) ||
+            (calling.grouping || '').toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    displayTab2Callings(filteredData);
 }
 
 // Global flag to track authentication status
@@ -241,7 +380,8 @@ function showPopup(title, callingId) {
     const popupTitle = document.getElementById("popup-title"); // or use querySelector if you need
     popupTitle.setAttribute("data-calling-id", callingId);
     
-    // Reset filter dropdowns to default
+    // Reset search and filter inputs to default
+    document.getElementById('candidate-search').value = "";  // Clear search
     document.getElementById('gender-filter').value = "";  // Resets to 'All'
     document.getElementById('age-filter').value = "";     // Resets to 'All'    
 
@@ -382,12 +522,24 @@ function populateCandidateDropdown(data) {
 
 // Function to apply filters based on gender and age
 function applyFilters() {
+    const searchTerm = document.getElementById('candidate-search').value.toLowerCase();
     const gender = document.getElementById('gender-filter').value;
     const ageGroup = document.getElementById('age-filter').value;
 
     const filteredCandidates = allCandidates.filter(candidate => {
+        let matchesSearch = true;
         let matchesGender = true;
         let matchesAge = true;
+
+        // Check name search filter
+        if (searchTerm) {
+            // Handle both field name formats (popup uses "First Name", member info uses "first_name")
+            const firstName = candidate['First Name'] || candidate.first_name || '';
+            const lastName = candidate['Last Name'] || candidate.last_name || '';
+            matchesSearch = firstName.toLowerCase().includes(searchTerm) ||
+                          lastName.toLowerCase().includes(searchTerm) ||
+                          `${firstName} ${lastName}`.toLowerCase().includes(searchTerm);
+        }
 
         // Check gender filter
         if (gender) {
@@ -400,7 +552,7 @@ function applyFilters() {
             matchesAge = ageGroup === 'under_18' ? age < 18 : age >= 18;
         }
 
-        return matchesGender && matchesAge;
+        return matchesSearch && matchesGender && matchesAge;
     });
 
     // Update the dropdown with filtered candidates
@@ -727,13 +879,8 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('get_members.php')
             .then(response => response.json())
             .then(data => {
-                const memberSelect = document.getElementById('member-select');
-                data.forEach(member => {
-                    const option = document.createElement('option');
-                    option.value = member.member_id;
-                    option.textContent = `${member.first_name} ${member.last_name}`;
-                    memberSelect.appendChild(option);
-                });
+                allTab2MembersData = data; // Store for search filtering
+                displayTab2Members(data);
             })
             .catch(error => console.error('Error fetching members:', error));
     }
@@ -743,13 +890,8 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('get_callings.php')
             .then(response => response.json())
             .then(data => {
-                const callingSelect = document.getElementById('calling-select');
-                data.forEach(calling => {
-                    const option = document.createElement('option');
-                    option.value = calling.calling_id;
-                    option.textContent = calling.calling_name;
-                    callingSelect.appendChild(option);
-                });
+                allTab2CallingsData = data; // Store for search filtering
+                displayTab2Callings(data);
             })
             .catch(error => console.error('Error fetching callings:', error));
     }
@@ -767,99 +909,214 @@ document.addEventListener('DOMContentLoaded', function() {
         const memberId = this.value;
 
         if (memberId) {
-            fetchCurrentCallings(memberId);
+            const memberName = this.options[this.selectedIndex].text;
+            fetchCurrentCallings(memberId, memberName);
         } else {
             document.getElementById('member-callings-container').innerHTML = ''; // Clear the table if no member is selected
         }
+        updateChangesPreview();
     });
     
     
 
 
-    // Handle "Assign Calling" form submission
-    document.getElementById('calling-form').addEventListener('submit', function(event) {
-        event.preventDefault();
-
-        const formData = new FormData(this);
-
-        const releaseCallings = [];
-        document.querySelectorAll('.release-calling-checkbox:checked, .release-member-checkbox:checked').forEach(checkbox => {
-            releaseCallings.push(checkbox.value);
+    // Handle "Make Proposed Changes" button click
+    const makeChangesBtn = document.getElementById('make-changes-btn');
+    if (makeChangesBtn) {
+        makeChangesBtn.addEventListener('click', function() {
+            makeProposedChanges();
         });
-
-        formData.append('release_callings', JSON.stringify(releaseCallings));
-
-        fetch('add_calling.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.text())
-        .then(data => {
-            document.getElementById('form-response').textContent = data;
-            document.getElementById('calling-form').reset();
-            dateSetApartField.value = today;
-            document.getElementById('member-callings-container').innerHTML = '';
-            document.getElementById('calling-members-container').innerHTML = '';
-        })
-        .catch(error => {
-            console.error('Error submitting form:', error);
-        });
-    });
-
-    // Handle "Release Only" button click
-    document.getElementById('release-only-btn').addEventListener('click', function() {
-        const releaseCallings = [];
-    
-        // Collect checked callings from both tables
-        document.querySelectorAll('.release-calling-checkbox:checked, .release-member-checkbox:checked').forEach(checkbox => {
-            releaseCallings.push(checkbox.value);
-        });
-    
-        if (releaseCallings.length === 0) {
-            alert('No callings selected for release.');
-            return;
-        }
-    
-        // --- NEW: Get the date from the form input ---
-        const releaseDate = document.getElementById('date-set-apart').value;
-    
-        // --- NEW: Add validation to ensure a date is selected ---
-        if (!releaseDate) {
-            alert('Please select a release date.');
-            return; // Stop execution if the date is missing
-        }
-    
-        // Send an AJAX request to release the selected callings
-        const formData = new FormData();
-        formData.append('release_callings', JSON.stringify(releaseCallings));
-        formData.append('release_date', releaseDate); // --- NEW: Add the date to the form data ---
-    
-        fetch('release_callings.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.text())
-        .then(data => {
-            document.getElementById('form-response').textContent = data;
-            
-            // Refresh the calling lists to show the changes
-            const memberId = document.getElementById('member-select').value;
-            if (memberId) fetchCurrentCallings(memberId);
-            
-            const callingId = document.getElementById('calling-select').value;
-            if (callingId) fetchCallingMembers(callingId);
-    
-        })
-        .catch(error => {
-            console.error('Error releasing callings:', error);
-            document.getElementById('form-response').textContent = 'An error occurred while releasing callings.';
-        });
-    });
+    }
 
 });
 
+// Function to make all proposed changes
+function makeProposedChanges() {
+    const memberSelect = document.getElementById('member-select');
+    const callingSelect = document.getElementById('calling-select');
+    const dateField = document.getElementById('date-set-apart');
+    
+    console.log('Date field element:', dateField);
+    console.log('Date field value:', dateField ? dateField.value : 'not found');
+    
+    if (!dateField) {
+        document.getElementById('form-response').textContent = 'Date field not found.';
+        return;
+    }
+    
+    const selectedMember = memberSelect.value;
+    const selectedCalling = callingSelect.value;
+    const changeDate = dateField.value;
+    
+    console.log('Change date:', changeDate);
+    
+    if (!changeDate) {
+        document.getElementById('form-response').textContent = 'Please select a date for the changes.';
+        return;
+    }
+    
+    // Collect all releases
+    const memberReleases = [];
+    document.querySelectorAll('.release-calling-checkbox:checked').forEach(checkbox => {
+        memberReleases.push(checkbox.value);
+    });
+    
+    const callingReleases = [];
+    document.querySelectorAll('.release-member-checkbox:checked').forEach(checkbox => {
+        callingReleases.push(checkbox.value);
+    });
+    
+    // Check if there are actually changes to make
+    if (!selectedMember && !selectedCalling && memberReleases.length === 0 && callingReleases.length === 0) {
+        document.getElementById('form-response').textContent = 'No changes selected.';
+        return;
+    }
+    
+    // Prepare data for the new endpoint
+    const changeData = {
+        member_id: selectedMember || null,
+        calling_id: selectedCalling || null,
+        change_date: changeDate,
+        member_releases: memberReleases,
+        calling_releases: callingReleases
+    };
+    
+    console.log('Sending change data:', changeData);
+    
+    // Send to new endpoint
+    fetch('make_calling_changes.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(changeData)
+    })
+    .then(response => response.text())
+    .then(data => {
+        document.getElementById('form-response').textContent = data;
+        // Reset form and clear containers
+        if (memberSelect) memberSelect.value = '';
+        if (callingSelect) callingSelect.value = '';
+        if (dateField) dateField.value = new Date().toISOString().substr(0, 10);
+        document.getElementById('member-callings-container').innerHTML = '';
+        document.getElementById('calling-members-container').innerHTML = '';
+        updateChangesPreview();
+    })
+    .catch(error => {
+        console.error('Error making changes:', error);
+        document.getElementById('form-response').textContent = 'An error occurred while making changes.';
+    });
+}
+
+// Function to update the changes preview based on current selections
+function updateChangesPreview() {
+    const memberSelect = document.getElementById('member-select');
+    const callingSelect = document.getElementById('calling-select');
+    const previewDiv = document.getElementById('changes-preview');
+    const changesText = document.getElementById('changes-text');
+    
+    if (!memberSelect || !callingSelect || !previewDiv || !changesText) {
+        return; // Elements not found
+    }
+    
+    const selectedMember = memberSelect.value;
+    const selectedCalling = callingSelect.value;
+    const selectedMemberName = selectedMember ? memberSelect.options[memberSelect.selectedIndex].text : '';
+    const selectedCallingName = selectedCalling ? callingSelect.options[callingSelect.selectedIndex].text : '';
+    
+    // If neither member nor calling is selected, hide preview
+    if (!selectedMember && !selectedCalling) {
+        previewDiv.style.display = 'none';
+        return;
+    }
+    
+    let changes = [];
+    
+    // Check for member releases (from member-callings table)
+    const memberReleaseCheckboxes = document.querySelectorAll('.release-calling-checkbox:checked');
+    let memberReleases = [];
+    memberReleaseCheckboxes.forEach(checkbox => {
+        const row = checkbox.closest('tr');
+        const callingCell = row.cells[2]; // Calling Name column
+        if (callingCell) {
+            memberReleases.push(callingCell.textContent);
+        }
+    });
+    
+    // Check for calling releases (from calling-members table)
+    const callingReleaseCheckboxes = document.querySelectorAll('.release-member-checkbox:checked');
+    let callingReleases = [];
+    callingReleaseCheckboxes.forEach(checkbox => {
+        const row = checkbox.closest('tr');
+        const memberCell = row.cells[2]; // Member Name column
+        if (memberCell) {
+            callingReleases.push(memberCell.textContent);
+        }
+    });
+    
+    // Build the changes description
+    if (selectedMember && selectedCalling) {
+        // Main assignment
+        changes.push(`${selectedMemberName} will be assigned to ${selectedCallingName}`);
+        
+        // Member releases
+        if (memberReleases.length > 0) {
+            const releasesText = memberReleases.length === 1 ? 
+                memberReleases[0] : 
+                memberReleases.slice(0, -1).join(', ') + ' and ' + memberReleases.slice(-1);
+            changes.push(`${selectedMemberName} will be released from ${releasesText}`);
+        }
+        
+        // Calling releases (other people being released from this calling)
+        if (callingReleases.length > 0) {
+            callingReleases.forEach(memberName => {
+                changes.push(`${memberName} will be released from ${selectedCallingName}`);
+            });
+        }
+    } else if (selectedMember && memberReleases.length > 0) {
+        // Only releases, no assignment
+        const releasesText = memberReleases.length === 1 ? 
+            memberReleases[0] : 
+            memberReleases.slice(0, -1).join(', ') + ' and ' + memberReleases.slice(-1);
+        changes.push(`${selectedMemberName} will be released from ${releasesText}`);
+    } else if (selectedCalling && callingReleases.length > 0) {
+        // Only calling releases, no assignment
+        callingReleases.forEach(memberName => {
+            changes.push(`${memberName} will be released from ${selectedCallingName}`);
+        });
+    }
+    
+    const makeChangesBtn = document.getElementById('make-changes-btn');
+    
+    if (changes.length > 0) {
+        // Join changes with proper punctuation
+        let changeText = changes.join(', ');
+        // Add proper punctuation at the end
+        if (!changeText.endsWith('.')) {
+            changeText += '.';
+        }
+        // Capitalize first letter
+        changeText = changeText.charAt(0).toUpperCase() + changeText.slice(1);
+        
+        changesText.textContent = changeText;
+        previewDiv.style.display = 'block';
+        
+        // Enable the button
+        if (makeChangesBtn) {
+            makeChangesBtn.disabled = false;
+        }
+    } else {
+        previewDiv.style.display = 'none';
+        
+        // Disable the button
+        if (makeChangesBtn) {
+            makeChangesBtn.disabled = true;
+        }
+    }
+}
+
 // Fetch and display current callings of the selected member
-function fetchCurrentCallings(memberId) {
+function fetchCurrentCallings(memberId, memberName) {
     // Check authentication before making request
     if (!isUserAuthenticated) {
         console.log('Cannot fetch current callings: User not authenticated');
@@ -871,6 +1128,9 @@ function fetchCurrentCallings(memberId) {
         .then(data => {
             const container = document.getElementById('member-callings-container');
             container.innerHTML = ''; // Clear previous content
+
+            // Add title with member name
+            let content = `<h4>${memberName}: Current Callings</h4>`;
 
             if (data.length > 0) {
                 let table = '<table>';
@@ -898,10 +1158,19 @@ function fetchCurrentCallings(memberId) {
                 });
 
                 table += '</table>';
-                container.innerHTML = table;
+                content += table;
             } else {
-                container.innerHTML = '<p>No current or past callings for this member.</p>';
+                content += '<p>No current or past callings for this member.</p>';
             }
+
+            container.innerHTML = content;
+            
+            // Add event listeners for checkbox changes and update preview
+            const checkboxes = container.querySelectorAll('.release-calling-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateChangesPreview);
+            });
+            updateChangesPreview();
         })
         .catch(error => {
             console.error('Error fetching current callings:', error);
@@ -998,14 +1267,16 @@ document.getElementById('calling-select').addEventListener('change', function() 
     const callingId = this.value;
 
     if (callingId) {
-        fetchCallingMembers(callingId);
+        const callingName = this.options[this.selectedIndex].text;
+        fetchCallingMembers(callingId, callingName);
     } else {
         document.getElementById('calling-members-container').innerHTML = ''; // Clear the table if no calling is selected
     }
+    updateChangesPreview();
 });
 
 // Fetch and display members associated with the selected calling
-function fetchCallingMembers(callingId) {
+function fetchCallingMembers(callingId, callingName) {
     // Check authentication before making request
     if (!isUserAuthenticated) {
         console.log('Cannot fetch calling members: User not authenticated');
@@ -1017,6 +1288,9 @@ function fetchCallingMembers(callingId) {
         .then(data => {
             const container = document.getElementById('calling-members-container');
             container.innerHTML = ''; // Clear previous content
+
+            // Add title with calling name
+            let content = `<h4>${callingName}: Current Status</h4>`;
 
             if (data.length > 0) {
                 let table = '<table>';
@@ -1044,10 +1318,19 @@ function fetchCallingMembers(callingId) {
                 });
 
                 table += '</table>';
-                container.innerHTML = table;
+                content += table;
             } else {
-                container.innerHTML = '<p>No members found for this calling.</p>';
+                content += '<p>No members found for this calling.</p>';
             }
+
+            container.innerHTML = content;
+            
+            // Add event listeners for checkbox changes and update preview
+            const checkboxes = container.querySelectorAll('.release-member-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateChangesPreview);
+            });
+            updateChangesPreview();
         })
         .catch(error => {
             console.error('Error fetching calling members:', error);
@@ -1138,43 +1421,76 @@ function fetchPossibleMembersForCalling(callingId) {
 
 
 
-document.addEventListener('DOMContentLoaded', function () {
-    // Event listeners for Members and Callings buttons
-    document.getElementById('members-btn').addEventListener('click', function () {
-        loadMembersForm();
-        underlineButton('members-btn');
-    });
-
-    document.getElementById('callings-btn').addEventListener('click', function () {
-        loadCallingsForm();
-        underlineButton('callings-btn');
-    });
-});
-
-// Function to underline the active button
-function underlineButton(buttonId) {
-    document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById(buttonId).classList.add('active');
-}
+// Remove old sub-tab functionality - no longer needed
 
 // Function to load the Members form
 function loadMembersForm() {
-    const container = document.getElementById('information-container');
+    const container = document.getElementById('member-information-container');
     container.innerHTML = `
         
         <form id="member-form">
-            <h2 class="form-title">Member Information</h2>
-            
-            <label for="member-form-select">Select Member:</label>
-            <select id="member-form-select">
-                <option value="">Select a Member</option>
-            </select>
-            <button id="add-member-btn" type="button" onclick="openAddMemberModal()">Add New Member</button>
-            <div id="member-details">
+            <div class="two-column-layout">
+                <!-- Left Column: Controls -->
+                <div class="left-column">
+                    <!-- Member Selection Section -->
+                    <div class="section-header">
+                        <h3>👤 Select Member</h3>
+                    </div>
+                    <div class="selection-section">
+                        <label for="member-form-select">Choose Member:</label>
+                        <select id="member-form-select">
+                            <option value="">Select a Member</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Search & Filter Section -->
+                    <div class="section-header">
+                        <h3>🔍 Search & Filter</h3>
+                    </div>
+                    <div class="search-section">
+                        <div class="search-column">
+                            <div class="search-field">
+                                <label for="member-search-input">Search Members:</label>
+                                <input type="text" id="member-search-input" placeholder="Type name to search..." />
+                            </div>
+                            <div class="filter-field">
+                                <label for="status-filter-select">Filter by Status:</label>
+                                <select id="status-filter-select">
+                                    <option value="">All Members</option>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                    <option value="moved">Moved Away</option>
+                                    <option value="no_calling">No Current Calling</option>
+                                    <option value="deceased">Deceased</option>
+                                    <option value="unknown">Status Unknown</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
 
-                <label>Member ID:</label>
-                <input type="text" id="member-id" disabled>
+                    <!-- Action Buttons Section -->
+                    <div class="section-header">
+                        <h3>⚙️ Actions</h3>
+                    </div>
+                    <div class="action-buttons">
+                        <button id="add-member-btn" type="button" class="action-btn save-btn" onclick="openAddMemberModal()">+ Add New Member</button>
+                        <button type="button" id="edit-btn" class="action-btn edit-btn">Edit Member</button>
+                        <button type="button" id="remove-member-btn" class="action-btn remove-btn">Remove Member</button>
+                        <button type="button" id="save-btn" class="action-btn save-btn" style="display: none;">Save Changes</button>
+                        <button type="button" id="cancel-btn" class="action-btn cancel-btn" style="display: none;">Cancel</button>
+                    </div>
+                    <div id="member-form-message" style="margin-top: 10px;"></div>
+                    <div id="form-response"></div>
+                </div>
                 
+                <!-- Right Column: Details -->
+                <div class="right-column">
+                    <!-- Member Information Section -->
+                    <div class="section-header">
+                        <h3>📋 Member Details</h3>
+                    </div>
+                    <div id="member-details" class="details-section">
+
                 <label>First Name:</label>
                 <input type="text" id="first-name" disabled>
         
@@ -1186,15 +1502,29 @@ function loadMembersForm() {
         
                 <label>Birthdate:</label>
                 <input type="date" id="birthdate" disabled>
+
+                <label>Status:</label>
+                <select id="member-status" disabled>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="moved">Moved Away</option>
+                    <option value="no_calling">No Current Calling</option>
+                    <option value="deceased">Deceased</option>
+                    <option value="unknown">Status Unknown</option>
+                </select>
+
+                <label>Status Notes:</label>
+                <textarea id="status-notes" disabled rows="3" placeholder="Additional notes about this member's status..."></textarea>
+                
+                <div id="member-status-display" style="margin-top: 10px;">
+                    <!-- Status badge will be displayed here -->
+                </div>
             </div>
-            <button type="button" id="edit-btn">Edit</button>
-            <button type="button" id="remove-member-btn">Remove</button>
-            <button type="button" id="save-btn" style="display: none;">Save</button>
-            <button type="button" id="cancel-btn" style="display: none;">Cancel</button>
-            <div id="member-form-message" style="margin-top: 10px;"></div>
-             <div id="form-response"></div>
-            <div id="member-callings"></div> 
-            <div id="member-callings-considered"></div>
+            
+                    <div id="member-callings"></div> 
+                    <div id="member-callings-considered"></div>
+                </div>
+            </div>
         </form>
     `;
 
@@ -1206,7 +1536,7 @@ function loadMembersForm() {
     const removeButton = document.getElementById('remove-member-btn');
     const formResponse = document.getElementById('form-response');
     const memberSelect = document.getElementById('member-form-select');
-    const fields = ['member-id', 'first-name', 'last-name', 'gender', 'birthdate'];
+    const fields = ['first-name', 'last-name', 'gender', 'birthdate', 'member-status', 'status-notes'];
     let originalValues = {};
 
     // Edit button event listener
@@ -1262,6 +1592,16 @@ function loadMembersForm() {
     saveButton.addEventListener('click', () => {
         const updatedData = {};
         const messageContainer = document.getElementById('member-form-message');
+        
+        // Get the member ID from the selected member in dropdown
+        const selectedMemberId = memberSelect.value;
+        if (!selectedMemberId) {
+            messageContainer.textContent = 'Please select a member first.';
+            return;
+        }
+        updatedData['member-id'] = selectedMemberId;
+        
+        // Get other field values
         fields.forEach(fieldId => {
             updatedData[fieldId] = document.getElementById(fieldId).value;
         });
@@ -1317,86 +1657,142 @@ function loadMembersForm() {
 
     }
     
+    // Add event listeners for search and filtering
+    const searchInput = document.getElementById('member-search-input');
+    const statusFilter = document.getElementById('status-filter-select');
     
+    // Real-time search as user types
+    searchInput.addEventListener('input', function() {
+        filterMembers();
+    });
     
-    fetchMembers(); // Populate dropdown
+    // Status filter change
+    statusFilter.addEventListener('change', function() {
+        const selectedStatus = this.value;
+        if (selectedStatus) {
+            // If filtering by status, fetch fresh data for that status
+            fetchMembers(selectedStatus);
+        } else {
+            // If showing all, fetch all members then apply search filter
+            fetchMembers();
+        }
+        // Clear search when changing status filter
+        searchInput.value = '';
+    });
+    
+    fetchMembers(); // Populate dropdown initially
 }
 
 
 
 // Function to load the Callings form
 function loadCallingsForm() {
-    const container = document.getElementById('information-container');
+    const container = document.getElementById('calling-information-container');
     container.innerHTML = `
         
         <form id="calling-form">
-            <h2 class="form-title">Calling Information</h2>
-            <label for="calling-form-select">Select Calling:</label>
-            <select id="calling-form-select">
-                <option value="">Select a Calling</option>
-            </select>
-            <button id="add-calling-btn" type="button" onclick="openAddCallingModal()">Add New Calling</button>
-            <div id="calling-details">
-                                
-                <label>Calling ID:</label>
-                <input type="text" id="calling-id" disabled>
+            <div class="two-column-layout">
+                <!-- Left Column: Controls -->
+                <div class="left-column">
+                    <!-- Calling Selection Section -->
+                    <div class="section-header">
+                        <h3>⛪ Select Calling</h3>
+                    </div>
+                    <div class="selection-section">
+                        <label for="calling-form-select">Choose Calling:</label>
+                        <select id="calling-form-select">
+                            <option value="">Select a Calling</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Search & Filter Section -->
+                    <div class="section-header">
+                        <h3>🔍 Search & Filter</h3>
+                    </div>
+                    <div class="search-section">
+                        <div class="search-column">
+                            <div class="search-field">
+                                <label for="calling-search-input">Search Callings:</label>
+                                <input type="text" id="calling-search-input" placeholder="Type calling name to search..." />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons Section -->
+                    <div class="section-header">
+                        <h3>⚙️ Actions</h3>
+                    </div>
+                    <div class="action-buttons">
+                        <button id="add-calling-btn" type="button" class="action-btn save-btn" onclick="openAddCallingModal()">+ Add New Calling</button>
+                        <button type="button" id="edit-calling-btn" class="action-btn edit-btn">Edit Calling</button>
+                        <button type="button" id="remove-calling-btn" class="action-btn remove-btn">Remove Calling</button>
+                        <button type="button" id="save-calling-btn" class="action-btn save-btn" style="display: none;">Save Changes</button>
+                        <button type="button" id="cancel-calling-btn" class="action-btn cancel-btn" style="display: none;">Cancel</button>
+                    </div>
+                    <div id="calling-form-message" style="margin-top: 10px;"></div>
+                </div>
                 
-                <label>Calling Name:</label>
-                <input type="text" id="calling-name" disabled>
-        
-                <label>Organization:</label>
-                <select id="organization" disabled>
-                    <option value="Aaronic Priesthood Quorums">Aaronic Priesthood Quorums</option>
-                    <option value="Additional Callings">Additional Callings</option>
-                    <option value="Bishopric">Bishopric</option>
-                    <option value="Elders Quorum">Elders Quorum</option>
-                    <option value="Facilities">Facilities</option>
-                    <option value="Full-Time Missionaries">Full-Time Missionaries</option>
-                    <option value="History">History</option>
-                    <option value="Music">Music</option>
-                    <option value="Primary">Primary</option>
-                    <option value="Relief Society">Relief Society</option>
-                    <option value="Stake">Stake</option>
-                    <option value="Sunday School">Sunday School</option>
-                    <option value="Technology">Technology</option>
-                    <option value="Temple and Family History">Temple and Family History</option>
-                    <option value="Ward Missionaries">Ward Missionaries</option>
-                    <option value="Welfare and Self-Reliance">Welfare and Self-Reliance</option>
-                    <option value="Young Women">Young Women</option>
-                </select>
-                <label>Grouping:</label>
-                <select id="grouping" disabled>
-                    <option value="AP Advisors">AP Advisors</option>
-                    <option value="AP Class Presidency">AP Class Presidency</option>
-                    <option value="Additional Callings">Additional Callings</option>
-                    <option value="Bishopric">Bishopric</option>
-                    <option value="Elders Quorum">Elders Quorum</option>
-                    <option value="Full-Time Missionaries">Full-Time Missionaries</option>
-                    <option value="Music">Music</option>
-                    <option value="Primary Teachers">Primary Teachers</option>
-                    <option value="Primary Other">Primary Other</option>
-                    <option value="Primary Presidency">Primary Presidency</option>
-                    <option value="RS Other">RS Other</option>
-                    <option value="RS Presidency">RS Presidency</option>
-                    <option value="Stake">Stake</option>
-                    <option value="SS Teachers">SS Teachers</option>
-                    <option value="SS Other">SS Other</option>
-                    <option value="SS Presidency">SS Presidency</option>
-                    <option value="Work of Salvation">Work of Salvation</option>
-                    <option value="YW Class Presidency">YW Class Presidency</option>
-                    <option value="YW Presidency">YW Presidency</option>
-                </select>
-                <label>Priority:</label>
-                <input type="text" id="priority" disabled>
+                <!-- Right Column: Details -->
+                <div class="right-column">
+                    <!-- Calling Information Section -->
+                    <div class="section-header">
+                        <h3>📋 Calling Details</h3>
+                    </div>
+                    <div id="calling-details" class="details-section">
+                                        
+                        <label>Calling Name:</label>
+                        <input type="text" id="calling-name" disabled>
+                
+                        <label>Organization:</label>
+                        <select id="organization" disabled>
+                            <option value="Aaronic Priesthood Quorums">Aaronic Priesthood Quorums</option>
+                            <option value="Additional Callings">Additional Callings</option>
+                            <option value="Bishopric">Bishopric</option>
+                            <option value="Elders Quorum">Elders Quorum</option>
+                            <option value="Facilities">Facilities</option>
+                            <option value="Full-Time Missionaries">Full-Time Missionaries</option>
+                            <option value="History">History</option>
+                            <option value="Music">Music</option>
+                            <option value="Primary">Primary</option>
+                            <option value="Relief Society">Relief Society</option>
+                            <option value="Stake">Stake</option>
+                            <option value="Sunday School">Sunday School</option>
+                            <option value="Technology">Technology</option>
+                            <option value="Temple and Family History">Temple and Family History</option>
+                            <option value="Ward Missionaries">Ward Missionaries</option>
+                            <option value="Welfare and Self-Reliance">Welfare and Self-Reliance</option>
+                            <option value="Young Women">Young Women</option>
+                        </select>
+                        <label>Grouping:</label>
+                        <select id="grouping" disabled>
+                            <option value="AP Advisors">AP Advisors</option>
+                            <option value="AP Class Presidency">AP Class Presidency</option>
+                            <option value="Additional Callings">Additional Callings</option>
+                            <option value="Bishopric">Bishopric</option>
+                            <option value="Elders Quorum">Elders Quorum</option>
+                            <option value="Full-Time Missionaries">Full-Time Missionaries</option>
+                            <option value="Music">Music</option>
+                            <option value="Primary Teachers">Primary Teachers</option>
+                            <option value="Primary Other">Primary Other</option>
+                            <option value="Primary Presidency">Primary Presidency</option>
+                            <option value="RS Other">RS Other</option>
+                            <option value="RS Presidency">RS Presidency</option>
+                            <option value="Stake">Stake</option>
+                            <option value="SS Teachers">SS Teachers</option>
+                            <option value="SS Other">SS Other</option>
+                            <option value="SS Presidency">SS Presidency</option>
+                            <option value="Work of Salvation">Work of Salvation</option>
+                            <option value="YW Class Presidency">YW Class Presidency</option>
+                            <option value="YW Presidency">YW Presidency</option>
+                        </select>
+                        <label>Priority:</label>
+                        <input type="text" id="priority" disabled>
+                    </div>
+                    
+                    <div id="callings-for-member"></div>
+                    <div id="calling-members-considered"></div>
+                </div>
             </div>
-                <button type="button" id="edit-calling-btn">Edit</button>
-                <button type="button" id="remove-calling-btn">Remove</button>
-                <button type="button" id="save-calling-btn" style="display: none;">Save</button>
-                <button type="button" id="cancel-calling-btn" style="display: none;">Cancel</button>
-                <div id="calling-form-message" style="margin-top: 10px;"></div>
-                <div id="callings-for-member"></div>
-                <div id="calling-members-considered"></div>
-            
         </form>
     `;
     
@@ -1407,7 +1803,7 @@ function loadCallingsForm() {
     const removeButton = document.getElementById('remove-calling-btn');
     const formResponse = document.getElementById('form-response');
     const callingSelect = document.getElementById('calling-form-select');
-    const fields = ['calling-id', 'calling-name', 'organization', 'grouping', 'priority'];
+    const fields = ['calling-name', 'organization', 'grouping', 'priority'];
     let originalValues = {};
 
     // Edit button event listener
@@ -1465,6 +1861,16 @@ function loadCallingsForm() {
     saveButton.addEventListener('click', () => {
         const updatedData = {};
         const messageContainer = document.getElementById('calling-form-message');
+        
+        // Get the calling ID from the selected calling in dropdown
+        const selectedCallingId = callingSelect.value;
+        if (!selectedCallingId) {
+            messageContainer.textContent = 'Please select a calling first.';
+            return;
+        }
+        updatedData['calling-id'] = selectedCallingId;
+        
+        // Get other field values
         fields.forEach(fieldId => {
             updatedData[fieldId] = document.getElementById(fieldId).value;
         });
@@ -1520,31 +1926,115 @@ function loadCallingsForm() {
 
     }
     
+    // Add event listener for search functionality
+    const callingSearchInput = document.getElementById('calling-search-input');
+    callingSearchInput.addEventListener('input', filterCallings);
+    
     fetchCallings(); // Populate dropdown
 }
 
+// Global variables to store data for filtering
+let allMembersData = [];
+let allTab2MembersData = [];
+let allTab2CallingsData = [];
+let allCallingsData = [];
+
 // Function to populate the Members dropdown
-function fetchMembers() {
-    fetch('get_members.php')
+function fetchMembers(statusFilter = '') {
+    const url = statusFilter ? `get_members.php?status=${encodeURIComponent(statusFilter)}` : 'get_members.php';
+    
+    fetch(url)
         .then(response => response.json())
         .then(data => {
-            const memberSelect = document.getElementById('member-form-select');
-            data.forEach(member => {
-                const option = document.createElement('option');
-                option.value = member.member_id;
-                option.textContent = `${member.first_name} ${member.last_name}`;
-                memberSelect.appendChild(option);
-            });
-
-            // Listener to fetch details on selection
-            memberSelect.addEventListener('change', function () {
-                const memberId = this.value;
-                if (memberId) fetchMemberDetails(memberId);
-                if (memberId) fetchCallingsForMember(memberId);
-                if (memberId) fetchPossibleCallingsForMember(memberId);
-            });
+            allMembersData = data; // Store all data for search filtering
+            displayMembers(data);
         })
         .catch(error => console.error('Error fetching members:', error));
+}
+
+// Function to display members in the dropdown
+function displayMembers(membersData) {
+    const memberSelect = document.getElementById('member-form-select');
+    
+    // Clear existing options except the first one
+    memberSelect.innerHTML = '<option value="">Select a Member</option>';
+    
+    membersData.forEach(member => {
+        const option = document.createElement('option');
+        option.value = member.member_id;
+        
+        // Add status indicator to the display text
+        const statusBadge = getStatusBadge(member.status);
+        option.textContent = `${member.first_name} ${member.last_name} ${statusBadge}`;
+        
+        memberSelect.appendChild(option);
+    });
+
+    // Only add the event listener once to avoid duplicates
+    if (!memberSelect.hasAttribute('data-listener-added')) {
+        memberSelect.addEventListener('change', function () {
+            const memberId = this.value;
+            if (memberId) fetchMemberDetails(memberId);
+            if (memberId) fetchCallingsForMember(memberId);
+            if (memberId) fetchPossibleCallingsForMember(memberId);
+        });
+        memberSelect.setAttribute('data-listener-added', 'true');
+    }
+}
+
+// Function to filter members based on search and status
+function filterMembers() {
+    const searchTerm = document.getElementById('member-search-input').value.toLowerCase();
+    const statusFilter = document.getElementById('status-filter-select').value;
+    
+    let filteredData = allMembersData;
+    
+    // Filter by search term
+    if (searchTerm) {
+        filteredData = filteredData.filter(member => 
+            member.first_name.toLowerCase().includes(searchTerm) ||
+            member.last_name.toLowerCase().includes(searchTerm) ||
+            `${member.first_name} ${member.last_name}`.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    // Filter by status (this is already handled by the initial fetch, but we can refine it)
+    if (statusFilter) {
+        filteredData = filteredData.filter(member => member.status === statusFilter);
+    }
+    
+    displayMembers(filteredData);
+}
+
+// Helper function to get status badge text
+function getStatusBadge(status) {
+    const badges = {
+        'active': '',
+        'inactive': '(Inactive)',
+        'moved': '(Moved)',
+        'no_calling': '(No Calling)',
+        'deceased': '(Deceased)',
+        'unknown': '(?)'
+    };
+    return badges[status] || '';
+}
+
+// Helper function to create status badge HTML
+function createStatusBadgeHTML(status) {
+    if (!status || status === 'active') {
+        return '';
+    }
+    
+    const statusLabels = {
+        'inactive': 'Inactive',
+        'moved': 'Moved',
+        'no_calling': 'No Calling',
+        'deceased': 'Deceased',
+        'unknown': 'Unknown'
+    };
+    
+    const label = statusLabels[status] || status;
+    return `<span class="status-badge status-${status}">${label}</span>`;
 }
 
 // Function to populate the Callings dropdown
@@ -1552,23 +2042,54 @@ function fetchCallings() {
     fetch('get_callings.php')
         .then(response => response.json())
         .then(data => {
-            const callingSelect = document.getElementById('calling-form-select');
-            data.forEach(calling => {
-                const option = document.createElement('option');
-                option.value = calling.calling_id;
-                option.textContent = calling.calling_name;
-                callingSelect.appendChild(option);
-            });
-
-            // Listener to fetch details on selection
-            callingSelect.addEventListener('change', function () {
-                const callingId = this.value;
-                if (callingId) fetchCallingDetails(callingId);
-                if (callingId) fetchMembersForCalling(callingId);
-                if (callingId) fetchPossibleMembersForCalling(callingId);
-            });
+            allCallingsData = data; // Store all data for search filtering
+            displayCallings(data);
         })
         .catch(error => console.error('Error fetching callings:', error));
+}
+
+// Function to display callings in the dropdown
+function displayCallings(callingsData) {
+    const callingSelect = document.getElementById('calling-form-select');
+    
+    // Clear existing options except the first one
+    callingSelect.innerHTML = '<option value="">Select a Calling</option>';
+    
+    callingsData.forEach(calling => {
+        const option = document.createElement('option');
+        option.value = calling.calling_id;
+        option.textContent = calling.calling_name;
+        callingSelect.appendChild(option);
+    });
+
+    // Only add the event listener once to avoid duplicates
+    if (!callingSelect.hasAttribute('data-listener-added')) {
+        callingSelect.addEventListener('change', function () {
+            const callingId = this.value;
+            if (callingId) fetchCallingDetails(callingId);
+            if (callingId) fetchMembersForCalling(callingId);
+            if (callingId) fetchPossibleMembersForCalling(callingId);
+        });
+        callingSelect.setAttribute('data-listener-added', 'true');
+    }
+}
+
+// Function to filter callings based on search
+function filterCallings() {
+    const searchTerm = document.getElementById('calling-search-input').value.toLowerCase();
+    
+    let filteredData = allCallingsData;
+    
+    // Filter by search term
+    if (searchTerm) {
+        filteredData = filteredData.filter(calling => 
+            calling.calling_name.toLowerCase().includes(searchTerm) ||
+            (calling.organization && calling.organization.toLowerCase().includes(searchTerm)) ||
+            (calling.grouping && calling.grouping.toLowerCase().includes(searchTerm))
+        );
+    }
+    
+    displayCallings(filteredData);
 }
 
 // Fetch specific member details
@@ -1576,11 +2097,19 @@ function fetchMemberDetails(memberId) {
     fetch(`get_member_details.php?member_id=${encodeURIComponent(memberId)}`)
         .then(response => response.json())
         .then(member => {
-            document.getElementById('member-id').value = member.member_id;
             document.getElementById('first-name').value = member.first_name;
             document.getElementById('last-name').value = member.last_name;
             document.getElementById('gender').value = member.gender;
             document.getElementById('birthdate').value = member.birthdate;
+            document.getElementById('member-status').value = member.status || 'active';
+            document.getElementById('status-notes').value = member.status_notes || '';
+            
+            // Update status display badge
+            const statusDisplay = document.getElementById('member-status-display');
+            if (statusDisplay) {
+                const badgeHTML = createStatusBadgeHTML(member.status || 'active');
+                statusDisplay.innerHTML = badgeHTML ? `<strong>Current Status:</strong> ${badgeHTML}` : '';
+            }
         })
         .catch(error => console.error('Error fetching member details:', error));
     
@@ -1593,7 +2122,6 @@ function fetchCallingDetails(callingId) {
     fetch(`get_calling_details.php?calling_id=${encodeURIComponent(callingId)}`)
         .then(response => response.json())
         .then(calling => {
-            document.getElementById('calling-id').value = calling.calling_id;
             document.getElementById('calling-name').value = calling.calling_name;
             document.getElementById('organization').value = calling.organization;
             document.getElementById('grouping').value = calling.grouping;
@@ -1632,16 +2160,18 @@ function saveNewMember() {
     const lastName = document.getElementById('last-name-input').value;
     const gender = document.getElementById('gender-input').value;
     const birthdate = document.getElementById('birthdate-input').value;
+    const status = document.getElementById('status-input').value;
+    const statusNotes = document.getElementById('status-notes-input').value;
 
     if (!firstName || !lastName || !gender || !birthdate) {
-        alert("Please fill in all fields.");
+        alert("Please fill in all required fields.");
         return;
     }
 
     fetch('add_member.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `first_name=${encodeURIComponent(firstName)}&last_name=${encodeURIComponent(lastName)}&gender=${encodeURIComponent(gender)}&birthdate=${encodeURIComponent(birthdate)}`
+        body: `first_name=${encodeURIComponent(firstName)}&last_name=${encodeURIComponent(lastName)}&gender=${encodeURIComponent(gender)}&birthdate=${encodeURIComponent(birthdate)}&status=${encodeURIComponent(status)}&status_notes=${encodeURIComponent(statusNotes)}`
     })
     .then(response => response.text())
     .then(data => {

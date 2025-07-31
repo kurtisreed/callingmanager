@@ -8,9 +8,20 @@ require_once 'db_connect.php';
 logUserActivity('get_members', ['action' => 'fetch_member_list']);
 
 try {
-    // SQL query to fetch members ordered by last name
-    $sql = "SELECT member_id, first_name, last_name FROM members ORDER BY last_name ASC";
-    $result = $conn->query($sql);
+    // Check for status filter parameter
+    $statusFilter = isset($_GET['status']) ? $_GET['status'] : null;
+    
+    // Build SQL query with optional status filtering
+    if ($statusFilter && in_array($statusFilter, ['active', 'inactive', 'moved', 'no_calling', 'deceased', 'unknown'])) {
+        $sql = "SELECT member_id, first_name, last_name, status, status_notes FROM members WHERE status = ? ORDER BY last_name ASC";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("s", $statusFilter);
+        $stmt->execute();
+        $result = $stmt->get_result();
+    } else {
+        $sql = "SELECT member_id, first_name, last_name, status, status_notes FROM members ORDER BY last_name ASC";
+        $result = $conn->query($sql);
+    }
     
     if (!$result) {
         throw new Exception('Database query failed: ' . $conn->error);
@@ -22,7 +33,9 @@ try {
         $members[] = [
             'member_id' => (int) $row['member_id'], // Ensure integer
             'first_name' => OutputSanitizer::html($row['first_name']),
-            'last_name' => OutputSanitizer::html($row['last_name'])
+            'last_name' => OutputSanitizer::html($row['last_name']),
+            'status' => OutputSanitizer::html($row['status'] ?? 'active'),
+            'status_notes' => OutputSanitizer::html($row['status_notes'] ?? '')
         ];
     }
     

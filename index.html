@@ -29,23 +29,25 @@
     <div class="tabs">
         <button class="tablinks" id="tab1-title" onclick="openTab(event, 'Tab1')">Callings Overview</button>
         <button class="tablinks" id="tab2-title" onclick="openTab(event, 'Tab2')">Assign/Release Callings</button>
-        <button class="tablinks" id="tab3-title" onclick="openTab(event, 'Tab3')">Information</button>
+        <button class="tablinks" id="tab3-title" onclick="openTab(event, 'Tab3')">Member Information</button>
+        <button class="tablinks" id="tab4-title" onclick="openTab(event, 'Tab4')">Calling Information</button>
     </div>
 
     <!-- Context-sensitive sub-bar -->
     <div class="sub-bar">
         <div id="subbar-Tab1" class="subcontent">
             <!-- Options for Tab 1 -->
-            <button class="toggle-btn additional-btn" data-org="AdditionalCallings">Additional</button>
+
             <button class="toggle-btn ym-btn" data-org="AaronicPriesthoodQuorums">AP</button>
+            <button class="toggle-btn additional-btn" data-org="AdditionalCallings">Additional</button>
             <button class="toggle-btn bishopric-btn" data-org="Bishopric">Bishopric</button>
             <button class="toggle-btn elders-btn" data-org="EldersQuorum">EQ</button>
             <button class="toggle-btn mission-btn" data-org="FullTimeMissionaries">Mission</button>
             <button class="toggle-btn music-btn" data-org="Music">Music</button>
             <button class="toggle-btn primary-btn" data-org="Primary">Primary</button>
             <button class="toggle-btn rs-btn" data-org="ReliefSociety">RS</button>
-            <button class="toggle-btn ss-btn" data-org="SundaySchool">SS</button>
             <button class="toggle-btn stake-btn" data-org="Stake">Stake</button>
+            <button class="toggle-btn ss-btn" data-org="SundaySchool">SS</button> 
             <button class="toggle-btn wos-btn" data-org="TempleandFamilyHistory">WoS</button>
             <button class="toggle-btn yw-btn" data-org="YoungWomen">YW</button>
              
@@ -62,8 +64,10 @@
         
         <div id="subbar-Tab3" class="subcontent">
             <!-- Options for Tab 3 -->
-                <button class="toggle-btn members-btn" id="members-btn">Members</button>
-                <button class="toggle-btn callings-btn" id="callings-btn">Callings</button>
+        </div>
+        
+        <div id="subbar-Tab4" class="subcontent">
+            <!-- Options for Tab 4 -->
         </div>
     </div>
 
@@ -77,62 +81,113 @@
     </div>
     
     <div id="Tab2" class="tabcontent">
-        <div class="large-box">
+        <div class="information-box">
         
             <form id="calling-form">
-                <h2 class="form-title">Assign and Release Callings</h2>
-            
-                <label for="member">Member:</label>
-                <select name="member_id" id="member-select" required>
-                    <option value="">Select a Member</option> <!-- Blank by default -->
-                    <!-- Members will be populated dynamically -->
-                </select>
-            
-                <div id="member-callings-container"></div> <!-- Table for current callings -->
-            
-                <label for="calling">Calling:</label>
-                <select name="calling_id" id="calling-select" required>
-                    <option value="">Select a Calling</option> <!-- Blank by default -->
-                    <!-- Callings will be populated dynamically -->
-                </select>
-                
-                <div id="calling-members-container"></div> <!-- Table for members with this calling -->
+                <div class="two-column-layout">
+                    <!-- Left Column: Form Controls -->
+                    <div class="left-column">
+                        <!-- Member Search & Selection Section -->
+                        <div class="section-header">
+                            <h3>👤 Member Selection</h3>
+                        </div>
+                        <div class="search-section">
+                            <div class="search-column">
+                                <div class="search-field">
+                                    <label for="member-search-tab2">Search Members:</label>
+                                    <input type="text" id="member-search-tab2" placeholder="Type name to search..." />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="selection-section">
+                            <label for="member">Select Member:</label>
+                            <select name="member_id" id="member-select" required>
+                                <option value="">Select a Member</option>
+                            </select>
+                        </div>
 
-                <div>
-                <label for="date_set_apart">Date of change:</label>
-                <input type="date" name="date_set_apart" id="date-set-apart" required>
+                        <!-- Calling Search & Selection Section -->
+                        <div class="section-header">
+                            <h3>⛪ Calling Selection</h3>
+                        </div>
+                        <div class="search-section">
+                            <div class="search-column">
+                                <div class="search-field">
+                                    <label for="calling-search-tab2">Search Callings:</label>
+                                    <input type="text" id="calling-search-tab2" placeholder="Type calling name to search..." />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="selection-section">
+                            <label for="calling">Select Calling:</label>
+                            <select name="calling_id" id="calling-select" required>
+                                <option value="">Select a Calling</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column: Tables and Details -->
+                    <div class="right-column">
+                        <div class="section-header">
+                            <h3>📋 Current Information</h3>
+                        </div>
+                        <div class="details-section">
+                            <div id="member-callings-container"></div> <!-- Table for current callings -->
+                            <div id="calling-members-container"></div> <!-- Table for members with this calling -->
+                        </div>
+
+                        <!-- Date & Action Section -->
+                        <div class="section-header">
+                            <h3>📅 Date & Actions</h3>
+                        </div>
+                        <div class="details-section">
+                            <div id="changes-preview" style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin-bottom: 20px; display: none;">
+                                <h5 style="margin: 0 0 10px 0; color: #495057;">Changes to be made:</h5>
+                                <div id="changes-text" style="color: #212529; font-weight: 500;"></div>
+                            </div>
+                            
+                            <label for="date_set_apart">Date of Change:</label>
+                            <input type="date" name="date_set_apart" id="date-set-apart" required>
+                            
+                            <div class="action-buttons">
+                                <button type="button" id="make-changes-btn" class="action-btn save-btn" disabled>Make Proposed Changes</button>
+                            </div>
+                            <div id="form-response"></div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div>
-                <button type="submit">Assign Calling</button>
-                <button type="button" id="release-only-btn">Release Only</button>
-                </div>
-                <div id="form-response"></div>
             </form>
-
-
 
         </div>    
     </div>
 
     <div id="Tab3" class="tabcontent">
         <div class="information-box">
-
-            <div id="information-container">
-                <!-- Form content will be dynamically generated here based on the selected tab -->
+            <div id="member-information-container">
+                <!-- Member form content will be dynamically generated here -->
             </div>
-            
-            
+        </div>
+    </div>
+
+    <div id="Tab4" class="tabcontent">
+        <div class="information-box">
+            <div id="calling-information-container">
+                <!-- Calling form content will be dynamically generated here -->
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Calling candidates Popup Modal -->
 <div id="popup-modal" class="modal">
-    <span class="close-btn" onclick="closePopup()">x</span>
+    <button class="close-btn" onclick="closePopup()">✕ Close</button>
     <div class="modal-content">
         <h2 id="popup-title"></h2>
-        <h4>Filters:</h4>
+        <h4>Search & Filters:</h4>
+        
+        <label for="candidate-search">Search by Name:</label>
+        <input type="text" id="candidate-search" placeholder="Type name to search..." oninput="applyFilters()" />
+        
         <!-- Filter container to hold gender and age filters side by side -->
         <div class="filter-container">
             
@@ -165,7 +220,7 @@
 <!-- Add New Member Modal -->
 <div id="add-member-modal" class="modal">
     <div class="modal-content">
-        <span class="close-btn" onclick="closeAddMemberModal()">&times;</span>
+        <button class="close-btn" onclick="closeAddMemberModal()">✕ Close</button>
         <h2>Add New Member</h2>
 
         <label for="first-name-input">First Name:</label>
@@ -184,6 +239,19 @@
         <label for="birthdate-input">Birthdate:</label>
         <input type="date" id="birthdate-input" />
 
+        <label for="status-input">Status:</label>
+        <select id="status-input">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="moved">Moved Away</option>
+            <option value="no_calling">No Current Calling</option>
+            <option value="deceased">Deceased</option>
+            <option value="unknown">Status Unknown</option>
+        </select>
+
+        <label for="status-notes-input">Status Notes (optional):</label>
+        <textarea id="status-notes-input" placeholder="Additional notes about this member's status..." rows="3"></textarea>
+
         <button id="save-member-btn" class="toggle-btn save-btn" onclick="saveNewMember()">Save</button>
     </div>
 </div>
@@ -191,7 +259,7 @@
 <!-- Add New Calling Modal -->
 <div id="add-calling-modal" class="modal">
     <div class="modal-content">
-        <span class="close-btn" onclick="closeAddCallingModal()">&times;</span>
+        <button class="close-btn" onclick="closeAddCallingModal()">✕ Close</button>
         <h2>Add New Calling</h2>
 
         <label for="calling-name-input">Calling Name:</label>

@@ -8,7 +8,7 @@ logUserActivity('get_member_details', ['risk_level' => 'medium', 'file' => 'get_
 require_once 'db_connect.php'; // Make sure this path is correct
 
 $memberId = $_GET['member_id'];
-$sql = "SELECT member_id, first_name, last_name, gender, birthdate FROM members WHERE member_id = ?";
+$sql = "SELECT member_id, first_name, last_name, gender, birthdate, status, status_notes FROM members WHERE member_id = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $memberId);
 $stmt->execute();

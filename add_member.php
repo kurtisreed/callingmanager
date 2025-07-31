@@ -17,7 +17,9 @@ try {
         'first_name' => $_POST['first_name'] ?? '',
         'last_name' => $_POST['last_name'] ?? '',
         'gender' => $_POST['gender'] ?? '',
-        'birthdate' => $_POST['birthdate'] ?? ''
+        'birthdate' => $_POST['birthdate'] ?? '',
+        'status' => $_POST['status'] ?? 'active',
+        'status_notes' => $_POST['status_notes'] ?? ''
     ];
     
     // Define sanitization rules
@@ -25,7 +27,9 @@ try {
         'first_name' => 'alpha',
         'last_name' => 'alpha',
         'gender' => 'string',
-        'birthdate' => 'date'
+        'birthdate' => 'date',
+        'status' => 'string',
+        'status_notes' => 'string'
     ];
     
     // Validate and sanitize
@@ -100,13 +104,15 @@ try {
     }
     
     // Insert new member with validated and sanitized data
-    $sql = "INSERT INTO members (first_name, last_name, gender, birthdate) VALUES (?, ?, ?, ?)";
+    $sql = "INSERT INTO members (first_name, last_name, gender, birthdate, status, status_notes) VALUES (?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssss", 
+    $stmt->bind_param("ssssss", 
         $cleanData['first_name'], 
         $cleanData['last_name'], 
         $cleanData['gender'], 
-        $cleanData['birthdate']
+        $cleanData['birthdate'],
+        $cleanData['status'],
+        $cleanData['status_notes']
     );
     
     if ($stmt->execute()) {

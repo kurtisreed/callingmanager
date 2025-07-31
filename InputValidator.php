@@ -362,6 +362,16 @@ class ValidationRules {
             'birthdate' => [
                 InputValidator::REQUIRED,
                 InputValidator::DATE
+            ],
+            'status' => [
+                [InputValidator::IN_ARRAY, [
+                    'active', 'inactive', 'moved', 
+                    'no_calling', 'deceased', 'unknown'
+                ]]
+            ],
+            'status_notes' => [
+                InputValidator::STRING,
+                [InputValidator::MAX_LENGTH, 500]
             ]
         ];
     }
@@ -459,6 +469,32 @@ class ValidationRules {
                 InputValidator::INTEGER
             ]
         ];
+    }
+    
+    /**
+     * Get member status options
+     * 
+     * @return array Associative array of status values and display names
+     */
+    public static function getMemberStatuses() {
+        return [
+            'active' => 'Active',
+            'inactive' => 'Inactive', 
+            'moved' => 'Moved Away',
+            'no_calling' => 'No Current Calling',
+            'deceased' => 'Deceased',
+            'unknown' => 'Status Unknown'
+        ];
+    }
+    
+    /**
+     * Get status options that should appear in calling assignments
+     * (excludes moved, deceased, etc.)
+     * 
+     * @return array Status values for calling-eligible members
+     */
+    public static function getCallingEligibleStatuses() {
+        return ['active', 'no_calling'];
     }
 }
 ?>

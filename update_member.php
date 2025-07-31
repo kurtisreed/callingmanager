@@ -23,7 +23,9 @@ $columnsToUpdate = [
     'first-name' => 'first_name',
     'last-name' => 'last_name',
     'gender' => 'gender',
-    'birthdate' => 'birthdate'
+    'birthdate' => 'birthdate',
+    'member-status' => 'status',
+    'status-notes' => 'status_notes'
 ];
 
 // Construct the update query with sanitized values
