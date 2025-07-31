@@ -455,6 +455,7 @@ function simulateUserSelections(memberId, callingId, memberName, callingName) {
         
         // This is what happens when user selects a calling:
         fetchCallingMembers(callingId, callingName);
+        fetchOtherCandidates(callingId);
         
         // This is what happens after both selections:
         setTimeout(() => {
@@ -1132,6 +1133,13 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             document.getElementById('member-callings-container').innerHTML = ''; // Clear the table if no member is selected
         }
+        
+        // Refresh other candidates list if a calling is selected
+        const callingId = document.getElementById('calling-select').value;
+        if (callingId) {
+            fetchOtherCandidates(callingId);
+        }
+        
         updateChangesPreview();
     });
     
@@ -1190,13 +1198,19 @@ function makeProposedChanges() {
         return;
     }
     
+    // Check if we need to handle possible_callings updates
+    const removeOtherCandidatesCheckbox = document.getElementById('remove-other-candidates-checkbox');
+    const shouldRemoveOtherCandidates = removeOtherCandidatesCheckbox && removeOtherCandidatesCheckbox.checked;
+
     // Prepare data for the new endpoint
     const changeData = {
         member_id: selectedMember || null,
         calling_id: selectedCalling || null,
         change_date: changeDate,
         member_releases: memberReleases,
-        calling_releases: callingReleases
+        calling_releases: callingReleases,
+        update_possible_callings: selectedMember && selectedCalling ? true : false,
+        remove_other_candidates: shouldRemoveOtherCandidates
     };
     
     console.log('Sending change data:', changeData);
@@ -1518,11 +1532,60 @@ document.getElementById('calling-select').addEventListener('change', function() 
     if (callingId) {
         const callingName = this.options[this.selectedIndex].text;
         fetchCallingMembers(callingId, callingName);
+        fetchOtherCandidates(callingId);
     } else {
         document.getElementById('calling-members-container').innerHTML = ''; // Clear the table if no calling is selected
+        hideOtherCandidatesSection();
     }
     updateChangesPreview();
 });
+
+// Function to fetch other members being considered for the same calling
+function fetchOtherCandidates(callingId) {
+    const selectedMemberId = document.getElementById('member-select').value;
+    
+    fetch(`get_possible_callings.php?newCalling=${callingId}`)
+        .then(response => response.json())
+        .then(data => {
+            // Filter out the currently selected member
+            const otherCandidates = data.filter(candidate => 
+                candidate['Member ID'] != selectedMemberId
+            );
+            
+            displayOtherCandidates(otherCandidates);
+        })
+        .catch(error => {
+            console.error('Error fetching other candidates:', error);
+            hideOtherCandidatesSection();
+        });
+}
+
+// Function to display other candidates in the checkbox section
+function displayOtherCandidates(candidates) {
+    const section = document.getElementById('remove-other-candidates-section');
+    const list = document.getElementById('other-candidates-list');
+    
+    if (candidates.length === 0) {
+        hideOtherCandidatesSection();
+        return;
+    }
+    
+    const candidateNames = candidates.map(candidate => 
+        `${candidate['First Name']} ${candidate['Last Name']}`
+    ).join(', ');
+    
+    list.textContent = candidateNames;
+    section.style.display = 'block';
+}
+
+// Function to hide the other candidates section
+function hideOtherCandidatesSection() {
+    const section = document.getElementById('remove-other-candidates-section');
+    const checkbox = document.getElementById('remove-other-candidates-checkbox');
+    
+    section.style.display = 'none';
+    checkbox.checked = false;
+}
 
 // Fetch and display members associated with the selected calling
 function fetchCallingMembers(callingId, callingName) {
@@ -2191,7 +2254,7 @@ function loadCallingProcessPage() {
             <div class="left-column">
                 <!-- Filter Section -->
                 <div class="section-header">
-                    <h3>🔍 Filter Process</h3>
+                    <h3>🔍 Filter</h3>
                 </div>
                 <div class="search-section">
                     <div class="search-column">
@@ -2250,8 +2313,8 @@ function loadCallingProcessPage() {
                                 <tr>
                                     <th>Member</th>
                                     <th>Proposed Calling</th>
+                                    <th>Approved Date</th>
                                     <th>Progress</th>
-                                    <th>Proposed Date</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -2288,6 +2351,7 @@ function fetchCallingProcesses() {
     fetch('get_calling_processes.php')
         .then(response => response.json())
         .then(data => {
+            allCallingProcessesData = data; // Store data for filtering
             displayCallingProcesses(data);
             updateProcessStats(data);
         })
@@ -2314,8 +2378,8 @@ function displayCallingProcesses(processes) {
         <tr>
             <td>${process.member_name}</td>
             <td>${process.calling_name}</td>
-            <td>${createProgressIndicator(process.status)}</td>
             <td>${formatDate(process.proposed_date)}</td>
+            <td>${createProgressIndicator(process.status)}</td>
             <td>
                 <div class="process-actions">
                     ${createActionButtons(process)}
@@ -2507,9 +2571,34 @@ function updateProcessStats(processes) {
 
 // Function to filter calling processes
 function filterCallingProcesses() {
-    // This will be implemented to filter the displayed processes
-    // For now, just refresh the data
-    fetchCallingProcesses();
+    const statusFilter = document.getElementById('process-status-filter');
+    const searchInput = document.getElementById('process-search-input');
+    
+    if (!statusFilter || !searchInput) return;
+    
+    const selectedStatus = statusFilter.value.toLowerCase();
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    
+    let filteredData = allCallingProcessesData;
+    
+    // Filter by status if a status is selected
+    if (selectedStatus) {
+        filteredData = filteredData.filter(process => 
+            process.status.toLowerCase() === selectedStatus
+        );
+    }
+    
+    // Filter by search term if search input has text
+    if (searchTerm) {
+        filteredData = filteredData.filter(process => 
+            process.member_name.toLowerCase().includes(searchTerm) ||
+            process.calling_name.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    // Display filtered results
+    displayCallingProcesses(filteredData);
+    updateProcessStats(filteredData);
 }
 
 // Helper function to format dates
@@ -2523,6 +2612,7 @@ let allMembersData = [];
 let allTab2MembersData = [];
 let allTab2CallingsData = [];
 let allCallingsData = [];
+let allCallingProcessesData = [];
 
 // Function to populate the Members dropdown
 function fetchMembers(statusFilter = '') {

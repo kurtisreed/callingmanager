@@ -30,10 +30,11 @@
         <!-- Desktop Tabs -->
         <div class="tabs desktop-tabs">
             <button class="tablinks" id="tab1-title" onclick="openTab(event, 'Tab1')">Callings Overview</button>
+            <button class="tablinks" id="tab5-title" onclick="openTab(event, 'Tab5')">Callings in Process</button>
             <button class="tablinks" id="tab2-title" onclick="openTab(event, 'Tab2')">Assign/Release Callings</button>
             <button class="tablinks" id="tab3-title" onclick="openTab(event, 'Tab3')">Member Information</button>
             <button class="tablinks" id="tab4-title" onclick="openTab(event, 'Tab4')">Calling Information</button>
-            <button class="tablinks" id="tab5-title" onclick="openTab(event, 'Tab5')">Calling Process</button>
+            
         </div>
         
         <!-- Mobile Menu -->
@@ -44,10 +45,11 @@
             </button>
             <div class="mobile-dropdown" id="mobile-dropdown">
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab1')">Callings Overview</button>
+                <button class="mobile-tablink" onclick="openTab(event, 'Tab5')">Callings in Process</button>
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab2')">Assign/Release Callings</button>
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab3')">Member Information</button>
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab4')">Calling Information</button>
-                <button class="mobile-tablink" onclick="openTab(event, 'Tab5')">Calling Process</button>
+                
             </div>
         </div>
     </div>
@@ -167,6 +169,17 @@
                             <div id="changes-preview" style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin-bottom: 20px; display: none;">
                                 <h5 style="margin: 0 0 10px 0; color: #495057;">Changes to be made:</h5>
                                 <div id="changes-text" style="color: #212529; font-weight: 500;"></div>
+                            </div>
+                            
+                            <div id="remove-other-candidates-section" style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin-bottom: 20px; display: none;">
+                                <h5 style="margin: 0 0 10px 0; color: #495057;">Other candidates for this calling:</h5>
+                                <label style="color: #212529; font-weight: 500;">
+                                    <input type="checkbox" id="remove-other-candidates-checkbox">
+                                    Remove all other members under consideration for this calling:
+                                </label>
+                                <div id="other-candidates-list" style="margin-left: 20px; margin-top: 10px; font-style: italic; color: #666;">
+                                    <!-- Other candidates will be listed here -->
+                                </div>
                             </div>
                             
                             <label for="date_set_apart">Date of Change:</label>
