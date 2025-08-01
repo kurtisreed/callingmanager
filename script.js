@@ -2416,7 +2416,7 @@ function createActionButtons(process) {
         'approved': 'Mark Interviewed',
         'interviewed': 'Mark Sustained',
         'sustained': 'Mark Set Apart',
-        'set_apart': 'Complete Process'
+        'set_apart': 'Finalize Calling'
     };
     
     const nextAction = nextActions[process.status];
