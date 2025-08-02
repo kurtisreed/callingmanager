@@ -11,6 +11,7 @@ require_once 'db_connect.php';
 try {
     // Query to get vacant callings (callings without current assignments)
     $sql = "SELECT 
+                c.calling_id,
                 c.calling_name,
                 c.organization,
                 c.grouping,
@@ -32,6 +33,7 @@ try {
     $details = [];
     while ($row = $result->fetch_assoc()) {
         $details[] = [
+            'calling_id' => $row['calling_id'],
             'calling_name' => $row['calling_name'],
             'organization' => $row['organization'],
             'grouping' => $row['grouping'] ?: 'N/A'

@@ -64,9 +64,6 @@ function openTab(evt, tabName, data = null) {
         loadCallingsForm();
     }
     
-    if (tabName === 'Tab5') {
-        loadCallingProcessPage();
-    }
     
     // Update mobile menu current tab text
     updateMobileTabText(tabName);    
@@ -87,8 +84,7 @@ function updateMobileTabText(tabName) {
             'Tab1': 'Callings Overview',
             'Tab2': 'Assign/Release Callings', 
             'Tab3': 'Member Information',
-            'Tab4': 'Calling Information',
-            'Tab5': 'Calling Process'
+            'Tab4': 'Calling Information'
         };
         currentTabText.textContent = tabTexts[tabName] || 'Menu';
     }
@@ -961,8 +957,8 @@ function addToCallingProcess(memberId, callingId) {
         if (result.success) {
             alert(`✓ ${result.message}\n\nThe calling has been added to the process and can be managed in the Calling Process tab.`);
             closePopup();
-            // Optionally redirect to the calling process tab
-            openTab(null, 'Tab5');
+            // Optionally redirect to the dashboard tab
+            openTab(null, 'Tab0');
         } else {
             alert(`Error: ${result.message}`);
         }
@@ -2313,150 +2309,30 @@ function loadCallingsForm() {
     fetchCallings(); // Populate dropdown
 }
 
-// Function to load the Calling Process page
-function loadCallingProcessPage() {
-    const container = document.getElementById('calling-process-container');
-    container.innerHTML = `
-        <div class="two-column-layout">
-            <!-- Left Column: Controls -->
-            <div class="left-column">
-                <!-- Filter Section -->
-                <div class="section-header">
-                    <h3>🔍 Filter</h3>
-                </div>
-                <div class="search-section">
-                    <div class="search-column">
-                        <div class="filter-field">
-                            <label for="process-status-filter">Status:</label>
-                            <select id="process-status-filter">
-                                <option value="">All Statuses</option>
-                                <option value="approved">Approved</option>
-                                <option value="interviewed">Interviewed</option>
-                                <option value="sustained">Sustained</option>
-                                <option value="set_apart">Set Apart</option>
-                            </select>
-                        </div>
-                        <div class="search-field">
-                            <label for="process-search-input">Search:</label>
-                            <input type="text" id="process-search-input" placeholder="Member or calling name..." />
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Stats Section -->
-                <div class="section-header">
-                    <h3>📊 Next Step</h3>
-                </div>
-                <div class="details-section">
-                    <div id="process-stats">
-                        <div class="stat-item">
-                            <span class="stat-label">Interview:</span>
-                            <span class="stat-value" id="stat-approved">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Sustained:</span>
-                            <span class="stat-value" id="stat-interviewed">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Set Apart:</span>
-                            <span class="stat-value" id="stat-sustained">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Finalized:</span>
-                            <span class="stat-value" id="stat-set-apart">0</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Right Column: Process Table -->
-            <div class="right-column">
-                <div class="section-header">
-                    <h3>📋 Callings in Process</h3>
-                </div>
-                <div class="details-section">
-                    <div id="calling-process-table-container">
-                        <table id="calling-process-table">
-                            <thead>
-                                <tr>
-                                    <th>Member</th>
-                                    <th>Proposed Calling</th>
-                                    <th>Progress</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="process-table-body">
-                                <tr>
-                                    <td colspan="4" class="no-data">Loading calling processes...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Add event listeners
-    const statusFilter = document.getElementById('process-status-filter');
-    const searchInput = document.getElementById('process-search-input');
-    
-    if (statusFilter) {
-        statusFilter.addEventListener('change', filterCallingProcesses);
-    }
-    
-    if (searchInput) {
-        searchInput.addEventListener('input', filterCallingProcesses);
-    }
-    
-    // Load the calling processes
-    fetchCallingProcesses();
-}
-
-// Function to fetch calling processes from server
+// Function to fetch calling processes from server (for action refreshes)
 function fetchCallingProcesses() {
     fetch('get_calling_processes.php')
         .then(response => response.json())
         .then(data => {
             allCallingProcessesData = data; // Store data for filtering
-            displayCallingProcesses(data);
+            
+            // If we're currently showing a process detail view, update it
+            const activeProcessStat = document.querySelector('.clickable-process-stat.active-stat');
+            if (activeProcessStat) {
+                const statusType = activeProcessStat.dataset.processStatus;
+                displayCallingProcessTable(data, statusType);
+            }
+            
+            // Update both dashboard stats and old-style stats
+            updateDashboardProcessStats(data);
             updateProcessStats(data);
         })
         .catch(error => {
             console.error('Error fetching calling processes:', error);
-            const tbody = document.getElementById('process-table-body');
-            if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="4" class="error">Error loading calling processes.</td></tr>';
-            }
         });
 }
 
-// Function to display calling processes in the table
-function displayCallingProcesses(processes) {
-    const tbody = document.getElementById('process-table-body');
-    if (!tbody) return;
-    
-    if (processes.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="no-data">No callings currently in process.</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = processes.map(process => `
-        <tr>
-            <td>${process.member_name}</td>
-            <td>${process.calling_name}</td>
-            <td>${createProgressIndicator(process)}</td>
-            <td>
-                <div class="process-actions">
-                    ${createActionButtons(process)}
-                </div>
-            </td>
-        </tr>
-    `).join('');
-    
-    // Add event listeners for action buttons
-    addProcessActionListeners();
-}
 
 // Function to create visual progress indicator
 function createProgressIndicator(process) {
@@ -2622,7 +2498,7 @@ function cancelCallingProcess(id) {
     });
 }
 
-// Function to update process statistics
+// Function to update process statistics (for old calling process elements)
 function updateProcessStats(processes) {
     const stats = {
         approved: 0,
@@ -2637,42 +2513,16 @@ function updateProcessStats(processes) {
         }
     });
     
-    document.getElementById('stat-approved').textContent = stats.approved;
-    document.getElementById('stat-interviewed').textContent = stats.interviewed;
-    document.getElementById('stat-sustained').textContent = stats.sustained;
-    document.getElementById('stat-set-apart').textContent = stats.set_apart;
-}
-
-// Function to filter calling processes
-function filterCallingProcesses() {
-    const statusFilter = document.getElementById('process-status-filter');
-    const searchInput = document.getElementById('process-search-input');
+    // Update old-style stat elements if they exist
+    const statApproved = document.getElementById('stat-approved');
+    const statInterviewed = document.getElementById('stat-interviewed');
+    const statSustained = document.getElementById('stat-sustained');
+    const statSetApart = document.getElementById('stat-set-apart');
     
-    if (!statusFilter || !searchInput) return;
-    
-    const selectedStatus = statusFilter.value.toLowerCase();
-    const searchTerm = searchInput.value.toLowerCase().trim();
-    
-    let filteredData = allCallingProcessesData;
-    
-    // Filter by status if a status is selected
-    if (selectedStatus) {
-        filteredData = filteredData.filter(process => 
-            process.status.toLowerCase() === selectedStatus
-        );
-    }
-    
-    // Filter by search term if search input has text
-    if (searchTerm) {
-        filteredData = filteredData.filter(process => 
-            process.member_name.toLowerCase().includes(searchTerm) ||
-            process.calling_name.toLowerCase().includes(searchTerm)
-        );
-    }
-    
-    // Display filtered results
-    displayCallingProcesses(filteredData);
-    updateProcessStats(filteredData);
+    if (statApproved) statApproved.textContent = stats.approved;
+    if (statInterviewed) statInterviewed.textContent = stats.interviewed;
+    if (statSustained) statSustained.textContent = stats.sustained;
+    if (statSetApart) statSetApart.textContent = stats.set_apart;
 }
 
 // Helper function to format dates
@@ -2742,6 +2592,35 @@ function loadDashboard() {
                         </div>
                     </div>
                 </div>
+
+                <!-- Callings in Process Section -->
+                <div class="section-header">
+                    <h3>📋 Callings in Process</h3>
+                </div>
+                <div class="details-section">
+                    <div id="process-stats">
+                        <div class="stat-item clickable-process-stat" data-process-status="all">
+                            <span class="stat-label">All:</span>
+                            <span class="stat-value" id="stat-all">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-process-stat" data-process-status="approved">
+                            <span class="stat-label">Interview pending:</span>
+                            <span class="stat-value" id="stat-approved">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-process-stat" data-process-status="interviewed">
+                            <span class="stat-label">Sustained pending:</span>
+                            <span class="stat-value" id="stat-interviewed">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-process-stat" data-process-status="sustained">
+                            <span class="stat-label">Set Apart pending:</span>
+                            <span class="stat-value" id="stat-sustained">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-process-stat" data-process-status="set_apart">
+                            <span class="stat-label">Finalized pending:</span>
+                            <span class="stat-value" id="stat-set-apart">Loading...</span>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Right Column: Detail Display -->
@@ -2760,9 +2639,11 @@ function loadDashboard() {
     
     // Load the stats data
     fetchDashboardStats();
+    fetchProcessStats();
     
     // Add click event listeners to stats
     addDashboardStatClickHandlers();
+    addProcessStatClickHandlers();
 }
 
 // Function to fetch dashboard statistics
@@ -2810,6 +2691,141 @@ function addDashboardStatClickHandlers() {
             showStatDetails(statType, statLabel);
         });
     });
+}
+
+// Function to fetch process statistics
+function fetchProcessStats() {
+    fetch('get_calling_processes.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.message);
+            }
+            updateDashboardProcessStats(data);
+        })
+        .catch(error => {
+            console.error('Error fetching process stats:', error);
+            // Set error states
+            document.getElementById('stat-all').textContent = 'Error';
+            document.getElementById('stat-approved').textContent = 'Error';
+            document.getElementById('stat-interviewed').textContent = 'Error';
+            document.getElementById('stat-sustained').textContent = 'Error';
+            document.getElementById('stat-set-apart').textContent = 'Error';
+        });
+}
+
+// Function to update process stats display
+function updateDashboardProcessStats(processes) {
+    const stats = {
+        all: processes.length,
+        approved: 0,
+        interviewed: 0,
+        sustained: 0,
+        set_apart: 0
+    };
+    
+    processes.forEach(process => {
+        if (stats.hasOwnProperty(process.status)) {
+            stats[process.status]++;
+        }
+    });
+    
+    document.getElementById('stat-all').textContent = stats.all;
+    document.getElementById('stat-approved').textContent = stats.approved;
+    document.getElementById('stat-interviewed').textContent = stats.interviewed;
+    document.getElementById('stat-sustained').textContent = stats.sustained;
+    document.getElementById('stat-set-apart').textContent = stats.set_apart;
+}
+
+// Function to add click handlers to process stats
+function addProcessStatClickHandlers() {
+    const clickableStats = document.querySelectorAll('.clickable-process-stat');
+    clickableStats.forEach(stat => {
+        stat.addEventListener('click', function() {
+            const statusType = this.dataset.processStatus;
+            const statLabel = this.querySelector('.stat-label').textContent;
+            showProcessDetails(statusType, statLabel);
+        });
+    });
+}
+
+// Function to show detailed process information for a selected status
+function showProcessDetails(statusType, statLabel) {
+    // Update header
+    document.getElementById('detail-header').textContent = `📋 Callings in Process - ${statLabel}`;
+    
+    // Show loading state
+    document.getElementById('dashboard-detail-content').innerHTML = '<p>Loading calling processes...</p>';
+    
+    // Remove active class from all stats and add to clicked one
+    document.querySelectorAll('.clickable-stat').forEach(s => s.classList.remove('active-stat'));
+    document.querySelectorAll('.clickable-process-stat').forEach(s => s.classList.remove('active-stat'));
+    document.querySelector(`[data-process-status="${statusType}"]`).classList.add('active-stat');
+    
+    // Fetch and display calling process data
+    fetch('get_calling_processes.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.message);
+            }
+            allCallingProcessesData = data; // Store data for action buttons
+            displayCallingProcessTable(data, statusType);
+        })
+        .catch(error => {
+            console.error('Error fetching calling processes:', error);
+            document.getElementById('dashboard-detail-content').innerHTML = 
+                '<p class="error">Error loading calling processes. Please try again.</p>';
+        });
+}
+
+// Function to display calling process table in dashboard
+function displayCallingProcessTable(processes, statusFilter) {
+    // Filter processes based on status
+    let filteredProcesses = processes;
+    if (statusFilter && statusFilter !== 'all') {
+        filteredProcesses = processes.filter(process => process.status === statusFilter);
+    }
+    
+    const container = document.getElementById('dashboard-detail-content');
+    
+    if (filteredProcesses.length === 0) {
+        container.innerHTML = '<p>No calling processes found for this status.</p>';
+        return;
+    }
+    
+    // Generate table HTML
+    const tableHTML = `
+        <table class="detail-table process-table">
+            <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>Proposed Calling</th>
+                    <th>Progress</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${filteredProcesses.map(process => `
+                    <tr>
+                        <td>${process.member_name}</td>
+                        <td>${process.calling_name}</td>
+                        <td>${createProgressIndicator(process)}</td>
+                        <td>
+                            <div class="process-actions">
+                                ${createActionButtons(process)}
+                            </div>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = tableHTML;
+    
+    // Add event listeners for action buttons
+    addProcessActionListeners();
 }
 
 // Function to show detailed information for a selected stat
@@ -2873,9 +2889,11 @@ function displayStatDetails(data, statType) {
     tableHTML += '</tbody></table>';
     container.innerHTML = tableHTML;
     
-    // Add click handlers for callings under consideration
+    // Add click handlers for callings under consideration and vacant callings
     if (statType === 'callings-under-consideration') {
         makeCallingsUnderConsiderationClickable(data);
+    } else if (statType === 'vacant-callings') {
+        makeVacantCallingsClickable(data);
     }
 }
 
@@ -2925,6 +2943,22 @@ function getDetailTableValues(item, statType) {
 
 // Function to make table rows clickable for callings under consideration
 function makeCallingsUnderConsiderationClickable(data) {
+    const rows = document.querySelectorAll('.detail-table tbody tr');
+    rows.forEach((row, index) => {
+        if (data[index]) {
+            row.style.cursor = 'pointer';
+            row.classList.add('clickable-row');
+            row.addEventListener('click', function() {
+                const callingName = data[index].calling_name;
+                const callingId = data[index].calling_id;
+                openCallingCandidatesModal(callingName, callingId);
+            });
+        }
+    });
+}
+
+// Function to make table rows clickable for vacant callings
+function makeVacantCallingsClickable(data) {
     const rows = document.querySelectorAll('.detail-table tbody tr');
     rows.forEach((row, index) => {
         if (data[index]) {

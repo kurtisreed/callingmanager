@@ -1449,6 +1449,24 @@ textarea:focus {
     border-left: 3px solid #2196F3;
 }
 
+/* Dashboard clickable process stats */
+.clickable-process-stat {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-radius: 4px;
+    padding: 5px;
+    margin: 2px 0;
+}
+
+.clickable-process-stat:hover {
+    background-color: #f0f0f0;
+}
+
+.clickable-process-stat.active-stat {
+    background-color: #e3f2fd;
+    border-left: 3px solid #2196F3;
+}
+
 /* Dashboard detail table */
 .detail-table {
     width: 100%;
