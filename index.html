@@ -227,36 +227,51 @@
     <button class="close-btn" onclick="closePopup()">✕ Close</button>
     <div class="modal-content">
         <h2 id="popup-title"></h2>
-        <h4>Search & Filters:</h4>
+        
+        <div class="section-header">
+            <h3>🔍 Choose Candidates</h3>
+        </div>
         
         <label for="candidate-search">Search by Name:</label>
         <input type="text" id="candidate-search" placeholder="Type name to search..." oninput="applyFilters()" />
         
-        <!-- Filter container to hold gender and age filters side by side -->
+        <!-- Filter container to hold gender and age filters -->
         <div class="filter-container">
+            <div class="filter-item">
+                <label for="gender-filter">Gender</label>
+                <select id="gender-filter" onchange="applyFilters()">
+                    <option value="">All</option>
+                    <option value="M">Male</option>
+                    <option value="F">Female</option>
+                </select>
+            </div>
             
-            <label for="gender-filter">Gender</label>
-            <select id="gender-filter" onchange="applyFilters()">
-                <option value="">All</option>
-                <option value="M">Male</option>
-                <option value="F">Female</option>
-            </select>
-            
-            <label for="age-filter">Age</label>
-            <select id="age-filter" onchange="applyFilters()">
-                <option value="">All</option>
-                <option value="under_18">Under 18</option>
-                <option value="18_plus">18+</option>
-            </select>
+            <div class="filter-item">
+                <label for="age-filter">Age</label>
+                <select id="age-filter" onchange="applyFilters()">
+                    <option value="">All</option>
+                    <option value="under_18">Under 18</option>
+                    <option value="18_plus">18+</option>
+                </select>
+            </div>
         </div>
         
-        <label for="callingDropdown">Candidates:</label>
+        <label for="callingDropdown">Select Candidate:</label>
         <select id="callingDropdown">
             <option value="">Select a Candidate</option>
         </select>
         
+        <div class="section-header">
+            <h3>👥 Candidates</h3>
+        </div>
+        
         <div id="selectionList"></div>
-        <label for="candidate-notes">Notes:</label>
+        
+        <div class="section-header">
+            <h3>📝 Notes</h3>
+        </div>
+        
+        <label for="candidate-notes">Additional Notes:</label>
         <textarea id="candidate-notes" class="custom-textarea"></textarea>
     </div>
 </div>

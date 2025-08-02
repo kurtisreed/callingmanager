@@ -1786,8 +1786,8 @@ function loadMembersForm() {
                     </div>
                     <div class="action-buttons">
                         <button id="add-member-btn" type="button" class="action-btn save-btn" onclick="openAddMemberModal()">+ Add New Member</button>
-                        <button type="button" id="edit-btn" class="action-btn edit-btn">Edit Member</button>
-                        <button type="button" id="remove-member-btn" class="action-btn remove-btn">Remove Member</button>
+                        <button type="button" id="edit-btn" class="action-btn edit-btn" style="display: none;">Edit Member</button>
+                        <button type="button" id="remove-member-btn" class="action-btn remove-btn" style="display: none;">Remove Member</button>
                         <button type="button" id="save-btn" class="action-btn save-btn" style="display: none;">Save Changes</button>
                         <button type="button" id="cancel-btn" class="action-btn cancel-btn" style="display: none;">Cancel</button>
                     </div>
@@ -2036,8 +2036,8 @@ function loadCallingsForm() {
                     </div>
                     <div class="action-buttons">
                         <button id="add-calling-btn" type="button" class="action-btn save-btn" onclick="openAddCallingModal()">+ Add New Calling</button>
-                        <button type="button" id="edit-calling-btn" class="action-btn edit-btn">Edit Calling</button>
-                        <button type="button" id="remove-calling-btn" class="action-btn remove-btn">Remove Calling</button>
+                        <button type="button" id="edit-calling-btn" class="action-btn edit-btn" style="display: none;">Edit Calling</button>
+                        <button type="button" id="remove-calling-btn" class="action-btn remove-btn" style="display: none;">Remove Calling</button>
                         <button type="button" id="save-calling-btn" class="action-btn save-btn" style="display: none;">Save Changes</button>
                         <button type="button" id="cancel-calling-btn" class="action-btn cancel-btn" style="display: none;">Cancel</button>
                     </div>
@@ -2649,9 +2649,22 @@ function displayMembers(membersData) {
     if (!memberSelect.hasAttribute('data-listener-added')) {
         memberSelect.addEventListener('change', function () {
             const memberId = this.value;
-            if (memberId) fetchMemberDetails(memberId);
-            if (memberId) fetchCallingsForMember(memberId);
-            if (memberId) fetchPossibleCallingsForMember(memberId);
+            const editBtn = document.getElementById('edit-btn');
+            const removeBtn = document.getElementById('remove-member-btn');
+            
+            if (memberId) {
+                fetchMemberDetails(memberId);
+                fetchCallingsForMember(memberId);
+                fetchPossibleCallingsForMember(memberId);
+                
+                // Show Edit and Remove buttons when member is selected
+                if (editBtn) editBtn.style.display = 'inline-block';
+                if (removeBtn) removeBtn.style.display = 'inline-block';
+            } else {
+                // Hide Edit and Remove buttons when no member is selected
+                if (editBtn) editBtn.style.display = 'none';
+                if (removeBtn) removeBtn.style.display = 'none';
+            }
         });
         memberSelect.setAttribute('data-listener-added', 'true');
     }
@@ -2741,9 +2754,22 @@ function displayCallings(callingsData) {
     if (!callingSelect.hasAttribute('data-listener-added')) {
         callingSelect.addEventListener('change', function () {
             const callingId = this.value;
-            if (callingId) fetchCallingDetails(callingId);
-            if (callingId) fetchMembersForCalling(callingId);
-            if (callingId) fetchPossibleMembersForCalling(callingId);
+            const editBtn = document.getElementById('edit-calling-btn');
+            const removeBtn = document.getElementById('remove-calling-btn');
+            
+            if (callingId) {
+                fetchCallingDetails(callingId);
+                fetchMembersForCalling(callingId);
+                fetchPossibleMembersForCalling(callingId);
+                
+                // Show Edit and Remove buttons when calling is selected
+                if (editBtn) editBtn.style.display = 'inline-block';
+                if (removeBtn) removeBtn.style.display = 'inline-block';
+            } else {
+                // Hide Edit and Remove buttons when no calling is selected
+                if (editBtn) editBtn.style.display = 'none';
+                if (removeBtn) removeBtn.style.display = 'none';
+            }
         });
         callingSelect.setAttribute('data-listener-added', 'true');
     }
