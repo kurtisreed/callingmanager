@@ -29,6 +29,7 @@
     <div class="tabs-container">
         <!-- Desktop Tabs -->
         <div class="tabs desktop-tabs">
+            <button class="tablinks" id="tab0-title" onclick="openTab(event, 'Tab0')">Dashboard</button>
             <button class="tablinks" id="tab1-title" onclick="openTab(event, 'Tab1')">Callings Overview</button>
             <button class="tablinks" id="tab5-title" onclick="openTab(event, 'Tab5')">Callings in Process</button>
             <button class="tablinks" id="tab2-title" onclick="openTab(event, 'Tab2')">Assign/Release Callings</button>
@@ -44,6 +45,7 @@
                 <span class="current-tab-text">Callings Overview</span>
             </button>
             <div class="mobile-dropdown" id="mobile-dropdown">
+                <button class="mobile-tablink" onclick="openTab(event, 'Tab0')">Dashboard</button>
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab1')">Callings Overview</button>
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab5')">Callings in Process</button>
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab2')">Assign/Release Callings</button>
@@ -56,6 +58,10 @@
 
     <!-- Context-sensitive sub-bar -->
     <div class="sub-bar">
+        <div id="subbar-Tab0" class="subcontent">
+            <!-- Options for Dashboard -->
+        </div>
+        
         <div id="subbar-Tab1" class="subcontent">
             <!-- Options for Tab 1 -->
 
@@ -97,6 +103,12 @@
     </div>
 
     <!-- Tab Content -->
+    <div id="Tab0" class="tabcontent">
+        <div class="large-box" id="dashboard-container">
+            <!-- Dashboard content will be dynamically generated here -->
+        </div>
+    </div>
+    
     <div id="Tab1" class="tabcontent">
         <div class="large-box" id="large-box">
 
@@ -224,7 +236,7 @@
 
 <!-- Calling candidates Popup Modal -->
 <div id="popup-modal" class="modal">
-    <button class="close-btn" onclick="closePopup()">✕ Close</button>
+    <button class="close-btn" onclick="closePopup()">✕ Save and Close</button>
     <div class="modal-content">
         <h2 id="popup-title"></h2>
         
@@ -262,7 +274,7 @@
         </select>
         
         <div class="section-header">
-            <h3>👥 Candidates</h3>
+            <h3>👥 Candidates Considered</h3>
         </div>
         
         <div id="selectionList"></div>

@@ -22,6 +22,8 @@ if (!empty($_POST['release_callings'])) {
     $release_callings = json_decode($_POST['release_callings'], true);
 
     foreach ($release_callings as $release_id) {
+        // Use local timezone to get correct date
+        date_default_timezone_set('America/Denver'); // Adjust to your timezone
         $release_date = date('Y-m-d');
         $stmt = $conn->prepare("UPDATE current_callings SET date_released = ? WHERE id = ? AND date_released IS NULL");
         $stmt->bind_param("si", $release_date, $release_id);

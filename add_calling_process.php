@@ -81,6 +81,8 @@ try {
     $callingName = $calling['calling_name'];
     
     // Insert new calling process
+    // Use local timezone to get correct date
+    date_default_timezone_set('America/Denver'); // Adjust to your timezone
     $today = date('Y-m-d');
     $insertSql = "INSERT INTO calling_process (
                     member_id, 

@@ -32,6 +32,11 @@ function openTab(evt, tabName, data = null) {
         handleDataForTab(tabName, data);
     }
     
+    // Initialize Dashboard when Tab0 is opened
+    if (tabName === 'Tab0') {
+        loadDashboard();
+    }
+    
         // Call buildSmallBoxes when Tab1 is opened
     if (tabName === 'Tab1') {
         buildSmallBoxes();
@@ -78,6 +83,7 @@ function updateMobileTabText(tabName) {
     const currentTabText = document.querySelector('.current-tab-text');
     if (currentTabText) {
         const tabTexts = {
+            'Tab0': 'Dashboard',
             'Tab1': 'Callings Overview',
             'Tab2': 'Assign/Release Callings', 
             'Tab3': 'Member Information',
@@ -860,10 +866,72 @@ function loadSelectionList(newCalling) {
 
                 selectionList.appendChild(selectedItem);
             });
+            
+            // After loading all candidates, check for approval status
+            checkApprovalStatus(newCalling);
         })
         .catch(error => {
             console.error('Error fetching possible callings:', error);
         });
+}
+
+// Function to check approval status and update visual state
+function checkApprovalStatus(callingId) {
+    fetch('check_approval_status.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `calling_id=${encodeURIComponent(callingId)}`
+    })
+    .then(response => response.json())
+    .then(approvedCandidates => {
+        if (approvedCandidates.error) {
+            console.error('Error checking approval status:', approvedCandidates.message);
+            return;
+        }
+        
+        // Update visual state for approved candidates
+        approvedCandidates.forEach(candidate => {
+            updateCandidateToApproved(candidate.member_id, candidate.possible_callings_id);
+        });
+    })
+    .catch(error => {
+        console.error('Error fetching approval status:', error);
+    });
+}
+
+// Function to update a candidate's visual state to approved
+function updateCandidateToApproved(memberId, possibleCallingsId) {
+    const selectionList = document.getElementById('selectionList');
+    const candidateItems = selectionList.querySelectorAll('.selected-item');
+    
+    candidateItems.forEach(item => {
+        const itemMemberId = item.getAttribute('data-member-id');
+        const itemPossibleCallingsId = item.getAttribute('data-possible-callings-id');
+        
+        if (itemMemberId === memberId.toString() && 
+            itemPossibleCallingsId === possibleCallingsId.toString()) {
+            
+            // Change background to light green
+            item.style.backgroundColor = '#d4edda';
+            item.style.border = '1px solid #c3e6cb';
+            item.style.padding = '8px';
+            item.style.borderRadius = '4px';
+            
+            // Find and update the checkmark to show approved status
+            const checkButton = item.querySelector('.check-btn');
+            if (checkButton) {
+                checkButton.textContent = '✔ APPROVED - IN PROCESS';
+                checkButton.style.color = '#28a745';
+                checkButton.style.fontWeight = 'bold';
+                checkButton.style.cursor = 'default';
+                
+                // Remove click event listener
+                checkButton.replaceWith(checkButton.cloneNode(true));
+            }
+        }
+    });
 }
 
 //function to handle the green checkmarks
@@ -2277,24 +2345,24 @@ function loadCallingProcessPage() {
 
                 <!-- Stats Section -->
                 <div class="section-header">
-                    <h3>📊 Process Stats</h3>
+                    <h3>📊 Next Step</h3>
                 </div>
                 <div class="details-section">
                     <div id="process-stats">
                         <div class="stat-item">
-                            <span class="stat-label">Approved:</span>
+                            <span class="stat-label">Interview:</span>
                             <span class="stat-value" id="stat-approved">0</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">Interviewed:</span>
+                            <span class="stat-label">Sustained:</span>
                             <span class="stat-value" id="stat-interviewed">0</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">Sustained:</span>
+                            <span class="stat-label">Set Apart:</span>
                             <span class="stat-value" id="stat-sustained">0</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">Set Apart:</span>
+                            <span class="stat-label">Finalized:</span>
                             <span class="stat-value" id="stat-set-apart">0</span>
                         </div>
                     </div>
@@ -2313,14 +2381,13 @@ function loadCallingProcessPage() {
                                 <tr>
                                     <th>Member</th>
                                     <th>Proposed Calling</th>
-                                    <th>Approved Date</th>
                                     <th>Progress</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="process-table-body">
                                 <tr>
-                                    <td colspan="5" class="no-data">Loading calling processes...</td>
+                                    <td colspan="4" class="no-data">Loading calling processes...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2359,7 +2426,7 @@ function fetchCallingProcesses() {
             console.error('Error fetching calling processes:', error);
             const tbody = document.getElementById('process-table-body');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="5" class="error">Error loading calling processes.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="error">Error loading calling processes.</td></tr>';
             }
         });
 }
@@ -2370,7 +2437,7 @@ function displayCallingProcesses(processes) {
     if (!tbody) return;
     
     if (processes.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="no-data">No callings currently in process.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="no-data">No callings currently in process.</td></tr>';
         return;
     }
     
@@ -2378,8 +2445,7 @@ function displayCallingProcesses(processes) {
         <tr>
             <td>${process.member_name}</td>
             <td>${process.calling_name}</td>
-            <td>${formatDate(process.proposed_date)}</td>
-            <td>${createProgressIndicator(process.status)}</td>
+            <td>${createProgressIndicator(process)}</td>
             <td>
                 <div class="process-actions">
                     ${createActionButtons(process)}
@@ -2393,19 +2459,27 @@ function displayCallingProcesses(processes) {
 }
 
 // Function to create visual progress indicator
-function createProgressIndicator(status) {
+function createProgressIndicator(process) {
     const steps = ['approved', 'interviewed', 'sustained', 'set_apart'];
     const stepLabels = ['Approved', 'Interviewed', 'Sustained', 'Set Apart'];
-    const currentIndex = steps.indexOf(status);
+    const dateFields = ['approved_date', 'interviewed_date', 'sustained_date', 'set_apart_date'];
+    const currentIndex = steps.indexOf(process.status);
     
     return `
         <div class="progress-indicator">
-            ${steps.map((step, index) => `
-                <div class="progress-step ${index <= currentIndex ? 'completed' : 'pending'}">
-                    <div class="step-icon">${index <= currentIndex ? '✓' : '○'}</div>
-                    <div class="step-label">${stepLabels[index]}</div>
-                </div>
-            `).join('<div class="step-connector"></div>')}
+            ${steps.map((step, index) => {
+                const isCompleted = index <= currentIndex;
+                const stepDate = process[dateFields[index]];
+                const formattedDate = stepDate ? formatDate(stepDate) : '';
+                
+                return `
+                    <div class="progress-step ${isCompleted ? 'completed' : 'pending'}">
+                        <div class="step-icon">${isCompleted ? '✓' : '○'}</div>
+                        <div class="step-label">${stepLabels[index]}</div>
+                        ${formattedDate ? `<div class="step-date">${formattedDate}</div>` : ''}
+                    </div>
+                `;
+            }).join('<div class="step-connector"></div>')}
         </div>
     `;
 }
@@ -2603,6 +2677,15 @@ function filterCallingProcesses() {
 
 // Helper function to format dates
 function formatDate(dateString) {
+    if (!dateString) return '';
+    
+    // If dateString is already in YYYY-MM-DD format, just reformat it
+    if (dateString.match(/^\d{4}-\d{2}-\d{2}/)) {
+        const [year, month, day] = dateString.split(' ')[0].split('-');
+        return `${month}/${day}/${year}`;
+    }
+    
+    // Fallback to original method if format is unexpected
     const date = new Date(dateString);
     return date.toLocaleDateString();
 }
@@ -2613,6 +2696,254 @@ let allTab2MembersData = [];
 let allTab2CallingsData = [];
 let allCallingsData = [];
 let allCallingProcessesData = [];
+
+// Function to load Dashboard content
+function loadDashboard() {
+    const container = document.getElementById('dashboard-container');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="two-column-layout">
+            <!-- Left Column: Stats and Controls -->
+            <div class="left-column">
+                <!-- Quick Stats Section -->
+                <div class="section-header">
+                    <h3>📊 Quick Stats</h3>
+                </div>
+                <div class="details-section">
+                    <div id="dashboard-stats">
+                        <div class="stat-item clickable-stat" data-stat="callings-under-consideration">
+                            <span class="stat-label">Callings under consideration:</span>
+                            <span class="stat-value" id="stat-callings-under-consideration">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-stat" data-stat="members-with-callings">
+                            <span class="stat-label">Members with Callings:</span>
+                            <span class="stat-value" id="stat-members-with-callings">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-stat" data-stat="adults-without-callings">
+                            <span class="stat-label">Adults without Callings:</span>
+                            <span class="stat-value" id="stat-members-without-callings">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-stat" data-stat="members-stake-callings">
+                            <span class="stat-label">Members with Stake Callings:</span>
+                            <span class="stat-value" id="stat-members-stake-callings">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-stat" data-stat="members-multiple-callings">
+                            <span class="stat-label">Members with more than 1 calling:</span>
+                            <span class="stat-value" id="stat-members-multiple-callings">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-stat" data-stat="vacant-callings">
+                            <span class="stat-label">Vacant Callings:</span>
+                            <span class="stat-value" id="stat-vacant-callings">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-stat" data-stat="missionaries">
+                            <span class="stat-label">Missionaries:</span>
+                            <span class="stat-value" id="stat-missionaries">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column: Detail Display -->
+            <div class="right-column">
+                <div class="section-header">
+                    <h3 id="detail-header">📈 Overview</h3>
+                </div>
+                <div class="details-section">
+                    <div id="dashboard-detail-content">
+                        <p>Click a stat on the left to see detailed information.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Load the stats data
+    fetchDashboardStats();
+    
+    // Add click event listeners to stats
+    addDashboardStatClickHandlers();
+}
+
+// Function to fetch dashboard statistics
+function fetchDashboardStats() {
+    fetch('get_dashboard_stats.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.message);
+            }
+            updateDashboardStats(data);
+        })
+        .catch(error => {
+            console.error('Error fetching dashboard stats:', error);
+            // Set error states
+            document.getElementById('stat-callings-under-consideration').textContent = 'Error';
+            document.getElementById('stat-members-with-callings').textContent = 'Error';
+            document.getElementById('stat-members-without-callings').textContent = 'Error';
+            document.getElementById('stat-members-stake-callings').textContent = 'Error';
+            document.getElementById('stat-members-multiple-callings').textContent = 'Error';
+            document.getElementById('stat-vacant-callings').textContent = 'Error';
+            document.getElementById('stat-missionaries').textContent = 'Error';
+        });
+}
+
+// Function to update dashboard stats display
+function updateDashboardStats(data) {
+    // Update the display with data from backend
+    document.getElementById('stat-callings-under-consideration').textContent = data.callings_under_consideration || 0;
+    document.getElementById('stat-members-with-callings').textContent = data.members_with_callings || 0;
+    document.getElementById('stat-members-without-callings').textContent = data.adults_without_callings || 0;
+    document.getElementById('stat-members-stake-callings').textContent = data.members_with_stake_callings || 0;
+    document.getElementById('stat-members-multiple-callings').textContent = data.members_with_multiple_callings || 0;
+    document.getElementById('stat-vacant-callings').textContent = data.vacant_callings || 0;
+    document.getElementById('stat-missionaries').textContent = data.missionaries || 0;
+}
+
+// Function to add click handlers to dashboard stats
+function addDashboardStatClickHandlers() {
+    const clickableStats = document.querySelectorAll('.clickable-stat');
+    clickableStats.forEach(stat => {
+        stat.addEventListener('click', function() {
+            const statType = this.dataset.stat;
+            const statLabel = this.querySelector('.stat-label').textContent;
+            showStatDetails(statType, statLabel);
+        });
+    });
+}
+
+// Function to show detailed information for a selected stat
+function showStatDetails(statType, statLabel) {
+    // Update header
+    document.getElementById('detail-header').textContent = `📋 ${statLabel}`;
+    
+    // Show loading state
+    document.getElementById('dashboard-detail-content').innerHTML = '<p>Loading details...</p>';
+    
+    // Remove active class from all stats and add to clicked one
+    document.querySelectorAll('.clickable-stat').forEach(s => s.classList.remove('active-stat'));
+    document.querySelector(`[data-stat="${statType}"]`).classList.add('active-stat');
+    
+    // Fetch detailed data
+    fetch(`get_${statType.replace(/-/g, '_')}_details.php`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.message);
+            }
+            displayStatDetails(data, statType);
+        })
+        .catch(error => {
+            console.error('Error fetching stat details:', error);
+            document.getElementById('dashboard-detail-content').innerHTML = 
+                '<p class="error">Error loading details. Please try again.</p>';
+        });
+}
+
+// Function to display the detailed stat information
+function displayStatDetails(data, statType) {
+    const container = document.getElementById('dashboard-detail-content');
+    
+    if (!data || data.length === 0) {
+        container.innerHTML = '<p>No items found.</p>';
+        return;
+    }
+    
+    // Generate table based on stat type
+    let tableHTML = '<table class="detail-table"><thead><tr>';
+    
+    // Define headers based on stat type
+    const headers = getDetailTableHeaders(statType);
+    headers.forEach(header => {
+        tableHTML += `<th>${header}</th>`;
+    });
+    
+    tableHTML += '</tr></thead><tbody>';
+    
+    // Add rows
+    data.forEach(item => {
+        tableHTML += '<tr>';
+        const values = getDetailTableValues(item, statType);
+        values.forEach(value => {
+            tableHTML += `<td>${value}</td>`;
+        });
+        tableHTML += '</tr>';
+    });
+    
+    tableHTML += '</tbody></table>';
+    container.innerHTML = tableHTML;
+    
+    // Add click handlers for callings under consideration
+    if (statType === 'callings-under-consideration') {
+        makeCallingsUnderConsiderationClickable(data);
+    }
+}
+
+// Function to get table headers for different stat types
+function getDetailTableHeaders(statType) {
+    switch(statType) {
+        case 'callings-under-consideration':
+            return ['Calling', 'Organization', 'Candidates Being Considered'];
+        case 'members-with-callings':
+            return ['Member', 'Calling(s)', 'Date Set Apart'];
+        case 'adults-without-callings':
+            return ['Member', 'Age', 'Status'];
+        case 'members-stake-callings':
+            return ['Member', 'Stake Calling', 'Date Set Apart'];
+        case 'members-multiple-callings':
+            return ['Member', 'Number of Callings', 'Callings'];
+        case 'vacant-callings':
+            return ['Calling', 'Organization', 'Grouping'];
+        case 'missionaries':
+            return ['Member', 'Mission Assignment', 'Date Started'];
+        default:
+            return ['Name', 'Details'];
+    }
+}
+
+// Function to get table values for different stat types
+function getDetailTableValues(item, statType) {
+    switch(statType) {
+        case 'callings-under-consideration':
+            return [item.calling_name, item.organization, item.candidate_count];
+        case 'members-with-callings':
+            return [item.member_name, item.callings, formatDate(item.date_set_apart)];
+        case 'adults-without-callings':
+            return [item.member_name, item.age, item.status];
+        case 'members-stake-callings':
+            return [item.member_name, item.calling_name, formatDate(item.date_set_apart)];
+        case 'members-multiple-callings':
+            return [item.member_name, item.calling_count, item.callings];
+        case 'vacant-callings':
+            return [item.calling_name, item.organization, item.grouping];
+        case 'missionaries':
+            return [item.member_name, item.calling_name, formatDate(item.date_set_apart)];
+        default:
+            return [item.name || 'Unknown', item.details || 'No details'];
+    }
+}
+
+// Function to make table rows clickable for callings under consideration
+function makeCallingsUnderConsiderationClickable(data) {
+    const rows = document.querySelectorAll('.detail-table tbody tr');
+    rows.forEach((row, index) => {
+        if (data[index]) {
+            row.style.cursor = 'pointer';
+            row.classList.add('clickable-row');
+            row.addEventListener('click', function() {
+                const callingName = data[index].calling_name;
+                const callingId = data[index].calling_id;
+                openCallingCandidatesModal(callingName, callingId);
+            });
+        }
+    });
+}
+
+// Function to open the calling candidates modal from dashboard
+function openCallingCandidatesModal(callingName, callingId) {
+    // Use the existing showPopup function
+    showPopup(callingName, callingId);
+}
 
 // Function to populate the Members dropdown
 function fetchMembers(statusFilter = '') {
