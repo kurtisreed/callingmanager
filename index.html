@@ -374,7 +374,79 @@
     </div>
 </div>
 
+<!-- Update Members Modal -->
+<div id="update-members-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeUpdateMembersModal()">✕ Close</button>
+        <h2>📄 Update Members from PDF</h2>
+        
+        <div class="section-header">
+            <h3>📤 Upload Member List</h3>
+            <div id="last-update-info" class="last-update-info">
+                <!-- Last update info will be loaded here -->
+            </div>
+        </div>
+        
+        <div class="upload-section">
+            <p>Download the Member List PDF at Leader and Clerk Resources -> Membership -> Member Directory -> Print.  Then upload here.</p>
+            
+            <div class="file-upload-container">
+                <input type="file" id="member-pdf-upload" accept=".pdf" onchange="handleMemberPDFUpload(this)" />
+                <label for="member-pdf-upload" class="upload-label">
+                    📄 Choose PDF File
+                </label>
+                <div id="upload-status" class="upload-status"></div>
+            </div>
+            
+            <div id="upload-progress" class="progress-container" style="display: none;">
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+                <div id="progress-text" class="progress-text">Processing...</div>
+            </div>
+        </div>
+        
+        <div id="reconciliation-results" class="reconciliation-section" style="display: none;">
+            <div class="section-header">
+                <h3>🔍 Reconciliation Results</h3>
+            </div>
+            
+            <div class="results-summary">
+                <div class="summary-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">New Members:</span>
+                        <span class="stat-value" id="new-members-count">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Updates:</span>
+                        <span class="stat-value" id="updates-count">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">No Changes:</span>
+                        <span class="stat-value" id="no-changes-count">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Removed:</span>
+                        <span class="stat-value" id="removed-count">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="changes-review" class="changes-review">
+                <!-- Detailed changes will be displayed here -->
+            </div>
+            
+            <div class="action-buttons">
+                <button id="apply-changes-btn" class="action-btn save-btn" onclick="applyMemberChanges()">Apply All Changes</button>
+                <button id="review-changes-btn" class="action-btn edit-btn" onclick="reviewMemberChanges()">Review Changes</button>
+                <button class="action-btn cancel-btn" onclick="closeUpdateMembersModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
 
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="client-validation.js"></script>
     <script src="script.js"></script>
 </body>

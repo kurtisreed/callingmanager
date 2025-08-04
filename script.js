@@ -307,7 +307,7 @@ function populateMembers(selectedMemberId = '', callback = null) {
         return;
     }
     
-    console.log('PopulateMembers called with selectedMemberId:', selectedMemberId);
+
     
     fetch('get_members.php')
         .then(response => response.json())
@@ -322,7 +322,7 @@ function populateMembers(selectedMemberId = '', callback = null) {
                 memberSelect.appendChild(option);
             });
             
-            console.log('Member dropdown populated, setting value to:', selectedMemberId);
+
             
             // Set the value and trigger selection logic if needed
             if (selectedMemberId) {
@@ -1850,6 +1850,7 @@ function loadMembersForm() {
                     </div>
                     <div class="action-buttons">
                         <button id="add-member-btn" type="button" class="action-btn save-btn" onclick="openAddMemberModal()">+ Add New Member</button>
+                        <button id="update-members-btn" type="button" class="action-btn edit-btn" onclick="openUpdateMembersModal()">📄 Update Members from PDF</button>
                         <button type="button" id="edit-btn" class="action-btn edit-btn" style="display: none;">Edit Member</button>
                         <button type="button" id="remove-member-btn" class="action-btn remove-btn" style="display: none;">Remove Member</button>
                         <button type="button" id="save-btn" class="action-btn save-btn" style="display: none;">Save Changes</button>
@@ -3324,6 +3325,887 @@ function closeAddCallingModal() {
     document.getElementById('calling-organization-input').value = '';
     document.getElementById('calling-grouping-input').value = '';
     document.getElementById('calling-priority-input').value = '';
+}
+
+function openUpdateMembersModal() {
+    document.getElementById('update-members-modal').style.display = 'block';
+    
+    // Reset the modal to initial state
+    document.getElementById('member-pdf-upload').value = '';
+    document.getElementById('upload-status').innerHTML = '';
+    document.getElementById('upload-progress').style.display = 'none';
+    document.getElementById('reconciliation-results').style.display = 'none';
+    
+    // Load last update information
+    loadLastUpdateInfo();
+}
+
+function closeUpdateMembersModal() {
+    document.getElementById('update-members-modal').style.display = 'none';
+    
+    // Reset form and progress indicators
+    document.getElementById('member-pdf-upload').value = '';
+    document.getElementById('upload-status').innerHTML = '';
+    document.getElementById('upload-progress').style.display = 'none';
+    document.getElementById('reconciliation-results').style.display = 'none';
+    document.getElementById('progress-fill').style.width = '0%';
+    document.getElementById('progress-text').textContent = 'Processing...';
+}
+
+async function loadLastUpdateInfo() {
+    try {
+        const response = await fetch('get_last_member_update.php');
+        const data = await response.json();
+        
+        const lastUpdateElement = document.getElementById('last-update-info');
+        
+        if (data.error) {
+            lastUpdateElement.innerHTML = '<span style="color: red;">❌ Error loading update info</span>';
+            return;
+        }
+        
+        if (data.has_update) {
+            const update = data.last_update;
+            const cssClass = update.is_recent ? 'recent-update' : '';
+            
+            let changesText = '';
+            if (update.total_changes > 0) {
+                const parts = [];
+                if (update.new_members_added > 0) parts.push(`${update.new_members_added} new`);
+                if (update.members_updated > 0) parts.push(`${update.members_updated} updated`);
+                if (update.members_removed > 0) parts.push(`${update.members_removed} removed`);
+                changesText = ` - ${parts.join(', ')}`;
+            }
+            
+            lastUpdateElement.className = `last-update-info ${cssClass}`;
+            lastUpdateElement.innerHTML = `
+                📅 <strong>Last Update:</strong> ${update.formatted_date} (${update.time_since})${changesText}
+            `;
+        } else {
+            lastUpdateElement.className = 'last-update-info no-update';
+            lastUpdateElement.innerHTML = '⚠️ <strong>No updates performed yet</strong> - Upload a Member List PDF to get started';
+        }
+        
+    } catch (error) {
+        document.getElementById('last-update-info').innerHTML = '<span style="color: red;">❌ Error loading update info</span>';
+    }
+}
+
+function handleMemberPDFUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    if (file.type !== 'application/pdf') {
+        document.getElementById('upload-status').innerHTML = '<span style="color: red;">❌ Please select a PDF file</span>';
+        input.value = '';
+        return;
+    }
+    
+    // Show progress
+    document.getElementById('upload-progress').style.display = 'block';
+    document.getElementById('upload-status').innerHTML = '<span style="color: blue;">📤 Processing PDF...</span>';
+    
+    // Process PDF client-side
+    processPDFClientSide(file);
+}
+
+async function processPDFClientSide(file) {
+    try {
+        // Set up progress
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 10;
+            if (progress > 90) progress = 90;
+            document.getElementById('progress-fill').style.width = progress + '%';
+            document.getElementById('progress-text').textContent = `Processing... ${Math.round(progress)}%`;
+        }, 300);
+        
+        // Configure PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        // Read file as array buffer
+        const arrayBuffer = await file.arrayBuffer();
+        
+        // Load PDF document
+        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+        
+        document.getElementById('upload-status').innerHTML = '<span style="color: blue;">📄 Extracting text from PDF...</span>';
+        
+        let allText = '';
+        
+        // Extract text from all pages
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const textContent = await page.getTextContent();
+            
+            // Combine text items with proper spacing
+            let pageText = '';
+            let lastY = null;
+            
+            textContent.items.forEach(item => {
+                // Add line breaks when Y position changes significantly
+                if (lastY !== null && Math.abs(lastY - item.transform[5]) > 5) {
+                    pageText += '\n';
+                }
+                pageText += item.str + ' ';
+                lastY = item.transform[5];
+            });
+            
+            allText += pageText + '\n';
+        }
+        
+        clearInterval(progressInterval);
+        document.getElementById('progress-fill').style.width = '100%';
+        document.getElementById('progress-text').textContent = 'Parsing member data...';
+        
+        // Parse member data from extracted text
+        const pdfMembers = parseTextContentClientSide(allText);
+        
+        document.getElementById('upload-status').innerHTML = '<span style="color: blue;">🔍 Reconciling with database...</span>';
+        
+        // Send parsed member data to server for reconciliation
+        const reconciliationData = await reconcileWithDatabase(pdfMembers, allText);
+        
+        document.getElementById('upload-status').innerHTML = '<span style="color: green;">✅ PDF processed successfully</span>';
+        displayReconciliationResults(reconciliationData);
+        
+    } catch (error) {
+        document.getElementById('upload-status').innerHTML = '<span style="color: red;">❌ Failed to process PDF: ' + error.message + '</span>';
+        document.getElementById('progress-fill').style.width = '0%';
+        document.getElementById('progress-text').textContent = 'Error';
+    }
+}
+
+function parseTextContentClientSide(text) {
+    const members = [];
+    const lines = text.split('\n');
+    
+    const debug = {
+        total_lines: lines.length,
+        sample_lines: lines.slice(0, 10),
+        text_sample: text.substring(0, 500)
+    };
+    
+    for (const line of lines) {
+        const cleanLine = line.trim();
+        if (cleanLine.length < 20 || cleanLine.includes('Name   Gender   Age')) continue; // Skip header and short lines
+        
+        // Pattern 1: "Last, First Middle   Gender   Age   DD MMM YYYY"
+        // Example: "Adams, Annabelle Jewell   F   12   21 Nov 2012"
+        let match = cleanLine.match(/^([A-Za-z\s\-\'\.]+),\s*([A-Za-z\s\-\'\.]+)\s+[MF]\s+\d+\s+(\d{1,2}\s+[A-Za-z]{3}\s+\d{4})/);
+        if (match) {
+            const member = extractMemberFromDateMatch(match[1].trim(), match[2].trim(), match[3]);
+            if (member) {
+                members.push(member);
+                continue;
+            }
+        }
+        
+        // Pattern 2: Look for any line with "DD MMM YYYY" date format
+        match = cleanLine.match(/(\d{1,2}\s+[A-Za-z]{3}\s+\d{4})/);
+        if (match) {
+            const beforeDate = cleanLine.split(match[0])[0].trim();
+            
+            // Try to extract name from the beginning
+            const nameMatch = beforeDate.match(/^([A-Za-z\s\-\'\.]+),\s*([A-Za-z\s\-\'\.]+)/);
+            if (nameMatch) {
+                const member = extractMemberFromDateMatch(nameMatch[1].trim(), nameMatch[2].trim(), match[1]);
+                if (member) {
+                    members.push(member);
+                    continue;
+                }
+            }
+        }
+        
+        // Pattern 3: Fall back to MM/DD/YYYY format (original patterns)
+        match = cleanLine.match(/^([A-Za-z\s\-\'\.]+),\s*([A-Za-z\s\-\'\.]+)\s+(\d{1,2}\/\d{1,2}\/\d{4})/);
+        if (match) {
+            const member = extractMemberFromMatch(match);
+            if (member) members.push(member);
+            continue;
+        }
+        
+        // Pattern 4: Any line with MM/DD/YYYY date
+        match = cleanLine.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+        if (match) {
+            const beforeDate = cleanLine.replace(match[0], '').trim();
+            const nameMatch = beforeDate.match(/([A-Za-z\-\'\.]+)[\s,]+([A-Za-z\s\-\'\.]+)/);
+            
+            if (nameMatch) {
+                const birthdate = convertDateToMysqlClientSide(match[1]);
+                if (birthdate && isAtLeast12ThisYear(birthdate)) {
+                    const member = {
+                        first_name: nameMatch[1].trim(),
+                        last_name: nameMatch[2].trim(),
+                        birthdate: birthdate,
+                        status: 'active'
+                    };
+                    members.push(member);
+                }
+            }
+        }
+    }
+    
+    return members;
+}
+
+function extractMemberFromMatch(match) {
+    const lastName = match[1].trim();
+    const firstMiddle = match[2].trim();
+    const birthdate = match[3];
+    
+    // Take first name only
+    const firstName = firstMiddle.split(' ')[0];
+    
+    const mysqlDate = convertDateToMysqlClientSide(birthdate);
+    if (mysqlDate) {
+        // Check if member will be 12 or older during current calendar year
+        if (isAtLeast12ThisYear(mysqlDate)) {
+            return {
+                first_name: firstName,
+                last_name: lastName,
+                birthdate: mysqlDate,
+                status: 'active'
+            };
+        }
+    }
+    
+    return null;
+}
+
+function extractMemberFromDateMatch(lastName, firstMiddle, dateString) {
+    // Take first name only (ignore middle names)
+    const firstName = firstMiddle.split(' ')[0];
+    
+    const mysqlDate = convertTextDateToMysql(dateString);
+    if (mysqlDate) {
+        // Check if member will be 12 or older during current calendar year
+        if (isAtLeast12ThisYear(mysqlDate)) {
+            return {
+                first_name: firstName,
+                last_name: lastName,
+                birthdate: mysqlDate,
+                status: 'active'
+            };
+        }
+    }
+    
+    return null;
+}
+
+function convertDateToMysqlClientSide(dateString) {
+    const formats = [
+        { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, format: 'M/D/YYYY' },
+        { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/, format: 'M/D/YY' }
+    ];
+    
+    for (const format of formats) {
+        const match = dateString.match(format.regex);
+        if (match) {
+            let month = parseInt(match[1]);
+            let day = parseInt(match[2]);
+            let year = parseInt(match[3]);
+            
+            // Handle 2-digit years
+            if (year < 100) {
+                year += year < 30 ? 2000 : 1900;
+            }
+            
+            // Validate date components
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+            }
+        }
+    }
+    
+    return null;
+}
+
+function convertTextDateToMysql(dateString) {
+    // Handle "DD MMM YYYY" format like "21 Nov 2012"
+    const monthMap = {
+        'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+        'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+    };
+    
+    const match = dateString.trim().match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+    if (match) {
+        const day = parseInt(match[1]);
+        const monthAbbr = match[2];
+        const year = parseInt(match[3]);
+        const month = monthMap[monthAbbr];
+        
+        if (month && day >= 1 && day <= 31 && year >= 1900 && year <= 2100) {
+            return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        }
+    }
+    
+    return null;
+}
+
+function isAtLeast12ThisYear(birthdateString) {
+    // Calculate if someone will be 12 or older during the current calendar year
+    // birthdateString format: "YYYY-MM-DD"
+    
+    const currentYear = new Date().getFullYear();
+    const birthYear = parseInt(birthdateString.split('-')[0]);
+    
+    // Age they will turn this year (regardless of whether birthday has passed)
+    const ageThisYear = currentYear - birthYear;
+    
+    return ageThisYear >= 12;
+}
+
+async function reconcileWithDatabase(pdfMembers, extractedText) {
+    try {
+        const response = await fetch('reconcile_members.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                pdf_members: pdfMembers,
+                debug_info: {
+                    extraction_method: 'client_side_pdfjs',
+                    extracted_text_length: extractedText.length,
+                    text_sample: extractedText.substring(0, 500),
+                    pdf_members_found: pdfMembers.length
+                }
+            })
+        });
+        
+        return await response.json();
+    } catch (error) {
+        throw new Error('Failed to reconcile with database: ' + error.message);
+    }
+}
+
+function displayReconciliationResults(data) {
+    // Store reconciliation data for later use
+    window.currentReconciliation = data.reconciliation;
+    
+    // Update statistics
+    document.getElementById('new-members-count').textContent = data.stats.new_members;
+    document.getElementById('updates-count').textContent = data.stats.updates;
+    document.getElementById('no-changes-count').textContent = data.stats.no_changes;
+    document.getElementById('removed-count').textContent = data.stats.removed;
+    
+    // Build changes review HTML
+    let changesHTML = '';
+    
+    // Add debug section if available
+    if (data.debug) {
+        changesHTML += `
+            <div class="changes-category">
+                <h4 style="cursor: pointer;" onclick="toggleDebugInfo()">🔍 Debug Info - Click to view</h4>
+                <div id="debug-info" style="display: none;">
+                    <p><strong>Extraction Method:</strong> ${data.debug.extraction_method || 'Unknown'}</p>
+                    ${data.debug.extraction_error ? `<p><strong>Extraction Error:</strong> ${data.debug.extraction_error}</p>` : ''}
+                    ${data.debug.extracted_text_length ? `<p><strong>Text Extracted:</strong> ${data.debug.extracted_text_length} characters</p>` : ''}
+                    ${data.debug.total_lines ? `<p><strong>Total Lines:</strong> ${data.debug.total_lines}</p>` : ''}
+                    <p><strong>PDF Members Found:</strong> ${data.debug.pdf_members_found}</p>
+                    <p><strong>Current Members in DB:</strong> ${data.debug.current_members_count}</p>
+                    
+                    ${data.debug.text_sample ? `
+                        <p><strong>Text Sample (first 500 chars):</strong></p>
+                        <pre style="background: #f5f5f5; padding: 10px; font-size: 12px; max-height: 100px; overflow-y: auto;">${data.debug.text_sample}</pre>
+                    ` : ''}
+                    
+                    ${data.debug.sample_lines ? `
+                        <p><strong>Sample Lines from PDF:</strong></p>
+                        <ul style="font-size: 12px; max-height: 100px; overflow-y: auto;">
+                            ${data.debug.sample_lines.map(line => `<li>${line || '(empty line)'}</li>`).join('')}
+                        </ul>
+                    ` : ''}
+                    
+                    <p><strong>Sample PDF Members:</strong></p>
+                    <ul>
+                        ${data.debug.pdf_sample.map(member => 
+                            `<li>${member.last_name}, ${member.first_name} (${member.birthdate})</li>`
+                        ).join('')}
+                    </ul>
+                    <p><strong>Sample Current Members:</strong></p>
+                    <ul>
+                        ${data.debug.current_sample.map(member => 
+                            `<li>${member.last_name}, ${member.first_name} (${member.birthdate})</li>`
+                        ).join('')}
+                    </ul>
+                </div>
+            </div>
+        `;
+    }
+    
+    // New Members
+    if (data.reconciliation.new_members.length > 0) {
+        changesHTML += `
+            <div class="changes-category">
+                <h4>📥 New Members (${data.reconciliation.new_members.length})</h4>
+                <ul>`;
+        data.reconciliation.new_members.forEach(member => {
+            changesHTML += `<li>${member.last_name}, ${member.first_name} (DOB: ${member.birthdate})</li>`;
+        });
+        changesHTML += '</ul></div>';
+    }
+    
+    // Updates
+    if (data.reconciliation.updates.length > 0) {
+        changesHTML += `
+            <div class="changes-category">
+                <h4>🔄 Updates (${data.reconciliation.updates.length})</h4>
+                <ul>`;
+        data.reconciliation.updates.forEach(update => {
+            const current = update.current;
+            const changes = update.changes;
+            changesHTML += `<li>${current.last_name}, ${current.first_name} - `;
+            
+            const changeDescriptions = [];
+            Object.keys(changes).forEach(field => {
+                const change = changes[field];
+                let fieldName = field.replace('_', ' ');
+                fieldName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+                changeDescriptions.push(`${fieldName}: ${change.old} → ${change.new}`);
+            });
+            
+            changesHTML += changeDescriptions.join(', ');
+            changesHTML += ` (Confidence: ${Math.round(update.confidence * 100)}%)</li>`;
+        });
+        changesHTML += '</ul></div>';
+    }
+    
+    // Removed Members
+    if (data.reconciliation.removed.length > 0) {
+        changesHTML += `
+            <div class="changes-category">
+                <h4>❌ Removed Members (${data.reconciliation.removed.length})</h4>
+                <ul>`;
+        data.reconciliation.removed.forEach(member => {
+            changesHTML += `<li>${member.last_name}, ${member.first_name} (Not found in PDF - may have moved away)</li>`;
+        });
+        changesHTML += '</ul></div>';
+    }
+    
+    // No Changes (collapsed by default)
+    if (data.reconciliation.no_changes.length > 0) {
+        changesHTML += `
+            <div class="changes-category">
+                <h4 style="cursor: pointer;" onclick="toggleNoChanges()">✅ No Changes Required (${data.reconciliation.no_changes.length}) - Click to view</h4>
+                <ul id="no-changes-list" style="display: none;">`;
+        data.reconciliation.no_changes.forEach(member => {
+            const current = member.current;
+            changesHTML += `<li>${current.last_name}, ${current.first_name} (Confidence: ${Math.round(member.confidence * 100)}%)</li>`;
+        });
+        changesHTML += '</ul></div>';
+    }
+    
+    document.getElementById('changes-review').innerHTML = changesHTML;
+    document.getElementById('reconciliation-results').style.display = 'block';
+}
+
+function toggleNoChanges() {
+    const list = document.getElementById('no-changes-list');
+    list.style.display = list.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleDebugInfo() {
+    const info = document.getElementById('debug-info');
+    info.style.display = info.style.display === 'none' ? 'block' : 'none';
+}
+
+function showMockReconciliationResults() {
+    // Keep mock function for testing
+    const mockData = {
+        reconciliation: {
+            new_members: [
+                {first_name: 'John', last_name: 'Smith', birthdate: '1985-03-15'},
+                {first_name: 'Sarah', last_name: 'Johnson', birthdate: '1992-07-22'},
+                {first_name: 'Michael', last_name: 'Williams', birthdate: '1978-11-08'}
+            ],
+            updates: [
+                {
+                    current: {first_name: 'Emily', last_name: 'Brown'},
+                    changes: {status: {old: 'Active', new: 'Inactive'}},
+                    confidence: 0.95
+                }
+            ],
+            no_changes: [],
+            removed: [
+                {first_name: 'Richard', last_name: 'Thompson'},
+                {first_name: 'Maria', last_name: 'Garcia'}
+            ]
+        },
+        stats: {new_members: 3, updates: 1, no_changes: 45, removed: 2}
+    };
+    
+    displayReconciliationResults(mockData);
+}
+
+function applyMemberChanges() {
+    if (!confirm('Are you sure you want to apply all these changes to the member database?')) {
+        return;
+    }
+    
+    if (!window.currentReconciliation) {
+        alert('No reconciliation data available. Please upload a PDF first.');
+        return;
+    }
+    
+    // Disable the apply button and show progress
+    const applyButton = document.getElementById('apply-changes-btn');
+    applyButton.disabled = true;
+    applyButton.textContent = 'Applying Changes...';
+    
+    // Send reconciliation data to server for processing
+    fetch('apply_member_changes.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            reconciliation: window.currentReconciliation
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error applying changes: ' + data.message);
+            applyButton.disabled = false;
+            applyButton.textContent = 'Apply All Changes';
+        } else {
+            alert(`Changes applied successfully!\n\nNew members added: ${data.summary.new_members_added}\nMembers updated: ${data.summary.members_updated}\nMembers marked as removed: ${data.summary.members_removed}`);
+            closeUpdateMembersModal();
+            
+            // Refresh member data if we're on the Member Information tab
+            if (document.getElementById('Tab3').style.display !== 'none') {
+                loadMembersForm();
+            }
+            
+            // Clear stored reconciliation data
+            window.currentReconciliation = null;
+        }
+    })
+    .catch(error => {
+        alert('Failed to apply changes. Please try again.');
+        applyButton.disabled = false;
+        applyButton.textContent = 'Apply All Changes';
+    });
+}
+
+function reviewMemberChanges() {
+    if (!window.currentReconciliation) {
+        alert('No reconciliation data available. Please upload a PDF first.');
+        return;
+    }
+    
+    // Create and show detailed review modal
+    createReviewModal();
+}
+
+function createReviewModal() {
+    // Initialize approval states if not exists
+    if (!window.memberChangeApprovals) {
+        window.memberChangeApprovals = {
+            new_members: {},
+            updates: {},
+            removed: {}
+        };
+        
+        // Default all to approved
+        window.currentReconciliation.new_members.forEach((member, index) => {
+            window.memberChangeApprovals.new_members[index] = true;
+        });
+        
+        window.currentReconciliation.updates.forEach((update, index) => {
+            window.memberChangeApprovals.updates[index] = true;
+        });
+        
+        window.currentReconciliation.removed.forEach((member, index) => {
+            window.memberChangeApprovals.removed[index] = true;
+        });
+    }
+    
+    // Create modal HTML
+    const modalHTML = `
+        <div id="review-changes-modal" class="modal" style="display: block;">
+            <div class="modal-content">
+                <button class="close-btn" onclick="closeReviewModal()">✕ Close</button>
+                <h2>📋 Review Individual Changes</h2>
+                <p>Select which changes you want to apply to the database:</p>
+                
+                <div class="review-summary">
+                    <div class="summary-actions">
+                        <button class="action-btn edit-btn" onclick="approveAll()">✅ Approve All</button>
+                        <button class="action-btn cancel-btn" onclick="rejectAll()">❌ Reject All</button>
+                        <button class="action-btn save-btn" onclick="applySelectedChanges()">Apply Selected Changes</button>
+                    </div>
+                </div>
+                
+                <div id="review-content">
+                    ${generateReviewContent()}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing review modal if present
+    const existingModal = document.getElementById('review-changes-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Initialize the button counter
+    updateReviewSummary();
+}
+
+function generateReviewContent() {
+    let html = '';
+    
+    // New Members Section
+    if (window.currentReconciliation.new_members.length > 0) {
+        html += `
+            <div class="review-section">
+                <h3>📥 New Members (${window.currentReconciliation.new_members.length})</h3>
+                <div class="review-items">
+        `;
+        
+        window.currentReconciliation.new_members.forEach((member, index) => {
+            const isApproved = window.memberChangeApprovals.new_members[index];
+            html += `
+                <div class="review-item ${isApproved ? 'approved' : 'rejected'}">
+                    <div class="review-checkbox">
+                        <input type="checkbox" id="new_${index}" ${isApproved ? 'checked' : ''} 
+                               onchange="toggleApproval('new_members', ${index}, this.checked); setTimeout(updateReviewSummary, 10)">
+                        <label for="new_${index}"></label>
+                    </div>
+                    <div class="review-details">
+                        <strong>${member.last_name}, ${member.first_name}</strong>
+                        <span class="review-date">DOB: ${member.birthdate}</span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    }
+    
+    // Updates Section
+    if (window.currentReconciliation.updates.length > 0) {
+        html += `
+            <div class="review-section">
+                <h3>🔄 Updates (${window.currentReconciliation.updates.length})</h3>
+                <div class="review-items">
+        `;
+        
+        window.currentReconciliation.updates.forEach((update, index) => {
+            const isApproved = window.memberChangeApprovals.updates[index];
+            const current = update.current;
+            const changes = update.changes;
+            
+            html += `
+                <div class="review-item ${isApproved ? 'approved' : 'rejected'}">
+                    <div class="review-checkbox">
+                        <input type="checkbox" id="update_${index}" ${isApproved ? 'checked' : ''} 
+                               onchange="toggleApproval('updates', ${index}, this.checked); setTimeout(updateReviewSummary, 10)">
+                        <label for="update_${index}"></label>
+                    </div>
+                    <div class="review-details">
+                        <strong>${current.last_name}, ${current.first_name}</strong>
+                        <span class="review-confidence">Confidence: ${Math.round(update.confidence * 100)}%</span>
+                        <div class="review-changes">
+            `;
+            
+            Object.keys(changes).forEach(field => {
+                const change = changes[field];
+                let fieldName = field.replace('_', ' ');
+                fieldName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+                html += `<div class="change-detail">${fieldName}: <span class="old-value">${change.old}</span> → <span class="new-value">${change.new}</span></div>`;
+            });
+            
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    }
+    
+    // Removed Members Section
+    if (window.currentReconciliation.removed.length > 0) {
+        html += `
+            <div class="review-section">
+                <h3>❌ Mark as Moved Away (${window.currentReconciliation.removed.length})</h3>
+                <div class="review-items">
+        `;
+        
+        window.currentReconciliation.removed.forEach((member, index) => {
+            const isApproved = window.memberChangeApprovals.removed[index];
+            html += `
+                <div class="review-item ${isApproved ? 'approved' : 'rejected'}">
+                    <div class="review-checkbox">
+                        <input type="checkbox" id="removed_${index}" ${isApproved ? 'checked' : ''} 
+                               onchange="toggleApproval('removed', ${index}, this.checked); setTimeout(updateReviewSummary, 10)">
+                        <label for="removed_${index}"></label>
+                    </div>
+                    <div class="review-details">
+                        <strong>${member.last_name}, ${member.first_name}</strong>
+                        <span class="review-date">DOB: ${member.birthdate}</span>
+                        <div class="review-note">Not found in PDF - will be marked as "moved away"</div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    }
+    
+    return html;
+}
+
+function toggleApproval(category, index, approved) {
+    window.memberChangeApprovals[category][index] = approved;
+    
+    // Update visual state
+    let elementId;
+    if (category === 'new_members') {
+        elementId = `new_${index}`;
+    } else if (category === 'updates') {
+        elementId = `update_${index}`;
+    } else if (category === 'removed') {
+        elementId = `removed_${index}`;
+    }
+    
+    const element = document.getElementById(elementId);
+    if (element) {
+        const item = element.closest('.review-item');
+        if (item) {
+            if (approved) {
+                item.classList.add('approved');
+                item.classList.remove('rejected');
+            } else {
+                item.classList.add('rejected');
+                item.classList.remove('approved');
+            }
+        }
+    }
+}
+
+function approveAll() {
+    // Check all checkboxes and trigger their change events
+    document.querySelectorAll('#review-changes-modal input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = true;
+        // Manually trigger the onchange event
+        checkbox.dispatchEvent(new Event('change'));
+    });
+}
+
+function rejectAll() {
+    // Uncheck all checkboxes and trigger their change events
+    document.querySelectorAll('#review-changes-modal input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = false;
+        // Manually trigger the onchange event
+        checkbox.dispatchEvent(new Event('change'));
+    });
+}
+
+function updateReviewSummary() {
+    // Count checked checkboxes directly from the DOM
+    const checkedBoxes = document.querySelectorAll('#review-changes-modal input[type="checkbox"]:checked');
+    const total = checkedBoxes.length;
+    
+    // Update apply button text
+    const applyBtn = document.querySelector('#review-changes-modal .save-btn');
+    if (applyBtn) {
+        applyBtn.textContent = `Apply Selected Changes (${total})`;
+    }
+}
+
+function applySelectedChanges() {
+    // Filter reconciliation data to only include approved changes
+    const filteredReconciliation = {
+        new_members: window.currentReconciliation.new_members.filter((_, index) => 
+            window.memberChangeApprovals.new_members[index]
+        ),
+        updates: window.currentReconciliation.updates.filter((_, index) => 
+            window.memberChangeApprovals.updates[index]
+        ),
+        removed: window.currentReconciliation.removed.filter((_, index) => 
+            window.memberChangeApprovals.removed[index]
+        ),
+        no_changes: window.currentReconciliation.no_changes
+    };
+    
+    const totalChanges = filteredReconciliation.new_members.length + 
+                        filteredReconciliation.updates.length + 
+                        filteredReconciliation.removed.length;
+    
+    if (totalChanges === 0) {
+        alert('No changes selected to apply.');
+        return;
+    }
+    
+    if (!confirm(`Apply ${totalChanges} selected changes to the database?`)) {
+        return;
+    }
+    
+    // Close review modal
+    closeReviewModal();
+    
+    // Apply the filtered changes
+    applyFilteredChanges(filteredReconciliation);
+}
+
+function closeReviewModal() {
+    const modal = document.getElementById('review-changes-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+async function applyFilteredChanges(filteredReconciliation) {
+    try {
+        const response = await fetch('apply_member_changes.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                reconciliation: filteredReconciliation
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            alert('Error applying changes: ' + data.message);
+        } else {
+            alert(`Selected changes applied successfully!\n\nNew members added: ${data.summary.new_members_added}\nMembers updated: ${data.summary.members_updated}\nMembers marked as removed: ${data.summary.members_removed}`);
+            closeUpdateMembersModal();
+            
+            // Refresh member data if we're on the Member Information tab
+            if (document.getElementById('Tab3').style.display !== 'none') {
+                loadMembersForm();
+            }
+            
+            // Clear stored data
+            window.currentReconciliation = null;
+            window.memberChangeApprovals = null;
+        }
+    } catch (error) {
+        alert('Failed to apply changes. Please try again.');
+    }
 }
 
 
