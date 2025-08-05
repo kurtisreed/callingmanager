@@ -67,13 +67,13 @@ try {
         
         // Commit transaction if no critical errors
         if (empty($summary['errors']) || count($summary['errors']) < 3) {
+            // Log to member_updates_log table before committing
+            logMemberUpdate($conn, $summary);
+            
             $conn->commit();
             
-            // Log the changes
+            // Log the changes to activity log
             logMemberReconciliation($summary);
-            
-            // Log to member_updates_log table
-            logMemberUpdate($conn, $summary);
             
             echo json_encode([
                 'success' => true,
