@@ -227,32 +227,19 @@
         <h2 id="popup-title"></h2>
         
         <div class="section-header">
+            <h3>👤 Current Calling Holder</h3>
+        </div>
+        
+        <div id="current-calling-holder">
+            <p>Loading current calling holder...</p>
+        </div>
+        
+        <div class="section-header">
             <h3>🔍 Choose Candidates</h3>
         </div>
         
         <label for="candidate-search">Search by Name:</label>
         <input type="text" id="candidate-search" placeholder="Type name to search..." oninput="applyFilters()" />
-        
-        <!-- Filter container to hold gender and age filters -->
-        <div class="filter-container">
-            <div class="filter-item">
-                <label for="gender-filter">Gender</label>
-                <select id="gender-filter" onchange="applyFilters()">
-                    <option value="">All</option>
-                    <option value="M">Male</option>
-                    <option value="F">Female</option>
-                </select>
-            </div>
-            
-            <div class="filter-item">
-                <label for="age-filter">Age</label>
-                <select id="age-filter" onchange="applyFilters()">
-                    <option value="">All</option>
-                    <option value="under_18">Under 18</option>
-                    <option value="18_plus">18+</option>
-                </select>
-            </div>
-        </div>
         
         <label for="callingDropdown">Select Candidate:</label>
         <select id="callingDropdown">
@@ -371,6 +358,59 @@
         <input type="text" value="0" id="calling-priority-input" />
 
         <button id="save-calling-btn" class="toggle-btn save-btn" onclick="saveNewCalling()">Save</button>
+    </div>
+</div>
+
+<!-- Add Calling History Modal -->
+<div id="add-calling-history-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeAddCallingHistoryModal()">✕ Close</button>
+        <h2>Add Calling History</h2>
+        
+        <p>Add historical callings for <strong id="history-member-name">Member Name</strong></p>
+        
+        <div class="section-header">
+            <h3>📋 Select Calling</h3>
+        </div>
+        
+        <label for="history-calling-select">Choose Calling:</label>
+        <select id="history-calling-select">
+            <option value="">Select a Calling</option>
+        </select>
+        
+        <label for="history-period">Approximate Period (optional):</label>
+        <input type="text" id="history-period" placeholder="e.g., 2010-2015, Early 2000s, Around 2018" />
+        
+        <label for="history-notes">Notes (optional):</label>
+        <textarea id="history-notes" rows="3" placeholder="Any additional information about this calling..."></textarea>
+        
+        <button type="button" onclick="addCallingToHistoryTable()" class="action-btn save-btn">Add to List</button>
+        
+        <div class="section-header">
+            <h3>📚 Calling History to Add</h3>
+        </div>
+        
+        <div id="history-table-container">
+            <table id="history-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Calling</th>
+                        <th>Period</th>
+                        <th>Notes</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="history-table-body">
+                </tbody>
+            </table>
+            <p id="no-history-message">No calling history added yet.</p>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: center;">
+            <button type="button" onclick="saveCallingHistory()" class="action-btn save-btn" id="save-history-btn" style="display: none;">Save All History</button>
+        </div>
+        
+        <div id="history-form-message" style="margin-top: 10px; text-align: center;"></div>
     </div>
 </div>
 

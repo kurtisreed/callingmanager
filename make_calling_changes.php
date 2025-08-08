@@ -36,6 +36,60 @@ if (!DateTime::createFromFormat('Y-m-d', $change_date)) {
     exit;
 }
 
+// Function to add calling to history when member is released
+function addToCallingHistory($conn, $member_id, $calling_id, $date_set_apart, $date_released) {
+    try {
+        // Create table if it doesn't exist
+        $createTableSql = "CREATE TABLE IF NOT EXISTS calling_history (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            member_id INT NOT NULL,
+            calling_id INT NOT NULL,
+            approximate_period VARCHAR(100) DEFAULT NULL,
+            notes TEXT DEFAULT NULL,
+            added_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (member_id) REFERENCES members(member_id) ON DELETE CASCADE,
+            FOREIGN KEY (calling_id) REFERENCES callings(calling_id) ON DELETE CASCADE,
+            INDEX idx_member_id (member_id),
+            INDEX idx_calling_id (calling_id)
+        )";
+        
+        $conn->query($createTableSql);
+        
+        // Format the period based on available dates
+        $period = null;
+        if ($date_set_apart && $date_released) {
+            $setApart = new DateTime($date_set_apart);
+            $released = new DateTime($date_released);
+            $period = $setApart->format('M j, Y') . ' - ' . $released->format('M j, Y');
+        } elseif ($date_set_apart) {
+            $setApart = new DateTime($date_set_apart);
+            $period = 'From ' . $setApart->format('M j, Y');
+        } elseif ($date_released) {
+            $released = new DateTime($date_released);
+            $period = 'Until ' . $released->format('M j, Y');
+        }
+        
+        $notes = "Automatically added when released from calling";
+        
+        // Check for duplicate entry
+        $duplicateCheck = $conn->prepare("SELECT id FROM calling_history WHERE member_id = ? AND calling_id = ?");
+        $duplicateCheck->bind_param("ii", $member_id, $calling_id);
+        $duplicateCheck->execute();
+        if ($duplicateCheck->get_result()->num_rows > 0) {
+            return; // Don't add duplicate
+        }
+        
+        // Insert the history entry
+        $stmt = $conn->prepare("INSERT INTO calling_history (member_id, calling_id, approximate_period, notes) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("iiss", $member_id, $calling_id, $period, $notes);
+        $stmt->execute();
+        
+    } catch (Exception $e) {
+        // Log error but don't stop the release process
+        error_log("Failed to add calling history: " . $e->getMessage());
+    }
+}
+
 try {
     // Start transaction
     $conn->begin_transaction();
@@ -48,7 +102,7 @@ try {
             $release_id = $conn->real_escape_string($release_id);
             
             // Get calling details for logging
-            $details_sql = "SELECT c.calling_name, m.first_name, m.last_name 
+            $details_sql = "SELECT cc.member_id, cc.calling_id, cc.date_set_apart, c.calling_name, m.first_name, m.last_name 
                            FROM current_callings cc 
                            JOIN callings c ON cc.calling_id = c.calling_id 
                            JOIN members m ON cc.member_id = m.member_id 
@@ -58,10 +112,16 @@ try {
             if ($details_result && $details_row = $details_result->fetch_assoc()) {
                 $member_name = $details_row['first_name'] . ' ' . $details_row['last_name'];
                 $calling_name = $details_row['calling_name'];
+                $calling_member_id = $details_row['member_id'];
+                $calling_calling_id = $details_row['calling_id'];
+                $date_set_apart = $details_row['date_set_apart'];
                 
                 // Update the record to set release date
                 $update_sql = "UPDATE current_callings SET date_released = '$change_date' WHERE id = '$release_id'";
                 if ($conn->query($update_sql)) {
+                    // Add to calling history
+                    addToCallingHistory($conn, $calling_member_id, $calling_calling_id, $date_set_apart, $change_date);
+                    
                     $changes_made[] = "$member_name released from $calling_name";
                 } else {
                     throw new Exception("Failed to release $member_name from $calling_name");
@@ -76,7 +136,7 @@ try {
             $release_id = $conn->real_escape_string($release_id);
             
             // Get member details for logging
-            $details_sql = "SELECT c.calling_name, m.first_name, m.last_name 
+            $details_sql = "SELECT cc.member_id, cc.calling_id, cc.date_set_apart, c.calling_name, m.first_name, m.last_name 
                            FROM current_callings cc 
                            JOIN callings c ON cc.calling_id = c.calling_id 
                            JOIN members m ON cc.member_id = m.member_id 
@@ -86,10 +146,16 @@ try {
             if ($details_result && $details_row = $details_result->fetch_assoc()) {
                 $member_name = $details_row['first_name'] . ' ' . $details_row['last_name'];
                 $calling_name = $details_row['calling_name'];
+                $calling_member_id = $details_row['member_id'];
+                $calling_calling_id = $details_row['calling_id'];
+                $date_set_apart = $details_row['date_set_apart'];
                 
                 // Update the record to set release date
                 $update_sql = "UPDATE current_callings SET date_released = '$change_date' WHERE id = '$release_id'";
                 if ($conn->query($update_sql)) {
+                    // Add to calling history
+                    addToCallingHistory($conn, $calling_member_id, $calling_calling_id, $date_set_apart, $change_date);
+                    
                     $changes_made[] = "$member_name released from $calling_name";
                 } else {
                     throw new Exception("Failed to release $member_name from $calling_name");

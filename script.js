@@ -568,10 +568,8 @@ function showPopup(title, callingId) {
     const popupTitle = document.getElementById("popup-title"); // or use querySelector if you need
     popupTitle.setAttribute("data-calling-id", callingId);
     
-    // Reset search and filter inputs to default
-    document.getElementById('candidate-search').value = "";  // Clear search
-    document.getElementById('gender-filter').value = "";  // Resets to 'All'
-    document.getElementById('age-filter').value = "";     // Resets to 'All'    
+    // Reset search input to default
+    document.getElementById('candidate-search').value = "";  // Clear search    
 
     fetch('get_calling_data_for_popup.php')
         .then(response => response.json())
@@ -607,6 +605,7 @@ function showPopup(title, callingId) {
         });
     loadCallingComments(callingId);
     loadSelectionList(callingId);
+    loadCurrentCallingHolder(callingId);
 
     // Display the overlay and modal
     document.getElementById('popup-overlay').style.display = 'block';
@@ -708,55 +707,78 @@ function populateCandidateDropdown(data) {
     });
 }
 
-// Function to apply filters based on gender and age
+// Function to apply search filter
 function applyFilters() {
     const searchTerm = document.getElementById('candidate-search').value.toLowerCase();
-    const gender = document.getElementById('gender-filter').value;
-    const ageGroup = document.getElementById('age-filter').value;
 
     const filteredCandidates = allCandidates.filter(candidate => {
-        let matchesSearch = true;
-        let matchesGender = true;
-        let matchesAge = true;
-
         // Check name search filter
         if (searchTerm) {
             // Handle both field name formats (popup uses "First Name", member info uses "first_name")
             const firstName = candidate['First Name'] || candidate.first_name || '';
             const lastName = candidate['Last Name'] || candidate.last_name || '';
-            matchesSearch = firstName.toLowerCase().includes(searchTerm) ||
-                          lastName.toLowerCase().includes(searchTerm) ||
-                          `${firstName} ${lastName}`.toLowerCase().includes(searchTerm);
+            return firstName.toLowerCase().includes(searchTerm) ||
+                   lastName.toLowerCase().includes(searchTerm) ||
+                   `${firstName} ${lastName}`.toLowerCase().includes(searchTerm);
         }
-
-        // Check gender filter
-        if (gender) {
-            matchesGender = candidate.gender === gender;
-        }
-
-        // Check age filter
-        if (ageGroup) {
-            const age = calculateAge(candidate.birthdate); // Calculate age from birthdate
-            matchesAge = ageGroup === 'under_18' ? age < 18 : age >= 18;
-        }
-
-        return matchesSearch && matchesGender && matchesAge;
+        
+        // If no search term, return all candidates
+        return true;
     });
 
     // Update the dropdown with filtered candidates
     populateCandidateDropdown(filteredCandidates);
 }
 
-// Helper function to calculate age from birthdate
-function calculateAge(birthdate) {
-    const birthDate = new Date(birthdate);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
+
+// Function to load and display current calling holder
+function loadCurrentCallingHolder(callingId) {
+    // Check authentication before making request
+    if (!isUserAuthenticated) {
+        console.log('Cannot load current calling holder: User not authenticated');
+        return;
     }
-    return age;
+    
+    fetch(`get_calling_members.php?calling_id=${encodeURIComponent(callingId)}`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('current-calling-holder');
+            
+            // Filter for active members only (those not yet released)
+            const activeMembers = data.filter(member => !member.date_released);
+            
+            if (activeMembers.length > 0) {
+                let html = '<div style="background-color: #e8f5e8; padding: 10px; border-radius: 5px; border: 1px solid #c3e6cb;">';
+                
+                if (activeMembers.length === 1) {
+                    const member = activeMembers[0];
+                    html += `<p><strong>Current holder:</strong> ${member.member_name}`;
+                    if (member.date_set_apart) {
+                        html += ` <em>(Set apart: ${member.date_set_apart})</em>`;
+                    }
+                    html += '</p>';
+                } else {
+                    html += '<p><strong>Current holders:</strong></p><ul>';
+                    activeMembers.forEach(member => {
+                        html += `<li>${member.member_name}`;
+                        if (member.date_set_apart) {
+                            html += ` <em>(${member.date_set_apart})</em>`;
+                        }
+                        html += '</li>';
+                    });
+                    html += '</ul>';
+                }
+                
+                html += '</div>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<div style="background-color: #fff3cd; padding: 10px; border-radius: 5px; border: 1px solid #ffeaa7;"><p><strong>This calling is currently vacant</strong></p></div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading current calling holder:', error);
+            document.getElementById('current-calling-holder').innerHTML = '<p style="color: red;">Error loading current calling holder information.</p>';
+        });
 }
 
 function closePopup() {
@@ -1512,8 +1534,11 @@ function fetchCallingsForMember(memberId) {
             const container = document.getElementById('member-callings');
             container.innerHTML = ''; // Clear previous content
 
-            if (data.length > 0) {
-                let heading = '<label>Calling History:</label>'; // Add your heading here
+            // Filter to show only current callings (no release date)
+            const currentCallings = data.filter(calling => !calling.date_released);
+
+            if (currentCallings.length > 0) {
+                let heading = '<label>Current Callings:</label>'; // Changed from "Calling History"
 
                 let table = '<table>';
                 table += `
@@ -1521,18 +1546,14 @@ function fetchCallingsForMember(memberId) {
                         <th>Status</th>
                         <th>Calling Name</th>
                         <th>Date Started</th>
-                        <th>Date Released</th>
                     </tr>`;
 
-                data.forEach(calling => {
-                    const isActive = !calling.date_released; // Active if no release date
-
+                currentCallings.forEach(calling => {
                     table += `
                         <tr>
-                            <td>${isActive ? 'Active' : 'Old'}</td>
+                            <td>Active</td>
                             <td>${calling.calling_name}</td>
                             <td>${calling.date_set_apart}</td>
-                            <td>${calling.date_released ? calling.date_released : '—'}</td>
                         </tr>
                     `;
                 });
@@ -1540,7 +1561,7 @@ function fetchCallingsForMember(memberId) {
                 table += '</table>';
                 container.innerHTML = heading + table;
             } else {
-                container.innerHTML = '<p>No current or past callings for this member.</p>';
+                container.innerHTML = '<label>Current Callings:</label><p>No current callings for this member.</p>';
             }
         })
         .catch(error => {
@@ -1583,6 +1604,46 @@ function fetchPossibleCallingsForMember(memberId) {
         })
         .catch(error => {
             console.error('Error fetching possible callings:', error);
+        });
+}
+
+function fetchCallingHistoryForMember(memberId) {
+    fetch(`get_calling_history.php?member_id=${encodeURIComponent(memberId)}`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('member-calling-history');
+            container.innerHTML = ''; // Clear previous content
+
+            if (data.length > 0) {
+                let heading = '<label>Calling History:</label>';
+
+                let table = '<table>';
+                table += `
+                    <tr>
+                        <th>Calling Name</th>
+                        <th>Period Served</th>
+                        <th>Notes</th>
+                    </tr>`;
+
+                data.forEach(history => {
+                    table += `
+                        <tr>
+                            <td>${history.calling_name}</td>
+                            <td>${history.approximate_period || '—'}</td>
+                            <td>${history.notes || '—'}</td>
+                        </tr>
+                    `;
+                });
+
+                table += '</table>';
+                container.innerHTML = heading + table;
+            } else {
+                container.innerHTML = '<label>Calling History:</label><p>No calling history records for this member.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching calling history:', error);
+            document.getElementById('member-calling-history').innerHTML = '<p>Error loading calling history.</p>';
         });
 }
 
@@ -1852,6 +1913,7 @@ function loadMembersForm() {
                         <button id="add-member-btn" type="button" class="action-btn save-btn" onclick="openAddMemberModal()">+ Add New Member</button>
                         <button id="update-members-btn" type="button" class="action-btn edit-btn" onclick="openUpdateMembersModal()">📄 Update Members from PDF</button>
                         <button type="button" id="edit-btn" class="action-btn edit-btn" style="display: none;">Edit Member</button>
+                        <button type="button" id="add-calling-history-btn" class="action-btn edit-btn" style="display: none;" onclick="openAddCallingHistoryModal()">📚 Add Calling History</button>
                         <button type="button" id="remove-member-btn" class="action-btn remove-btn" style="display: none;">Remove Member</button>
                         <button type="button" id="save-btn" class="action-btn save-btn" style="display: none;">Save Changes</button>
                         <button type="button" id="cancel-btn" class="action-btn cancel-btn" style="display: none;">Cancel</button>
@@ -1899,6 +1961,7 @@ function loadMembersForm() {
             </div>
             
                     <div id="member-callings"></div> 
+                    <div id="member-calling-history"></div>
                     <div id="member-callings-considered"></div>
                 </div>
             </div>
@@ -2839,6 +2902,7 @@ function showStatDetails(statType, statLabel) {
     
     // Remove active class from all stats and add to clicked one
     document.querySelectorAll('.clickable-stat').forEach(s => s.classList.remove('active-stat'));
+    document.querySelectorAll('.clickable-process-stat').forEach(s => s.classList.remove('active-stat'));
     document.querySelector(`[data-stat="${statType}"]`).classList.add('active-stat');
     
     // Fetch detailed data
@@ -3022,13 +3086,18 @@ function displayMembers(membersData) {
                 fetchMemberDetails(memberId);
                 fetchCallingsForMember(memberId);
                 fetchPossibleCallingsForMember(memberId);
+                fetchCallingHistoryForMember(memberId);
                 
-                // Show Edit and Remove buttons when member is selected
+                // Show Edit, Add Calling History, and Remove buttons when member is selected
                 if (editBtn) editBtn.style.display = 'inline-block';
+                const addCallingHistoryBtn = document.getElementById('add-calling-history-btn');
+                if (addCallingHistoryBtn) addCallingHistoryBtn.style.display = 'inline-block';
                 if (removeBtn) removeBtn.style.display = 'inline-block';
             } else {
-                // Hide Edit and Remove buttons when no member is selected
+                // Hide Edit, Add Calling History, and Remove buttons when no member is selected
                 if (editBtn) editBtn.style.display = 'none';
+                const addCallingHistoryBtn = document.getElementById('add-calling-history-btn');
+                if (addCallingHistoryBtn) addCallingHistoryBtn.style.display = 'none';
                 if (removeBtn) removeBtn.style.display = 'none';
             }
         });
@@ -4298,12 +4367,209 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// ============ CALLING HISTORY MODAL FUNCTIONS ============
 
+// Global variable to store current member info and history entries
+let currentMemberId = null;
+let callingHistoryEntries = [];
 
+// Function to open the calling history modal
+function openAddCallingHistoryModal() {
+    const memberSelect = document.getElementById('member-form-select');
+    const memberId = memberSelect.value;
+    const memberName = memberSelect.options[memberSelect.selectedIndex].text;
+    
+    if (!memberId) {
+        alert('Please select a member first.');
+        return;
+    }
+    
+    // Store current member info
+    currentMemberId = memberId;
+    
+    // Set member name in modal
+    document.getElementById('history-member-name').textContent = memberName;
+    
+    // Clear form fields
+    document.getElementById('history-calling-select').value = '';
+    document.getElementById('history-period').value = '';
+    document.getElementById('history-notes').value = '';
+    
+    // Clear table and entries
+    callingHistoryEntries = [];
+    updateHistoryTable();
+    
+    // Populate calling dropdown
+    populateHistoryCallingDropdown();
+    
+    // Show modal
+    document.getElementById('add-calling-history-modal').style.display = 'block';
+    document.getElementById('popup-overlay').style.display = 'block';
+}
 
+// Function to close the calling history modal
+function closeAddCallingHistoryModal() {
+    document.getElementById('add-calling-history-modal').style.display = 'none';
+    document.getElementById('popup-overlay').style.display = 'none';
+    
+    // Clear form and reset
+    document.getElementById('history-calling-select').value = '';
+    document.getElementById('history-period').value = '';
+    document.getElementById('history-notes').value = '';
+    document.getElementById('history-form-message').textContent = '';
+    callingHistoryEntries = [];
+    currentMemberId = null;
+}
 
+// Function to populate the calling dropdown in the modal
+function populateHistoryCallingDropdown() {
+    fetch('get_callings.php')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('history-calling-select');
+            select.innerHTML = '<option value="">Select a Calling</option>';
+            
+            data.forEach(calling => {
+                const option = document.createElement('option');
+                option.value = calling.calling_id;
+                option.textContent = calling.calling_name;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading callings:', error);
+            document.getElementById('history-form-message').textContent = 'Error loading callings list.';
+        });
+}
 
+// Function to add a calling to the history table
+function addCallingToHistoryTable() {
+    const callingSelect = document.getElementById('history-calling-select');
+    const periodInput = document.getElementById('history-period');
+    const notesInput = document.getElementById('history-notes');
+    
+    const callingId = callingSelect.value;
+    const callingName = callingSelect.options[callingSelect.selectedIndex].text;
+    const period = periodInput.value.trim();
+    const notes = notesInput.value.trim();
+    
+    if (!callingId) {
+        alert('Please select a calling.');
+        return;
+    }
+    
+    // Check if calling is already in the list
+    const existingEntry = callingHistoryEntries.find(entry => entry.callingId === callingId);
+    if (existingEntry) {
+        alert('This calling is already in the list.');
+        return;
+    }
+    
+    // Add to entries array
+    callingHistoryEntries.push({
+        callingId: callingId,
+        callingName: callingName,
+        period: period,
+        notes: notes
+    });
+    
+    // Clear form fields
+    callingSelect.value = '';
+    periodInput.value = '';
+    notesInput.value = '';
+    
+    // Update table display
+    updateHistoryTable();
+    
+    document.getElementById('history-form-message').textContent = '';
+}
 
+// Function to update the history table display
+function updateHistoryTable() {
+    const table = document.getElementById('history-table');
+    const tbody = document.getElementById('history-table-body');
+    const noMessage = document.getElementById('no-history-message');
+    const saveBtn = document.getElementById('save-history-btn');
+    
+    if (callingHistoryEntries.length === 0) {
+        table.style.display = 'none';
+        noMessage.style.display = 'block';
+        saveBtn.style.display = 'none';
+    } else {
+        table.style.display = 'table';
+        noMessage.style.display = 'none';
+        saveBtn.style.display = 'inline-block';
+        
+        // Clear tbody
+        tbody.innerHTML = '';
+        
+        // Add rows
+        callingHistoryEntries.forEach((entry, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${entry.callingName}</td>
+                <td>${entry.period || '—'}</td>
+                <td>${entry.notes || '—'}</td>
+                <td><button type="button" class="action-btn remove-btn" onclick="removeHistoryEntry(${index})">Remove</button></td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+}
 
+// Function to remove an entry from the history table
+function removeHistoryEntry(index) {
+    callingHistoryEntries.splice(index, 1);
+    updateHistoryTable();
+}
+
+// Function to save all calling history entries
+function saveCallingHistory() {
+    if (!currentMemberId || callingHistoryEntries.length === 0) {
+        alert('No calling history to save.');
+        return;
+    }
+    
+    const messageDiv = document.getElementById('history-form-message');
+    messageDiv.textContent = 'Saving calling history...';
+    
+    const data = {
+        member_id: currentMemberId,
+        history_entries: callingHistoryEntries
+    };
+    
+    fetch('save_calling_history.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            messageDiv.style.color = 'green';
+            messageDiv.textContent = `Successfully saved ${callingHistoryEntries.length} calling history entries.`;
+            
+            // Clear entries and update table
+            callingHistoryEntries = [];
+            updateHistoryTable();
+            
+            // Auto-close modal after success
+            setTimeout(() => {
+                closeAddCallingHistoryModal();
+            }, 2000);
+            
+        } else {
+            messageDiv.style.color = 'red';
+            messageDiv.textContent = 'Error: ' + (result.message || 'Failed to save calling history.');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving calling history:', error);
+        messageDiv.style.color = 'red';
+        messageDiv.textContent = 'Error saving calling history. Please try again.';
+    });
+}
 
 

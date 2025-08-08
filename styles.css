@@ -3,7 +3,8 @@ body {
 }
 
 .tabs-container {
-    background-color: #333;
+    background-color: slategray;
+    border-bottom: 3px solid #424242;
 }
 
 .desktop-tabs {
@@ -16,7 +17,8 @@ body {
     border: none;
     outline: none;
     cursor: pointer;
-    padding: 14px 16px;
+    padding: 10px 10px;
+    margin-bottom: 0;
     transition: 0.3s;
     color: white;
     font-size: 18px;
@@ -30,10 +32,11 @@ body {
 }
 
 .mobile-menu-btn {
-    background-color: #333;
+    background-color: slategray;
     border: none;
     color: white;
-    padding: 14px 16px;
+    padding: 10px 10px;
+    margin-bottom: 0;
     font-size: 16px;
     width: 100%;
     text-align: left;
@@ -59,7 +62,7 @@ body {
     top: 100%;
     left: 0;
     right: 0;
-    background-color: #333;
+    background-color: slategray;
     border-top: 1px solid #555;
     z-index: 1000;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
@@ -70,7 +73,7 @@ body {
 }
 
 .mobile-tablink {
-    background-color: #333;
+    background-color: slategray;
     border: none;
     color: white;
     padding: 16px 20px;
@@ -82,9 +85,7 @@ body {
     transition: background-color 0.3s;
 }
 
-.mobile-tablink:hover {
-    background-color: #444;
-}
+
 
 .mobile-tablink:last-child {
     border-bottom: none;
@@ -720,6 +721,50 @@ table td input[type="checkbox"] {
     position: relative;
 }
 
+/* Add Calling History Modal */
+#add-calling-history-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+#add-calling-history-modal .modal-content {
+    background-color: #fff;
+    padding: 20px;
+    position: relative;
+}
+
+#add-calling-history-modal table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+#add-calling-history-modal th,
+#add-calling-history-modal td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+#add-calling-history-modal th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+#add-calling-history-modal tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
 /* Update Members Modal */
 #update-members-modal {
     position: fixed;
@@ -1111,7 +1156,7 @@ table td input[type="checkbox"] {
 #auth-form {
     background-color: white;
     padding: 30px;
-    border-radius: 8px;
+    border-radius: 5px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     max-width: 400px;
     width: 100%;
@@ -1142,7 +1187,7 @@ table td input[type="checkbox"] {
 
 #auth-form button[type="submit"] {
     width: 100%;
-    background-color: black;
+    background-color: slategray;
     color: white;
     padding: 12px;
     border: none;
@@ -1329,19 +1374,19 @@ textarea:focus {
 
 /* Enhanced Information Page Layout */
 .section-header {
-    margin: 25px 0 15px 0;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #424242;
-    background: linear-gradient(90deg, rgba(66,66,66,0.1) 0%, rgba(66,66,66,0.05) 100%);
-    padding: 10px 15px;
+    margin: 10px 0 10px 0;
+    padding-bottom: 5px;
+    border-bottom: 3px solid #424242;
+    background: slategray;
+    padding: 5px 5px;
     border-radius: 5px;
 }
 
 .section-header h3 {
     margin: 0;
-    color: #212121;
+    color: white;
     font-size: 18px;
-    font-weight: bold;
+    font-weight: normal;
 }
 
 /* Primary Action Section */
@@ -1376,8 +1421,9 @@ textarea:focus {
     margin-bottom: 20px;
     background-color: #f8f9fa;
     padding: 20px;
-    border-radius: 8px;
+    border-radius: 5px;
     border: 1px solid #e9ecef;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .search-row {
@@ -1400,8 +1446,9 @@ textarea:focus {
     margin-bottom: 20px;
     background-color: #f8f9fa;
     padding: 20px;
-    border-radius: 8px;
+    border-radius: 5px;
     border: 1px solid #e9ecef;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .selection-section select {
@@ -1412,9 +1459,9 @@ textarea:focus {
 
 /* Details Section */
 .details-section {
-    background-color: #ffffff;
+    background-color: #f8f9fa;
     padding: 25px;
-    border-radius: 8px;
+    border-radius: 5px;
     border: 1px solid #dee2e6;
     margin-bottom: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -1743,36 +1790,36 @@ textarea:focus {
 .clickable-stat {
     cursor: pointer;
     transition: background-color 0.2s ease;
-    border-radius: 4px;
+    border-radius: 0px;
     padding: 5px;
     margin: 2px 0;
 }
 
 .clickable-stat:hover {
-    background-color: #f0f0f0;
+    background-color: aliceblue;
 }
 
 .clickable-stat.active-stat {
-    background-color: #e3f2fd;
-    border-left: 3px solid #2196F3;
+    background-color: aliceblue;
+    border-left: 3px solid slategray;
 }
 
 /* Dashboard clickable process stats */
 .clickable-process-stat {
     cursor: pointer;
     transition: background-color 0.2s ease;
-    border-radius: 4px;
+    border-radius: 0px;
     padding: 5px;
     margin: 2px 0;
 }
 
 .clickable-process-stat:hover {
-    background-color: #f0f0f0;
+    background-color: aliceblue;
 }
 
 .clickable-process-stat.active-stat {
-    background-color: #e3f2fd;
-    border-left: 3px solid #2196F3;
+    background-color: aliceblue;
+    border-left: 3px solid slategray;
 }
 
 /* Dashboard detail table */
@@ -2073,6 +2120,7 @@ textarea:focus {
     #popup-modal,
     #add-member-modal,
     #add-calling-modal,
+    #add-calling-history-modal,
     #update-members-modal,
     #review-changes-modal {
         width: 95vw !important;
@@ -2124,7 +2172,10 @@ textarea:focus {
     #add-member-modal textarea,
     #add-calling-modal input,
     #add-calling-modal select,
-    #add-calling-modal textarea {
+    #add-calling-modal textarea,
+    #add-calling-history-modal input,
+    #add-calling-history-modal select,
+    #add-calling-history-modal textarea {
         font-size: 16px !important;
         padding: 12px !important;
         margin-bottom: 15px;
@@ -2159,6 +2210,7 @@ textarea:focus {
     #popup-modal,
     #add-member-modal,
     #add-calling-modal,
+    #add-calling-history-modal,
     #update-members-modal,
     #review-changes-modal {
         width: 98vw !important;
