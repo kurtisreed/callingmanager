@@ -28,6 +28,23 @@ while ($row = $considered_result->fetch_row()) {
     $considered_ids[$row[0]] = true; // Use calling_id as key for O(1) lookups
 }
 
+// === QUERY 1.5: Get all calling IDs that have approved calling processes ===
+$approved_sql = "SELECT DISTINCT calling_id FROM calling_process WHERE status IN ('approved', 'interviewed', 'sustained', 'set_apart')";
+$approved_result = $conn->query($approved_sql);
+
+if (!$approved_result) {
+    http_response_code(500);
+    error_log('Database error in get_all_overview_data.php (Query 1.5): ' . $conn->error);
+    echo json_encode(['error' => 'Database query failed']);
+    exit;
+}
+
+// Build lookup array for approved calling IDs
+$approved_ids = [];
+while ($row = $approved_result->fetch_row()) {
+    $approved_ids[$row[0]] = true; // Use calling_id as key for O(1) lookups
+}
+
 // === QUERY 2: Get all callings and their currently assigned members ===
 $sql = "
     SELECT
@@ -66,7 +83,8 @@ while ($row = $result->fetch_assoc()) {
                 'priority' => (int)$row['priority'],
                 'organization' => $row['organization'],
                 // Check if this calling_id exists in our lookup set
-                'is_considered' => isset($considered_ids[$calling_id]) 
+                'is_considered' => isset($considered_ids[$calling_id]),
+                'is_approved' => isset($approved_ids[$calling_id])
             ],
             'members' => []
         ];

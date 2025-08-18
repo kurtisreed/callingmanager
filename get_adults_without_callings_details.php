@@ -13,7 +13,6 @@ try {
     $sql = "SELECT 
                 CONCAT(m.first_name, ' ', m.last_name) as member_name,
                 TIMESTAMPDIFF(YEAR, m.birthdate, CURDATE()) as age,
-                m.status,
                 m.birthdate
             FROM members m
             WHERE m.status = 'active'
@@ -35,8 +34,7 @@ try {
     while ($row = $result->fetch_assoc()) {
         $details[] = [
             'member_name' => $row['member_name'],
-            'age' => $row['age'],
-            'status' => ucfirst($row['status'])
+            'age' => $row['age']
         ];
     }
     

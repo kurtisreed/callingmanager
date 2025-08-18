@@ -3,8 +3,18 @@ body {
 }
 
 .tabs-container {
-    background-color: slategray;
+    background-color: #0F2439;
     border-bottom: 3px solid #424242;
+    display: flex;
+    align-items: center;
+}
+
+.ward-title {
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 10px 20px;
+    margin-right: auto;
 }
 
 .desktop-tabs {
@@ -32,7 +42,7 @@ body {
 }
 
 .mobile-menu-btn {
-    background-color: slategray;
+    background-color: #A2AAAD;
     border: none;
     color: white;
     padding: 10px 10px;
@@ -62,7 +72,7 @@ body {
     top: 100%;
     left: 0;
     right: 0;
-    background-color: slategray;
+    background-color: #A2AAAD;
     border-top: 1px solid #555;
     z-index: 1000;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
@@ -73,7 +83,7 @@ body {
 }
 
 .mobile-tablink {
-    background-color: slategray;
+    background-color: #A2AAAD;
     border: none;
     color: white;
     padding: 16px 20px;
@@ -114,7 +124,7 @@ body {
 
 .tabcontent {
     display: none;
-    padding: 20px;
+    padding: 2px;
 }
 
 .sub-bar {
@@ -131,13 +141,13 @@ body {
     width: 95%;
     min-height: 400px;
     border: 2px solid #ccc;
-    margin: 10px auto;
+    margin: 2px;
     position: relative;
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-start;
     align-items: flex-start;
-    padding: 10px;
+    padding: 2px;
 }
 
 .information-box {
@@ -156,7 +166,7 @@ body {
 .small-box {
     background-color: #f9f9f9;
     border: 1px solid #000;
-    margin: 10px;
+    margin: 4px;
     display: flex;
     flex-direction: column;
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
@@ -412,6 +422,30 @@ body {
     color: orange;
     margin-right: 2px;
     vertical-align: middle;
+}
+
+.checkmark-symbol {
+    font-size: 14px; /* Adjust size as needed */
+    color: green;
+    margin-right: 2px;
+    vertical-align: middle;
+}
+
+/* Legend Key Styling */
+.legend-key {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 4px;
+    margin: 2px;
+    font-size: 14px;
+    color: #495057;
+}
+
+.legend-item {
+    margin-right: 20px;
+    display: inline-flex;
+    align-items: center;
 }
 
 
@@ -817,7 +851,7 @@ table td input[type="checkbox"] {
 
 .upload-label {
     display: inline-block;
-    background-color: #007bff;
+    background-color: #A2AAAD;
     color: white;
     padding: 10px 20px;
     border-radius: 4px;
@@ -827,7 +861,7 @@ table td input[type="checkbox"] {
 }
 
 .upload-label:hover {
-    background-color: #0056b3;
+    background-color: #8a9399;
 }
 
 #member-pdf-upload {
@@ -1156,7 +1190,7 @@ table td input[type="checkbox"] {
 #auth-form {
     background-color: white;
     padding: 30px;
-    border-radius: 5px;
+    border-radius: 0 8px 0 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     max-width: 400px;
     width: 100%;
@@ -1187,11 +1221,11 @@ table td input[type="checkbox"] {
 
 #auth-form button[type="submit"] {
     width: 100%;
-    background-color: slategray;
+    background-color: #A2AAAD;
     color: white;
     padding: 12px;
     border: none;
-    border-radius: 4px;
+    border-radius: 0 8px 0 8px;
     font-size: 16px;
     cursor: pointer;
     transition: background-color 0.3s ease;
@@ -1376,10 +1410,10 @@ textarea:focus {
 .section-header {
     margin: 10px 0 10px 0;
     padding-bottom: 5px;
-    border-bottom: 3px solid #424242;
-    background: slategray;
+    border-bottom: 3px solid #0F2439;
+    background: #A2AAAD;
     padding: 5px 5px;
-    border-radius: 5px;
+    border-radius: 0 8px 0 8px;;
 }
 
 .section-header h3 {
@@ -1421,7 +1455,7 @@ textarea:focus {
     margin-bottom: 20px;
     background-color: #f8f9fa;
     padding: 20px;
-    border-radius: 5px;
+    border-radius: 0 8px 0 8px;
     border: 1px solid #e9ecef;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
@@ -1446,7 +1480,7 @@ textarea:focus {
     margin-bottom: 20px;
     background-color: #f8f9fa;
     padding: 20px;
-    border-radius: 5px;
+    border-radius: 0 8px 0 8px;
     border: 1px solid #e9ecef;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
@@ -1461,7 +1495,7 @@ textarea:focus {
 .details-section {
     background-color: #f8f9fa;
     padding: 25px;
-    border-radius: 5px;
+    border-radius: 0 8px 0 8px;
     border: 1px solid #dee2e6;
     margin-bottom: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -1801,7 +1835,7 @@ textarea:focus {
 
 .clickable-stat.active-stat {
     background-color: aliceblue;
-    border-left: 3px solid slategray;
+    border-left: 3px solid #A2AAAD;
 }
 
 /* Dashboard clickable process stats */
@@ -1819,7 +1853,7 @@ textarea:focus {
 
 .clickable-process-stat.active-stat {
     background-color: aliceblue;
-    border-left: 3px solid slategray;
+    border-left: 3px solid #A2AAAD;
 }
 
 /* Dashboard detail table */

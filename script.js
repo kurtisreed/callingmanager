@@ -748,17 +748,17 @@ function loadCurrentCallingHolder(callingId) {
             const activeMembers = data.filter(member => !member.date_released);
             
             if (activeMembers.length > 0) {
-                let html = '<div style="background-color: #e8f5e8; padding: 10px; border-radius: 5px; border: 1px solid #c3e6cb;">';
+                let html = '<div style="background-color: arcticblue; padding: 2px; border-radius: 5px; border: 1px solid #c3e6cb;">';
                 
                 if (activeMembers.length === 1) {
                     const member = activeMembers[0];
-                    html += `<p><strong>Current holder:</strong> ${member.member_name}`;
+                    html += `<p style="margin: 2px;"><strong>${member.member_name}</strong>`;
                     if (member.date_set_apart) {
                         html += ` <em>(Set apart: ${member.date_set_apart})</em>`;
                     }
                     html += '</p>';
                 } else {
-                    html += '<p><strong>Current holders:</strong></p><ul>';
+                    html += '<ul>';
                     activeMembers.forEach(member => {
                         html += `<li>${member.member_name}`;
                         if (member.date_set_apart) {
@@ -772,7 +772,7 @@ function loadCurrentCallingHolder(callingId) {
                 html += '</div>';
                 container.innerHTML = html;
             } else {
-                container.innerHTML = '<div style="background-color: #fff3cd; padding: 10px; border-radius: 5px; border: 1px solid #ffeaa7;"><p><strong>This calling is currently vacant</strong></p></div>';
+                container.innerHTML = '<div style="background-color: #fff3cd; padding: 2px; border-radius: 5px; border: 1px solid #ffeaa7;"><p style="margin: 2px;"><strong>This calling is currently vacant</strong></p></div>';
             }
         })
         .catch(error => {
@@ -977,7 +977,7 @@ function addToCallingProcess(memberId, callingId) {
     .then(response => response.json())
     .then(result => {
         if (result.success) {
-            alert(`✓ ${result.message}\n\nThe calling has been added to the process and can be managed in the Calling Process tab.`);
+            alert(`✓ ${result.message}\n\nThe calling can be managed in the Dashboard.`);
             closePopup();
             // Optionally redirect to the dashboard tab
             openTab(null, 'Tab0');
@@ -1061,6 +1061,7 @@ function buildSmallBoxes() {
                     callingId: callingId,
                     callingName: details.calling_name,
                     isConsidered: details.is_considered,
+                    isApproved: details.is_approved,
                     priority: details.priority,
                     members: callingInfo.members
                 });
@@ -1090,11 +1091,16 @@ function buildSmallBoxes() {
                         `<div data-member-id="${member.member_id}">     - ${member.first_name} ${member.last_name} (${member.date_set_apart})</div>`
                     ).join('') || `<div style="font-style: italic;color: red;">     - (Vacant)</div>`;
 
-                    const deltaSymbolHtml = calling.isConsidered ? '<span class="delta-symbol">▲</span>' : '';
+                    let indicatorHtml = '';
+                    if (calling.isApproved) {
+                        indicatorHtml = '<span class="checkmark-symbol">✓</span>';
+                    } else if (calling.isConsidered) {
+                        indicatorHtml = '<span class="delta-symbol">▲</span>';
+                    }
 
                     return `
                         <div class="box-title" data-calling-id="${calling.callingId}" data-title="${calling.callingName}">
-                            ${deltaSymbolHtml} ${calling.callingName}
+                            ${indicatorHtml} ${calling.callingName}
                         </div>
                         <div class="box-content">
                             ${membersHtml}
@@ -1871,7 +1877,7 @@ function loadMembersForm() {
                 <div class="left-column">
                     <!-- Member Selection Section -->
                     <div class="section-header">
-                        <h3>👤 Select Member</h3>
+                        <h3>Select Member</h3>
                     </div>
                     <div class="selection-section">
                         <label for="member-form-select">Choose Member:</label>
@@ -1882,7 +1888,7 @@ function loadMembersForm() {
                     
                     <!-- Search & Filter Section -->
                     <div class="section-header">
-                        <h3>🔍 Search & Filter</h3>
+                        <h3>Search & Filter</h3>
                     </div>
                     <div class="search-section">
                         <div class="search-column">
@@ -1907,7 +1913,7 @@ function loadMembersForm() {
 
                     <!-- Action Buttons Section -->
                     <div class="section-header">
-                        <h3>⚙️ Actions</h3>
+                        <h3>Actions</h3>
                     </div>
                     <div class="action-buttons">
                         <button id="add-member-btn" type="button" class="action-btn save-btn" onclick="openAddMemberModal()">+ Add New Member</button>
@@ -1926,7 +1932,7 @@ function loadMembersForm() {
                 <div class="right-column">
                     <!-- Member Information Section -->
                     <div class="section-header">
-                        <h3>📋 Member Details</h3>
+                        <h3>Member Details</h3>
                     </div>
                     <div id="member-details" class="details-section">
 
@@ -2136,7 +2142,7 @@ function loadCallingsForm() {
                 <div class="left-column">
                     <!-- Calling Selection Section -->
                     <div class="section-header">
-                        <h3>⛪ Select Calling</h3>
+                        <h3>Select Calling</h3>
                     </div>
                     <div class="selection-section">
                         <label for="calling-form-select">Choose Calling:</label>
@@ -2147,7 +2153,7 @@ function loadCallingsForm() {
                     
                     <!-- Search & Filter Section -->
                     <div class="section-header">
-                        <h3>🔍 Search & Filter</h3>
+                        <h3>Search & Filter</h3>
                     </div>
                     <div class="search-section">
                         <div class="search-column">
@@ -2160,7 +2166,7 @@ function loadCallingsForm() {
 
                     <!-- Action Buttons Section -->
                     <div class="section-header">
-                        <h3>⚙️ Actions</h3>
+                        <h3>Actions</h3>
                     </div>
                     <div class="action-buttons">
                         <button id="add-calling-btn" type="button" class="action-btn save-btn" onclick="openAddCallingModal()">+ Add New Calling</button>
@@ -2176,7 +2182,7 @@ function loadCallingsForm() {
                 <div class="right-column">
                     <!-- Calling Information Section -->
                     <div class="section-header">
-                        <h3>📋 Calling Details</h3>
+                        <h3>Calling Details</h3>
                     </div>
                     <div id="calling-details" class="details-section">
                                         
@@ -2622,7 +2628,7 @@ function loadDashboard() {
             <div class="left-column">
                 <!-- Quick Stats Section -->
                 <div class="section-header">
-                    <h3>📊 Quick Stats</h3>
+                    <h3>Quick Stats</h3>
                 </div>
                 <div class="details-section">
                     <div id="dashboard-stats">
@@ -2659,7 +2665,7 @@ function loadDashboard() {
 
                 <!-- Callings in Process Section -->
                 <div class="section-header">
-                    <h3>📋 Callings in Process</h3>
+                    <h3>Callings in Process</h3>
                 </div>
                 <div class="details-section">
                     <div id="process-stats">
@@ -2668,19 +2674,19 @@ function loadDashboard() {
                             <span class="stat-value" id="stat-all">Loading...</span>
                         </div>
                         <div class="stat-item clickable-process-stat" data-process-status="approved">
-                            <span class="stat-label">Interview pending:</span>
+                            <span class="stat-label">Needs interview:</span>
                             <span class="stat-value" id="stat-approved">Loading...</span>
                         </div>
                         <div class="stat-item clickable-process-stat" data-process-status="interviewed">
-                            <span class="stat-label">Sustained pending:</span>
+                            <span class="stat-label">Needs sustaining:</span>
                             <span class="stat-value" id="stat-interviewed">Loading...</span>
                         </div>
                         <div class="stat-item clickable-process-stat" data-process-status="sustained">
-                            <span class="stat-label">Set Apart pending:</span>
+                            <span class="stat-label">Needs set apart:</span>
                             <span class="stat-value" id="stat-sustained">Loading...</span>
                         </div>
                         <div class="stat-item clickable-process-stat" data-process-status="set_apart">
-                            <span class="stat-label">Finalized pending:</span>
+                            <span class="stat-label">Needs finalized:</span>
                             <span class="stat-value" id="stat-set-apart">Loading...</span>
                         </div>
                     </div>
@@ -2690,7 +2696,7 @@ function loadDashboard() {
             <!-- Right Column: Detail Display -->
             <div class="right-column">
                 <div class="section-header">
-                    <h3 id="detail-header">📈 Overview</h3>
+                    <h3 id="detail-header">Overview</h3>
                 </div>
                 <div class="details-section">
                     <div id="dashboard-detail-content">
@@ -2816,7 +2822,7 @@ function addProcessStatClickHandlers() {
 // Function to show detailed process information for a selected status
 function showProcessDetails(statusType, statLabel) {
     // Update header
-    document.getElementById('detail-header').textContent = `📋 Callings in Process - ${statLabel}`;
+    document.getElementById('detail-header').textContent = `Callings in Process - ${statLabel}`;
     
     // Show loading state
     document.getElementById('dashboard-detail-content').innerHTML = '<p>Loading calling processes...</p>';
@@ -2970,7 +2976,7 @@ function getDetailTableHeaders(statType) {
         case 'members-with-callings':
             return ['Member', 'Calling(s)', 'Date Set Apart'];
         case 'adults-without-callings':
-            return ['Member', 'Age', 'Status'];
+            return ['Member', 'Age'];
         case 'members-stake-callings':
             return ['Member', 'Stake Calling', 'Date Set Apart'];
         case 'members-multiple-callings':
@@ -2992,7 +2998,7 @@ function getDetailTableValues(item, statType) {
         case 'members-with-callings':
             return [item.member_name, item.callings, formatDate(item.date_set_apart)];
         case 'adults-without-callings':
-            return [item.member_name, item.age, item.status];
+            return [item.member_name, item.age];
         case 'members-stake-callings':
             return [item.member_name, item.calling_name, formatDate(item.date_set_apart)];
         case 'members-multiple-callings':
@@ -3808,7 +3814,7 @@ function displayReconciliationResults(data) {
     if (data.reconciliation.new_members.length > 0) {
         changesHTML += `
             <div class="changes-category">
-                <h4>📥 New Members (${data.reconciliation.new_members.length})</h4>
+                <h4>New Members (${data.reconciliation.new_members.length})</h4>
                 <ul>`;
         data.reconciliation.new_members.forEach(member => {
             changesHTML += `<li>${member.last_name}, ${member.first_name} (DOB: ${member.birthdate})</li>`;
@@ -3820,7 +3826,7 @@ function displayReconciliationResults(data) {
     if (data.reconciliation.updates.length > 0) {
         changesHTML += `
             <div class="changes-category">
-                <h4>🔄 Updates (${data.reconciliation.updates.length})</h4>
+                <h4>Updates (${data.reconciliation.updates.length})</h4>
                 <ul>`;
         data.reconciliation.updates.forEach(update => {
             const current = update.current;
@@ -3997,7 +4003,7 @@ function createReviewModal() {
         <div id="review-changes-modal" class="modal" style="display: block;">
             <div class="modal-content">
                 <button class="close-btn" onclick="closeReviewModal()">✕ Close</button>
-                <h2>📋 Review Individual Changes</h2>
+                <h2>Review Individual Changes</h2>
                 <p>Select which changes you want to apply to the database:</p>
                 
                 <div class="review-summary">
@@ -4035,7 +4041,7 @@ function generateReviewContent() {
     if (window.currentReconciliation.new_members.length > 0) {
         html += `
             <div class="review-section">
-                <h3>📥 New Members (${window.currentReconciliation.new_members.length})</h3>
+                <h3>New Members (${window.currentReconciliation.new_members.length})</h3>
                 <div class="review-items">
         `;
         
@@ -4066,7 +4072,7 @@ function generateReviewContent() {
     if (window.currentReconciliation.updates.length > 0) {
         html += `
             <div class="review-section">
-                <h3>🔄 Updates (${window.currentReconciliation.updates.length})</h3>
+                <h3>Updates (${window.currentReconciliation.updates.length})</h3>
                 <div class="review-items">
         `;
         

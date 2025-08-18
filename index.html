@@ -27,6 +27,8 @@
 <div id="app-content" style="display: none;">
     <!-- Main Tabs -->
     <div class="tabs-container">
+        <!-- Ward Title -->
+        <div class="ward-title">Kimberly 1st</div>
         <!-- Desktop Tabs -->
         <div class="tabs desktop-tabs">
             <button class="tablinks" id="tab0-title" onclick="openTab(event, 'Tab0')">Dashboard</button>
@@ -104,6 +106,16 @@
     </div>
     
     <div id="Tab1" class="tabcontent">
+        <!-- Legend Key -->
+        <div class="legend-key">
+            <span class="legend-item">
+                <span class="delta-symbol">▲</span> Considering change
+            </span>
+            <span class="legend-item">
+                <span class="checkmark-symbol">✓</span> Calling approved
+            </span>
+        </div>
+        
         <div class="large-box" id="large-box">
 
 
@@ -120,7 +132,7 @@
                     <div class="left-column">
                         <!-- Member Search & Selection Section -->
                         <div class="section-header">
-                            <h3>👤 Member Selection</h3>
+                            <h3>Member Selection</h3>
                         </div>
                         <div class="search-section">
                             <div class="search-column">
@@ -139,7 +151,7 @@
 
                         <!-- Calling Search & Selection Section -->
                         <div class="section-header">
-                            <h3>⛪ Calling Selection</h3>
+                            <h3>Calling Selection</h3>
                         </div>
                         <div class="search-section">
                             <div class="search-column">
@@ -160,7 +172,7 @@
                     <!-- Right Column: Tables and Details -->
                     <div class="right-column">
                         <div class="section-header">
-                            <h3>📋 Current Information</h3>
+                            <h3>Current Information</h3>
                         </div>
                         <div class="details-section">
                             <div id="member-callings-container"></div> <!-- Table for current callings -->
@@ -169,7 +181,7 @@
 
                         <!-- Date & Action Section -->
                         <div class="section-header">
-                            <h3>📅 Date & Actions</h3>
+                            <h3>Date & Actions</h3>
                         </div>
                         <div class="details-section">
                             <div id="changes-preview" style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin-bottom: 20px; display: none;">
@@ -227,7 +239,7 @@
         <h2 id="popup-title"></h2>
         
         <div class="section-header">
-            <h3>👤 Current Calling Holder</h3>
+            <h3>Current Calling Holder</h3>
         </div>
         
         <div id="current-calling-holder">
@@ -235,7 +247,7 @@
         </div>
         
         <div class="section-header">
-            <h3>🔍 Choose Candidates</h3>
+            <h3>Choose Candidates</h3>
         </div>
         
         <label for="candidate-search">Search by Name:</label>
@@ -247,13 +259,13 @@
         </select>
         
         <div class="section-header">
-            <h3>👥 Candidates Considered</h3>
+            <h3>Candidates Considered</h3>
         </div>
         
         <div id="selectionList"></div>
         
         <div class="section-header">
-            <h3>📝 Notes</h3>
+            <h3>Notes</h3>
         </div>
         
         <label for="candidate-notes">Additional Notes:</label>
@@ -370,7 +382,7 @@
         <p>Add historical callings for <strong id="history-member-name">Member Name</strong></p>
         
         <div class="section-header">
-            <h3>📋 Select Calling</h3>
+            <h3>Select Calling</h3>
         </div>
         
         <label for="history-calling-select">Choose Calling:</label>
@@ -387,7 +399,7 @@
         <button type="button" onclick="addCallingToHistoryTable()" class="action-btn save-btn">Add to List</button>
         
         <div class="section-header">
-            <h3>📚 Calling History to Add</h3>
+            <h3>Calling History to Add</h3>
         </div>
         
         <div id="history-table-container">
@@ -418,10 +430,10 @@
 <div id="update-members-modal" class="modal" style="display: none;">
     <div class="modal-content">
         <button class="close-btn" onclick="closeUpdateMembersModal()">✕ Close</button>
-        <h2>📄 Update Members from PDF</h2>
+        <h2>Update Members from PDF</h2>
         
         <div class="section-header">
-            <h3>📤 Upload Member List</h3>
+            <h3>Upload Member List</h3>
             <div id="last-update-info" class="last-update-info">
                 <!-- Last update info will be loaded here -->
             </div>
@@ -433,7 +445,7 @@
             <div class="file-upload-container">
                 <input type="file" id="member-pdf-upload" accept=".pdf" onchange="handleMemberPDFUpload(this)" />
                 <label for="member-pdf-upload" class="upload-label">
-                    📄 Choose PDF File
+                    Choose PDF File
                 </label>
                 <div id="upload-status" class="upload-status"></div>
             </div>
@@ -448,7 +460,7 @@
         
         <div id="reconciliation-results" class="reconciliation-section" style="display: none;">
             <div class="section-header">
-                <h3>🔍 Reconciliation Results</h3>
+                <h3>Reconciliation Results</h3>
             </div>
             
             <div class="results-summary">
