@@ -754,7 +754,7 @@ function loadCurrentCallingHolder(callingId) {
                     const member = activeMembers[0];
                     html += `<p style="margin: 2px;"><strong>${member.member_name}</strong>`;
                     if (member.date_set_apart) {
-                        html += ` <em>(Set apart: ${member.date_set_apart})</em>`;
+                        html += ` <em>(${member.date_set_apart})</em>`;
                     }
                     html += '</p>';
                 } else {
@@ -2626,6 +2626,35 @@ function loadDashboard() {
         <div class="two-column-layout">
             <!-- Left Column: Stats and Controls -->
             <div class="left-column">
+                <!-- Callings in Process Section -->
+                <div class="section-header">
+                    <h3>Callings in Process</h3>
+                </div>
+                <div class="details-section">
+                    <div id="process-stats">
+                        <div class="stat-item clickable-process-stat" data-process-status="all">
+                            <span class="stat-label">All:</span>
+                            <span class="stat-value" id="stat-all">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-process-stat" data-process-status="approved">
+                            <span class="stat-label">Needs interview:</span>
+                            <span class="stat-value" id="stat-approved">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-process-stat" data-process-status="interviewed">
+                            <span class="stat-label">Needs sustaining:</span>
+                            <span class="stat-value" id="stat-interviewed">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-process-stat" data-process-status="sustained">
+                            <span class="stat-label">Needs set apart:</span>
+                            <span class="stat-value" id="stat-sustained">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-process-stat" data-process-status="set_apart">
+                            <span class="stat-label">Needs finalized:</span>
+                            <span class="stat-value" id="stat-set-apart">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Quick Stats Section -->
                 <div class="section-header">
                     <h3>Quick Stats</h3>
@@ -2662,35 +2691,6 @@ function loadDashboard() {
                         </div>
                     </div>
                 </div>
-
-                <!-- Callings in Process Section -->
-                <div class="section-header">
-                    <h3>Callings in Process</h3>
-                </div>
-                <div class="details-section">
-                    <div id="process-stats">
-                        <div class="stat-item clickable-process-stat" data-process-status="all">
-                            <span class="stat-label">All:</span>
-                            <span class="stat-value" id="stat-all">Loading...</span>
-                        </div>
-                        <div class="stat-item clickable-process-stat" data-process-status="approved">
-                            <span class="stat-label">Needs interview:</span>
-                            <span class="stat-value" id="stat-approved">Loading...</span>
-                        </div>
-                        <div class="stat-item clickable-process-stat" data-process-status="interviewed">
-                            <span class="stat-label">Needs sustaining:</span>
-                            <span class="stat-value" id="stat-interviewed">Loading...</span>
-                        </div>
-                        <div class="stat-item clickable-process-stat" data-process-status="sustained">
-                            <span class="stat-label">Needs set apart:</span>
-                            <span class="stat-value" id="stat-sustained">Loading...</span>
-                        </div>
-                        <div class="stat-item clickable-process-stat" data-process-status="set_apart">
-                            <span class="stat-label">Needs finalized:</span>
-                            <span class="stat-value" id="stat-set-apart">Loading...</span>
-                        </div>
-                    </div>
-                </div>
             </div>
             
             <!-- Right Column: Detail Display -->
@@ -2700,7 +2700,7 @@ function loadDashboard() {
                 </div>
                 <div class="details-section">
                     <div id="dashboard-detail-content">
-                        <p>Click a stat on the left to see detailed information.</p>
+                        <p>Click an item on the left to see detailed information.</p>
                     </div>
                 </div>
             </div>
@@ -2714,6 +2714,11 @@ function loadDashboard() {
     // Add click event listeners to stats
     addDashboardStatClickHandlers();
     addProcessStatClickHandlers();
+    
+    // Automatically load "Callings in Process - All" details
+    setTimeout(() => {
+        showProcessDetails('all', 'All');
+    }, 100); // Small delay to ensure DOM is ready
 }
 
 // Function to fetch dashboard statistics
@@ -2901,7 +2906,7 @@ function displayCallingProcessTable(processes, statusFilter) {
 // Function to show detailed information for a selected stat
 function showStatDetails(statType, statLabel) {
     // Update header
-    document.getElementById('detail-header').textContent = `📋 ${statLabel}`;
+    document.getElementById('detail-header').textContent = `${statLabel}`;
     
     // Show loading state
     document.getElementById('dashboard-detail-content').innerHTML = '<p>Loading details...</p>';
