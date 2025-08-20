@@ -9,7 +9,7 @@ header('Content-Type: application/json');
 require_once 'db_connect.php';
 
 try {
-    // Query to get all calling processes with member and calling names
+    // Query to get all calling processes with member and calling names, plus activated status
     $sql = "SELECT 
                 cp.id,
                 cp.member_id,
@@ -24,10 +24,16 @@ try {
                 cp.proposed_by,
                 cp.updated_at,
                 CONCAT(m.first_name, ' ', m.last_name) AS member_name,
-                c.calling_name
+                c.calling_name,
+                CASE 
+                    WHEN cc.member_id IS NOT NULL AND cc.calling_id IS NOT NULL AND cc.date_released IS NULL 
+                    THEN 1 
+                    ELSE 0 
+                END AS is_activated
             FROM calling_process cp
             JOIN members m ON cp.member_id = m.member_id
             JOIN callings c ON cp.calling_id = c.calling_id
+            LEFT JOIN current_callings cc ON cp.member_id = cc.member_id AND cp.calling_id = cc.calling_id AND cc.date_released IS NULL
             ORDER BY cp.proposed_date DESC, cp.updated_at DESC";
     
     $result = $conn->query($sql);
@@ -52,7 +58,8 @@ try {
             'set_apart_date' => $row['set_apart_date'],
             'notes' => $row['notes'],
             'proposed_by' => $row['proposed_by'],
-            'updated_at' => $row['updated_at']
+            'updated_at' => $row['updated_at'],
+            'is_activated' => (bool)$row['is_activated']
         ];
     }
     

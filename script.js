@@ -51,6 +51,8 @@ function openTab(evt, tabName, data = null) {
         document.getElementById('member-callings-container').innerHTML = "";
         document.getElementById('calling-members-container').innerHTML = "";
         
+        // Temporarily removed clearing logic to test if this was breaking the preview
+        
         // Initialize search functionality for Tab 2
         // Don't refresh data if we're coming from calling process (it will wipe our selections)
         initializeTab2Search(data && data.fromProcess);
@@ -1246,6 +1248,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Listen for calling selection changes to check for current members
+    document.getElementById('calling-select').addEventListener('change', function() {
+        const callingId = this.value;
+
+        if (callingId) {
+            const callingName = this.options[this.selectedIndex].text;
+            fetchCallingMembers(callingId, callingName);
+            fetchOtherCandidates(callingId);
+        } else {
+            document.getElementById('calling-members-container').innerHTML = ''; // Clear the table if no calling is selected
+            hideOtherCandidatesSection();
+        }
+        updateChangesPreview();
+    });
+
 });
 
 // Function to make all proposed changes
@@ -1656,20 +1673,7 @@ function fetchCallingHistoryForMember(memberId) {
 
 
 
-// Listen for calling selection changes to check for current members
-document.getElementById('calling-select').addEventListener('change', function() {
-    const callingId = this.value;
-
-    if (callingId) {
-        const callingName = this.options[this.selectedIndex].text;
-        fetchCallingMembers(callingId, callingName);
-        fetchOtherCandidates(callingId);
-    } else {
-        document.getElementById('calling-members-container').innerHTML = ''; // Clear the table if no calling is selected
-        hideOtherCandidatesSection();
-    }
-    updateChangesPreview();
-});
+// This event listener is now moved inside DOMContentLoaded below
 
 // Function to fetch other members being considered for the same calling
 function fetchOtherCandidates(callingId) {
@@ -1917,9 +1921,9 @@ function loadMembersForm() {
                     </div>
                     <div class="action-buttons">
                         <button id="add-member-btn" type="button" class="action-btn save-btn" onclick="openAddMemberModal()">+ Add New Member</button>
-                        <button id="update-members-btn" type="button" class="action-btn edit-btn" onclick="openUpdateMembersModal()">📄 Update Members from PDF</button>
+                        <button id="update-members-btn" type="button" class="action-btn edit-btn" onclick="openUpdateMembersModal()">Update Members from PDF</button>
                         <button type="button" id="edit-btn" class="action-btn edit-btn" style="display: none;">Edit Member</button>
-                        <button type="button" id="add-calling-history-btn" class="action-btn edit-btn" style="display: none;" onclick="openAddCallingHistoryModal()">📚 Add Calling History</button>
+                        <button type="button" id="add-calling-history-btn" class="action-btn edit-btn" style="display: none;" onclick="openAddCallingHistoryModal()">Add Calling History</button>
                         <button type="button" id="remove-member-btn" class="action-btn remove-btn" style="display: none;">Remove Member</button>
                         <button type="button" id="save-btn" class="action-btn save-btn" style="display: none;">Save Changes</button>
                         <button type="button" id="cancel-btn" class="action-btn cancel-btn" style="display: none;">Cancel</button>
@@ -2406,16 +2410,26 @@ function fetchCallingProcesses() {
 
 // Function to create visual progress indicator
 function createProgressIndicator(process) {
-    const steps = ['approved', 'interviewed', 'sustained', 'set_apart'];
-    const stepLabels = ['Approved', 'Interviewed', 'Sustained', 'Set Apart'];
-    const dateFields = ['approved_date', 'interviewed_date', 'sustained_date', 'set_apart_date'];
+    const steps = ['approved', 'interviewed', 'sustained', 'set_apart', 'activated'];
+    const stepLabels = ['Approved', 'Interviewed', 'Sustained', 'Set Apart', 'Activated'];
+    const dateFields = ['approved_date', 'interviewed_date', 'sustained_date', 'set_apart_date', null];
     const currentIndex = steps.indexOf(process.status);
     
     return `
         <div class="progress-indicator">
             ${steps.map((step, index) => {
-                const isCompleted = index <= currentIndex;
-                const stepDate = process[dateFields[index]];
+                let isCompleted;
+                let stepDate;
+                
+                // Special handling for "Activated" step
+                if (step === 'activated') {
+                    isCompleted = process.is_activated;
+                    stepDate = null; // No specific date for activation
+                } else {
+                    isCompleted = index <= currentIndex;
+                    stepDate = process[dateFields[index]];
+                }
+                
                 const formattedDate = stepDate ? formatDate(stepDate) : '';
                 
                 return `
@@ -2435,50 +2449,92 @@ function createActionButtons(process) {
     const nextActions = {
         'approved': 'Mark Interviewed',
         'interviewed': 'Mark Sustained',
-        'sustained': 'Mark Set Apart',
-        'set_apart': 'Finalize Calling'
+        'sustained': 'Mark Set Apart'
+        // Removed 'set_apart': 'Finalize Calling' from normal progression
     };
     
-    const nextAction = nextActions[process.status];
-    if (!nextAction) return '';
+    let buttons = '';
     
-    return `
-        <button class="action-btn save-btn process-advance-btn" 
-                data-id="${process.id}" 
-                data-status="${process.status}"
-                data-member-id="${process.member_id}"
-                data-calling-id="${process.calling_id}"
-                data-member-name="${process.member_name}"
-                data-calling-name="${process.calling_name}">
-            ${nextAction}
-        </button>
+    // Add progression button (up to Set Apart)
+    const nextAction = nextActions[process.status];
+    if (nextAction) {
+        buttons += `
+            <button class="action-btn save-btn process-advance-btn" 
+                    data-id="${process.id}" 
+                    data-status="${process.status}"
+                    data-member-id="${process.member_id}"
+                    data-calling-id="${process.calling_id}"
+                    data-member-name="${process.member_name}"
+                    data-calling-name="${process.calling_name}">
+                ${nextAction}
+            </button>`;
+    }
+    
+    // Add Activate button (only if not activated)
+    if (!process.is_activated) {
+        buttons += `
+            <button class="action-btn edit-btn process-activate-btn" 
+                    data-member-id="${process.member_id}"
+                    data-calling-id="${process.calling_id}"
+                    data-member-name="${process.member_name}"
+                    data-calling-name="${process.calling_name}">
+                Activate
+            </button>`;
+    }
+    
+    // Add Finalize Calling button (only if all 5 progress indicators are completed)
+    const allStepsCompleted = process.approved_date && process.interviewed_date && 
+                             process.sustained_date && process.set_apart_date && 
+                             process.is_activated;
+    
+    if (allStepsCompleted) {
+        buttons += `
+            <button class="action-btn save-btn process-finalize-btn" 
+                    data-id="${process.id}">
+                Finalize Calling
+            </button>`;
+    }
+    
+    // Add Cancel button
+    buttons += `
         <button class="action-btn remove-btn process-cancel-btn" 
                 data-id="${process.id}">
             Cancel
-        </button>
-    `;
+        </button>`;
+    
+    return buttons;
 }
 
 // Function to add event listeners to action buttons
 function addProcessActionListeners() {
-    // Advance buttons
+    // Advance buttons (now only goes up to Set Apart)
     document.querySelectorAll('.process-advance-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const id = this.dataset.id;
             const currentStatus = this.dataset.status;
-            
-            // Handle "Complete Process" differently - redirect to Assign/Release tab
-            if (currentStatus === 'set_apart') {
-                const processData = {
-                    id: id,
-                    memberId: this.dataset.memberId,
-                    callingId: this.dataset.callingId,
-                    memberName: this.dataset.memberName,
-                    callingName: this.dataset.callingName
-                };
-                completeCallingProcess(processData);
-            } else {
-                advanceCallingProcess(id, currentStatus);
+            advanceCallingProcess(id, currentStatus);
+        });
+    });
+    
+    // Activate buttons - redirect to Assign/Release tab
+    document.querySelectorAll('.process-activate-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const processData = {
+                memberId: this.dataset.memberId,
+                callingId: this.dataset.callingId,
+                memberName: this.dataset.memberName,
+                callingName: this.dataset.callingName
+            };
+            activateCalling(processData);
+        });
+    });
+    
+    // Finalize Calling buttons - only removes from calling_process table
+    document.querySelectorAll('.process-finalize-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            if (confirm('Are you sure you want to finalize and remove this calling process? The member will remain in their calling.')) {
+                finalizeCallingProcess(id);
             }
         });
     });
@@ -2545,6 +2601,60 @@ function completeCallingProcess(processData) {
     }
 }
 
+// Function to activate a calling (redirect to Assign/Release tab)
+function activateCalling(processData) {
+    if (confirm(`Activate the calling for ${processData.memberName} → ${processData.callingName}?\n\nThis will take you to the Assign/Release Callings tab where you can make the assignment official.`)) {
+        // Redirect to Tab2 with pre-filled member and calling
+        openTab(null, 'Tab2', { 
+            memberId: processData.memberId, 
+            callingId: processData.callingId,
+            memberName: processData.memberName,
+            callingName: processData.callingName,
+            fromProcess: true
+        });
+    }
+}
+
+// Function to finalize calling process (remove from calling_process table only)
+function finalizeCallingProcess(id) {
+    fetch('cancel_calling_process.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id: id })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Calling process finalized successfully');
+            // Refresh the calling processes data and table
+            fetchProcessStats();
+            
+            // If we're currently showing a process detail view, refresh the table
+            const activeProcessStat = document.querySelector('.clickable-process-stat.active-stat');
+            if (activeProcessStat) {
+                const statusType = activeProcessStat.dataset.processStatus;
+                // Refresh the process data and update the table display
+                fetch('get_calling_processes.php')
+                    .then(response => response.json())
+                    .then(processes => {
+                        allCallingProcessesData = processes;
+                        displayCallingProcessTable(processes, statusType);
+                    })
+                    .catch(error => console.error('Error refreshing process table:', error));
+            }
+        } else {
+            console.error('Error finalizing calling process:', data.message);
+            alert('Error finalizing calling process: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error finalizing calling process:', error);
+        alert('Error finalizing calling process. Please try again.');
+    });
+}
+
 // Function to cancel a calling process
 function cancelCallingProcess(id) {
     fetch('cancel_calling_process.php', {
@@ -2574,12 +2684,18 @@ function updateProcessStats(processes) {
         approved: 0,
         interviewed: 0,
         sustained: 0,
-        set_apart: 0
+        set_apart: 0 // This will count non-activated processes (needs activated)
     };
     
     processes.forEach(process => {
-        if (stats.hasOwnProperty(process.status)) {
-            stats[process.status]++;
+        // Count by status for the first 3 categories
+        if (process.status === 'approved') stats.approved++;
+        if (process.status === 'interviewed') stats.interviewed++;
+        if (process.status === 'sustained') stats.sustained++;
+        
+        // Count non-activated processes for "Needs activated"
+        if (!process.is_activated) {
+            stats.set_apart++;
         }
     });
     
@@ -2649,7 +2765,7 @@ function loadDashboard() {
                             <span class="stat-value" id="stat-sustained">Loading...</span>
                         </div>
                         <div class="stat-item clickable-process-stat" data-process-status="set_apart">
-                            <span class="stat-label">Needs finalized:</span>
+                            <span class="stat-label">Needs activated:</span>
                             <span class="stat-value" id="stat-set-apart">Loading...</span>
                         </div>
                     </div>
@@ -2657,7 +2773,7 @@ function loadDashboard() {
 
                 <!-- Quick Stats Section -->
                 <div class="section-header">
-                    <h3>Quick Stats</h3>
+                    <h3>Useful Information</h3>
                 </div>
                 <div class="details-section">
                     <div id="dashboard-stats">
@@ -2688,6 +2804,10 @@ function loadDashboard() {
                         <div class="stat-item clickable-stat" data-stat="missionaries">
                             <span class="stat-label">Missionaries:</span>
                             <span class="stat-value" id="stat-missionaries">Loading...</span>
+                        </div>
+                        <div class="stat-item clickable-stat" data-stat="recent-calling-changes">
+                            <span class="stat-label">Recent Calling Changes:</span>
+                            <span class="stat-value" id="stat-recent-calling-changes">-</span>
                         </div>
                     </div>
                 </div>
@@ -2796,12 +2916,18 @@ function updateDashboardProcessStats(processes) {
         approved: 0,
         interviewed: 0,
         sustained: 0,
-        set_apart: 0
+        set_apart: 0 // This will count non-activated processes (needs activated)
     };
     
     processes.forEach(process => {
-        if (stats.hasOwnProperty(process.status)) {
-            stats[process.status]++;
+        // Count by status for the first 4 categories
+        if (process.status === 'approved') stats.approved++;
+        if (process.status === 'interviewed') stats.interviewed++;
+        if (process.status === 'sustained') stats.sustained++;
+        
+        // Count non-activated processes for "Needs activated"
+        if (!process.is_activated) {
+            stats.set_apart++;
         }
     });
     
@@ -2859,7 +2985,13 @@ function displayCallingProcessTable(processes, statusFilter) {
     // Filter processes based on status
     let filteredProcesses = processes;
     if (statusFilter && statusFilter !== 'all') {
-        filteredProcesses = processes.filter(process => process.status === statusFilter);
+        if (statusFilter === 'set_apart') {
+            // For "Needs activated", show all non-activated processes
+            filteredProcesses = processes.filter(process => !process.is_activated);
+        } else {
+            // For other statuses, filter by status
+            filteredProcesses = processes.filter(process => process.status === statusFilter);
+        }
     }
     
     const container = document.getElementById('dashboard-detail-content');
@@ -2908,13 +3040,19 @@ function showStatDetails(statType, statLabel) {
     // Update header
     document.getElementById('detail-header').textContent = `${statLabel}`;
     
-    // Show loading state
-    document.getElementById('dashboard-detail-content').innerHTML = '<p>Loading details...</p>';
-    
     // Remove active class from all stats and add to clicked one
     document.querySelectorAll('.clickable-stat').forEach(s => s.classList.remove('active-stat'));
     document.querySelectorAll('.clickable-process-stat').forEach(s => s.classList.remove('active-stat'));
     document.querySelector(`[data-stat="${statType}"]`).classList.add('active-stat');
+    
+    // Handle special case for recent calling changes
+    if (statType === 'recent-calling-changes') {
+        showRecentCallingChanges();
+        return;
+    }
+    
+    // Show loading state
+    document.getElementById('dashboard-detail-content').innerHTML = '<p>Loading details...</p>';
     
     // Fetch detailed data
     fetch(`get_${statType.replace(/-/g, '_')}_details.php`)
@@ -2930,6 +3068,95 @@ function showStatDetails(statType, statLabel) {
             document.getElementById('dashboard-detail-content').innerHTML = 
                 '<p class="error">Error loading details. Please try again.</p>';
         });
+}
+
+// Function to show recent calling changes with time period dropdown
+function showRecentCallingChanges() {
+    document.getElementById('dashboard-detail-content').innerHTML = `
+        <div class="time-period-selector">
+            <label for="time-period-select">Time Period:</label>
+            <select id="time-period-select" onchange="loadRecentCallingChanges()">
+                <option value="1">Last 1 Month</option>
+                <option value="3">Last 3 Months</option>
+                <option value="6">Last 6 Months</option>
+                <option value="12">Last 12 Months</option>
+            </select>
+        </div>
+        <div id="calling-changes-table-container">
+            <p>Loading recent calling changes...</p>
+        </div>
+    `;
+    
+    // Load default data (1 month)
+    loadRecentCallingChanges();
+}
+
+// Function to load recent calling changes based on selected time period
+function loadRecentCallingChanges() {
+    const timeSelect = document.getElementById('time-period-select');
+    const period = timeSelect ? timeSelect.value : '1';
+    const container = document.getElementById('calling-changes-table-container');
+    
+    container.innerHTML = '<p>Loading recent calling changes...</p>';
+    
+    fetch(`get_recent_calling_changes.php?period=${period}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.message);
+            }
+            displayRecentCallingChanges(data);
+        })
+        .catch(error => {
+            console.error('Error fetching recent calling changes:', error);
+            container.innerHTML = '<p class="error">Error loading recent calling changes. Please try again.</p>';
+        });
+}
+
+// Function to display recent calling changes in a table
+function displayRecentCallingChanges(data) {
+    const container = document.getElementById('calling-changes-table-container');
+    
+    if (data.length === 0) {
+        container.innerHTML = '<p>No calling changes found for the selected time period.</p>';
+        return;
+    }
+    
+    let tableHTML = `
+        <table class="detail-table">
+            <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>Calling</th>
+                    <th>Organization</th>
+                    <th>Change Type</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    data.forEach(change => {
+        const changeDate = new Date(change.change_date).toLocaleDateString();
+        const changeTypeClass = change.change_type.toLowerCase();
+        
+        tableHTML += `
+            <tr>
+                <td>${change.member_name}</td>
+                <td>${change.calling_name}</td>
+                <td>${change.organization}</td>
+                <td><span class="change-type ${changeTypeClass}">${change.change_type}</span></td>
+                <td>${changeDate}</td>
+            </tr>
+        `;
+    });
+    
+    tableHTML += `
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = tableHTML;
 }
 
 // Function to display the detailed stat information
