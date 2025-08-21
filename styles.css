@@ -255,7 +255,6 @@ body {
 
 .Music  .box-header {
     background-color: LightSalmon;
-    color: black;
 }
 
 .FullTimeMissionaries  .box-header {
@@ -2320,4 +2319,49 @@ textarea:focus {
         font-size: 16px;
         padding-right: 50px;
     }
+}
+
+/* Drag and Drop Styles for SortableJS */
+.sortable-ghost {
+    opacity: 0.4;
+}
+
+.sortable-chosen {
+    background-color: #f0f0f0;
+}
+
+.sortable-drag {
+    opacity: 0.8;
+    transform: rotate(5deg);
+}
+
+.dragging {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    transform: scale(1.05);
+    z-index: 1000;
+}
+
+/* Make box headers look draggable */
+.box-header {
+    cursor: grab;
+    user-select: none;
+    transition: background-color 0.2s ease;
+}
+
+.box-header:hover {
+    background-color: rgba(0, 0, 0, 0.15);
+}
+
+.box-header:active {
+    cursor: grabbing;
+}
+
+/* Visual feedback for entire small-box during drag */
+.small-box {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.small-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }

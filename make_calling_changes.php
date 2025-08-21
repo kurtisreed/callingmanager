@@ -189,6 +189,13 @@ try {
             
             if ($conn->query($insert_sql)) {
                 $changes_made[] = "$member_name assigned to $calling_name";
+                
+                // Update calling_process table with activated_date if this assignment matches an ongoing process
+                $update_process_sql = "UPDATE calling_process 
+                                      SET activated_date = '$change_date' 
+                                      WHERE member_id = '$member_id' AND calling_id = '$calling_id' AND activated_date IS NULL";
+                $conn->query($update_process_sql);
+                
             } else {
                 throw new Exception("Failed to assign $member_name to $calling_name");
             }

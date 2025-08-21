@@ -981,8 +981,7 @@ function addToCallingProcess(memberId, callingId) {
         if (result.success) {
             alert(`✓ ${result.message}\n\nThe calling can be managed in the Dashboard.`);
             closePopup();
-            // Optionally redirect to the dashboard tab
-            openTab(null, 'Tab0');
+
         } else {
             alert(`Error: ${result.message}`);
         }
@@ -1077,61 +1076,181 @@ function buildSmallBoxes() {
                 });
             }
             
-            // --- Step 3: Render the HTML from the sorted, grouped structure ---
-            largeBox.innerHTML = ''; // Clear loading message
-
-            for (const groupingName in groupedData) {
-                // Get the entire group object, which contains 'organization' and 'callings'
-                const groupInfo = groupedData[groupingName]; 
-                
-                // Get the array of callings from the group object
-                const callingsInGroup = groupInfo.callings; 
-
-                // The rest of your mapping logic is perfect and doesn't need to change
-                let groupContentHtml = callingsInGroup.map(calling => {
-                    const membersHtml = calling.members.map(member =>
-                        `<div data-member-id="${member.member_id}">     - ${member.first_name} ${member.last_name} (${member.date_set_apart})</div>`
-                    ).join('') || `<div style="font-style: italic;color: red;">     - (Vacant)</div>`;
-
-                    let indicatorHtml = '';
-                    if (calling.isApproved) {
-                        indicatorHtml = '<span class="checkmark-symbol">✓</span>';
-                    } else if (calling.isConsidered) {
-                        indicatorHtml = '<span class="delta-symbol">▲</span>';
-                    }
-
-                    return `
-                        <div class="box-title" data-calling-id="${calling.callingId}" data-title="${calling.callingName}">
-                            ${indicatorHtml} ${calling.callingName}
-                        </div>
-                        <div class="box-content">
-                            ${membersHtml}
-                        </div>
-                    `;
-                }).join('');
-
-                // Now this line will work because groupInfo.organization is correctly defined
-                const orgClassName = groupInfo.organization.replace(/[^a-zA-Z0-9]/g, '');
-
-                const boxHtml = `
-                    <div class="small-box ${orgClassName}">
-                        <div class="box-header">${groupingName}</div>
-                        <div class="box-content-wrapper" style="padding: 10px;">
-                            ${groupContentHtml}
-                        </div>
-                    </div>
-                `;
-
-                largeBox.insertAdjacentHTML('beforeend', boxHtml);
-            }
-
-            // --- Step 4: Attach event listeners ---
-            attachPopupListeners();
+            // --- Step 3: Load saved order and sort groupings accordingly ---
+            loadSavedOrderAndRender(groupedData);
         })
         .catch(error => {
             console.error('Error loading callings overview:', error);
             largeBox.innerHTML = `<p style="color: red;">Error loading data. Please try again. (${error.message})</p>`;
         });
+}
+function initializeDragAndDrop() {
+    const largeBox = document.getElementById('large-box');
+    
+    // Initialize SortableJS on the container
+    if (largeBox && typeof Sortable !== 'undefined') {
+        Sortable.create(largeBox, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            handle: '.box-header', // Only allow dragging by the header
+            onStart: function(evt) {
+                // Add visual feedback when dragging starts
+                evt.item.classList.add('dragging');
+            },
+            onEnd: function(evt) {
+                // Remove visual feedback when dragging ends
+                evt.item.classList.remove('dragging');
+                
+                // Save the new order if the position changed
+                if (evt.oldIndex !== evt.newIndex) {
+                    saveBoxOrder();
+                }
+            }
+        });
+    }
+}
+
+// Save the current order of boxes to the backend
+function saveBoxOrder() {
+    const largeBox = document.getElementById('large-box');
+    const boxes = largeBox.querySelectorAll('.small-box');
+    
+    // Extract the grouping names in their current order
+    const orderData = Array.from(boxes).map((box, index) => {
+        const header = box.querySelector('.box-header');
+        return {
+            grouping: header.textContent.trim(),
+            order: index + 1
+        };
+    });
+    
+    // Send the order data to the backend
+    fetch('save_calling_order.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ order: orderData })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Calling order saved successfully');
+        } else {
+            console.error('Failed to save calling order:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error saving calling order:', error);
+    });
+}
+
+// Function to load saved order and render the boxes accordingly
+function loadSavedOrderAndRender(groupedData) {
+    const largeBox = document.getElementById('large-box');
+    
+    // First, render all boxes in default order
+    renderBoxes(groupedData);
+    
+    // Then fetch saved order and rearrange if needed
+    fetch('get_calling_order.php')
+        .then(response => response.json())
+        .then(orderData => {
+            if (orderData.success && orderData.order && orderData.order.length > 0) {
+                rearrangeBoxesByOrder(orderData.order);
+            }
+            
+            // Initialize drag-and-drop after rendering
+            setTimeout(() => {
+                attachPopupListeners();
+                initializeDragAndDrop();
+            }, 100);
+        })
+        .catch(error => {
+            console.log('No saved order found, using default order');
+            // Initialize drag-and-drop with default order
+            setTimeout(() => {
+                attachPopupListeners();
+                initializeDragAndDrop();
+            }, 100);
+        });
+}
+
+// Function to render boxes in their default order
+function renderBoxes(groupedData) {
+    const largeBox = document.getElementById('large-box');
+    largeBox.innerHTML = ''; // Clear loading message
+
+    for (const groupingName in groupedData) {
+        // Get the entire group object, which contains 'organization' and 'callings'
+        const groupInfo = groupedData[groupingName]; 
+        
+        // Get the array of callings from the group object
+        const callingsInGroup = groupInfo.callings; 
+
+        let groupContentHtml = callingsInGroup.map(calling => {
+            const membersHtml = calling.members.map(member =>
+                `<div data-member-id="${member.member_id}">     - ${member.first_name} ${member.last_name} (${member.date_set_apart})</div>`
+            ).join('') || `<div style="font-style: italic;color: red;">     - (Vacant)</div>`;
+
+            let indicatorHtml = '';
+            if (calling.isApproved) {
+                indicatorHtml = '<span class="checkmark-symbol">✓</span>';
+            } else if (calling.isConsidered) {
+                indicatorHtml = '<span class="delta-symbol">▲</span>';
+            }
+
+            return `
+                <div class="box-title" data-calling-id="${calling.callingId}" data-title="${calling.callingName}">
+                    ${indicatorHtml} ${calling.callingName}
+                </div>
+                <div class="box-content">
+                    ${membersHtml}
+                </div>
+            `;
+        }).join('');
+
+        // Now this line will work because groupInfo.organization is correctly defined
+        const orgClassName = groupInfo.organization.replace(/[^a-zA-Z0-9]/g, '');
+
+        const boxHtml = `
+            <div class="small-box ${orgClassName}" data-grouping="${groupingName}">
+                <div class="box-header">${groupingName}</div>
+                <div class="box-content-wrapper" style="padding: 10px;">
+                    ${groupContentHtml}
+                </div>
+            </div>
+        `;
+
+        largeBox.insertAdjacentHTML('beforeend', boxHtml);
+    }
+}
+
+// Function to rearrange boxes based on saved order
+function rearrangeBoxesByOrder(orderData) {
+    const largeBox = document.getElementById('large-box');
+    const boxes = Array.from(largeBox.querySelectorAll('.small-box'));
+    
+    // Create order map
+    const orderMap = {};
+    orderData.forEach(item => {
+        orderMap[item.grouping] = item.order_position;
+    });
+    
+    // Sort boxes by saved order
+    boxes.sort((a, b) => {
+        const groupingA = a.dataset.grouping;
+        const groupingB = b.dataset.grouping;
+        const orderA = orderMap[groupingA] || 999;
+        const orderB = orderMap[groupingB] || 999;
+        return orderA - orderB;
+    });
+    
+    // Clear and re-append in correct order
+    largeBox.innerHTML = '';
+    boxes.forEach(box => largeBox.appendChild(box));
 }
 
 // attaches popup listeners to each box title
@@ -2412,7 +2531,7 @@ function fetchCallingProcesses() {
 function createProgressIndicator(process) {
     const steps = ['approved', 'interviewed', 'sustained', 'set_apart', 'activated'];
     const stepLabels = ['Approved', 'Interviewed', 'Sustained', 'Set Apart', 'Activated'];
-    const dateFields = ['approved_date', 'interviewed_date', 'sustained_date', 'set_apart_date', null];
+    const dateFields = ['approved_date', 'interviewed_date', 'sustained_date', 'set_apart_date', 'activated_date'];
     const currentIndex = steps.indexOf(process.status);
     
     return `
@@ -2424,7 +2543,7 @@ function createProgressIndicator(process) {
                 // Special handling for "Activated" step
                 if (step === 'activated') {
                     isCompleted = process.is_activated;
-                    stepDate = null; // No specific date for activation
+                    stepDate = process.activated_date;
                 } else {
                     isCompleted = index <= currentIndex;
                     stepDate = process[dateFields[index]];
@@ -2485,7 +2604,7 @@ function createActionButtons(process) {
     // Add Finalize Calling button (only if all 5 progress indicators are completed)
     const allStepsCompleted = process.approved_date && process.interviewed_date && 
                              process.sustained_date && process.set_apart_date && 
-                             process.is_activated;
+                             process.activated_date;
     
     if (allStepsCompleted) {
         buttons += `
@@ -2533,7 +2652,7 @@ function addProcessActionListeners() {
     document.querySelectorAll('.process-finalize-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const id = this.dataset.id;
-            if (confirm('Are you sure you want to finalize and remove this calling process? The member will remain in their calling.')) {
+            if (confirm('Are you sure you want to finalize this calling?')) {
                 finalizeCallingProcess(id);
             }
         });
