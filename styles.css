@@ -3,8 +3,8 @@ body {
 }
 
 .tabs-container {
-    background-color: #0F2439;
-    border-bottom: 3px solid #424242;
+    background-color: #2D5B89;
+    border-bottom: 3px solid #CDE2F4;
     display: flex;
     align-items: center;
 }
@@ -42,7 +42,7 @@ body {
 }
 
 .mobile-menu-btn {
-    background-color: #A2AAAD;
+    background-color: #CDE2F4;
     border: none;
     color: white;
     padding: 10px 10px;
@@ -72,7 +72,7 @@ body {
     top: 100%;
     left: 0;
     right: 0;
-    background-color: #A2AAAD;
+    background-color: #2D5B89;
     border-top: 1px solid #555;
     z-index: 1000;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
@@ -83,7 +83,7 @@ body {
 }
 
 .mobile-tablink {
-    background-color: #A2AAAD;
+    background-color: #2D5B89;
     border: none;
     color: white;
     padding: 16px 20px;
@@ -891,7 +891,7 @@ table td input[type="checkbox"] {
 
 .upload-label {
     display: inline-block;
-    background-color: #A2AAAD;
+    background-color: #2D5B89;
     color: white;
     padding: 10px 20px;
     border-radius: 4px;
@@ -1214,7 +1214,7 @@ table td input[type="checkbox"] {
 /* Auth form submit button states */
 #auth-form button[type="submit"]:disabled {
     background-color: #ccc;
-    color: #0F2439;
+    color: #2D5B89;
     cursor: not-allowed;
 }
 
@@ -1261,7 +1261,7 @@ table td input[type="checkbox"] {
 
 #auth-form button[type="submit"] {
     width: 100%;
-    background-color: #0F2439;
+    background-color: #2D5B89;
     color: white;
     padding: 12px;
     border: none;
@@ -1450,8 +1450,8 @@ textarea:focus {
 .section-header {
     margin: 10px 0 10px 0;
     padding-bottom: 5px;
-    border-bottom: 3px solid #0F2439;
-    background: #A2AAAD;
+    border-bottom: 3px solid #CDE2F4;
+    background: #2D5B89;
     padding: 5px 5px;
     border-radius: 0 8px 0 8px;;
 }
@@ -1579,7 +1579,7 @@ textarea:focus {
 }
 
 .action-btn.save-btn {
-    background-color: #0F2439;
+    background-color: #2D5B89;
     color: white;
 }
 
@@ -1870,12 +1870,12 @@ textarea:focus {
 }
 
 .clickable-stat:hover {
-    background-color: aliceblue;
+    background-color: #CDE2F4;
 }
 
 .clickable-stat.active-stat {
-    background-color: aliceblue;
-    border-left: 3px solid #0F2439;
+    background-color: #CDE2F4;
+    border-left: 3px solid #2D5B89;
 }
 
 /* Dashboard clickable process stats */
@@ -1888,12 +1888,12 @@ textarea:focus {
 }
 
 .clickable-process-stat:hover {
-    background-color: aliceblue;
+    background-color: #CDE2F4;
 }
 
 .clickable-process-stat.active-stat {
-    background-color: aliceblue;
-    border-left: 3px solid #0F2439;
+    background-color: #CDE2F4;
+    border-left: 3px solid #2D5B89;
 }
 
 /* Dashboard detail table */
@@ -2015,7 +2015,7 @@ textarea:focus {
 }
 
 .progress-step.completed .step-icon {
-    background-color: #0F2439;
+    background-color: #2D5B89;
     color: white;
 }
 
@@ -2048,7 +2048,7 @@ textarea:focus {
 }
 
 .progress-step.completed + .step-connector {
-    background-color: #0F2439;
+    background-color: #2D5B89;
 }
 
 /* Process Stats */
