@@ -24,7 +24,7 @@ try {
     }
 
     $callingId = (int)$_GET['calling_id'];
-    $sql = "SELECT calling_id, calling_name, organization, grouping, priority, grouping_priority, comments FROM callings WHERE calling_id = ?";
+    $sql = "SELECT calling_id, calling_name, organization, `grouping`, priority, grouping_priority, comments FROM callings WHERE calling_id = ?";
     $stmt = $conn->prepare($sql);
     
     if (!$stmt) {
