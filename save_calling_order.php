@@ -21,11 +21,11 @@ try {
     // Create calling_order table if it doesn't exist
     $createTableSql = "CREATE TABLE IF NOT EXISTS calling_order (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        grouping VARCHAR(255) NOT NULL UNIQUE,
+        `grouping` VARCHAR(255) NOT NULL UNIQUE,
         order_position INT NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_order_position (order_position),
-        INDEX idx_grouping (grouping)
+        INDEX idx_grouping (`grouping`)
     )";
     
     if (!$conn->query($createTableSql)) {
@@ -36,7 +36,7 @@ try {
     $conn->begin_transaction();
     
     // Update or insert the order for each grouping
-    $stmt = $conn->prepare("INSERT INTO calling_order (grouping, order_position) VALUES (?, ?) 
+    $stmt = $conn->prepare("INSERT INTO calling_order (`grouping`, order_position) VALUES (?, ?) 
                            ON DUPLICATE KEY UPDATE order_position = VALUES(order_position)");
     
     if (!$stmt) {
