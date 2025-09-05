@@ -23,7 +23,7 @@ try {
     }
     
     // Fetch saved order
-    $sql = "SELECT grouping, order_position FROM calling_order ORDER BY order_position ASC";
+    $sql = "SELECT `grouping`, order_position FROM calling_order ORDER BY order_position ASC";
     $result = $conn->query($sql);
     
     if (!$result) {
