@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(C:\\k1ward/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

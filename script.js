@@ -2002,36 +2002,19 @@ function loadMembersForm() {
                     <div class="section-header">
                         <h3>Select Member</h3>
                     </div>
-                    <div class="selection-section">
-                        <label for="member-form-select">Choose Member:</label>
-                        <select id="member-form-select">
-                            <option value="">Select a Member</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Search & Filter Section -->
-                    <div class="section-header">
-                        <h3>Search & Filter</h3>
-                    </div>
                     <div class="search-section">
                         <div class="search-column">
                             <div class="search-field">
                                 <label for="member-search-input">Search Members:</label>
                                 <input type="text" id="member-search-input" placeholder="Type name to search..." />
                             </div>
-                            <div class="filter-field">
-                                <label for="status-filter-select">Filter by Status:</label>
-                                <select id="status-filter-select">
-                                    <option value="">All Members</option>
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                    <option value="moved">Moved Away</option>
-                                    <option value="no_calling">No Current Calling</option>
-                                    <option value="deceased">Deceased</option>
-                                    <option value="unknown">Status Unknown</option>
-                                </select>
-                            </div>
                         </div>
+                    </div>
+                    <div class="selection-section">
+                        <label for="member-form-select">Select Member:</label>
+                        <select id="member-form-select">
+                            <option value="">Select a Member</option>
+                        </select>
                     </div>
 
                     <!-- Action Buttons Section -->
@@ -2226,27 +2209,12 @@ function loadMembersForm() {
 
     }
     
-    // Add event listeners for search and filtering
+    // Add event listeners for search
     const searchInput = document.getElementById('member-search-input');
-    const statusFilter = document.getElementById('status-filter-select');
     
     // Real-time search as user types
     searchInput.addEventListener('input', function() {
         filterMembers();
-    });
-    
-    // Status filter change
-    statusFilter.addEventListener('change', function() {
-        const selectedStatus = this.value;
-        if (selectedStatus) {
-            // If filtering by status, fetch fresh data for that status
-            fetchMembers(selectedStatus);
-        } else {
-            // If showing all, fetch all members then apply search filter
-            fetchMembers();
-        }
-        // Clear search when changing status filter
-        searchInput.value = '';
     });
     
     fetchMembers(); // Populate dropdown initially
@@ -2267,17 +2235,6 @@ function loadCallingsForm() {
                     <div class="section-header">
                         <h3>Select Calling</h3>
                     </div>
-                    <div class="selection-section">
-                        <label for="calling-form-select">Choose Calling:</label>
-                        <select id="calling-form-select">
-                            <option value="">Select a Calling</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Search & Filter Section -->
-                    <div class="section-header">
-                        <h3>Search & Filter</h3>
-                    </div>
                     <div class="search-section">
                         <div class="search-column">
                             <div class="search-field">
@@ -2285,6 +2242,12 @@ function loadCallingsForm() {
                                 <input type="text" id="calling-search-input" placeholder="Type calling name to search..." />
                             </div>
                         </div>
+                    </div>
+                    <div class="selection-section">
+                        <label for="calling-form-select">Select Calling:</label>
+                        <select id="calling-form-select">
+                            <option value="">Select a Calling</option>
+                        </select>
                     </div>
 
                     <!-- Action Buttons Section -->
@@ -3116,7 +3079,7 @@ function displayCallingProcessTable(processes, statusFilter) {
     const container = document.getElementById('dashboard-detail-content');
     
     if (filteredProcesses.length === 0) {
-        container.innerHTML = '<p>No calling processes found for this status.</p>';
+        container.innerHTML = '<p>No callings in this status.</p>';
         return;
     }
     
@@ -3402,10 +3365,8 @@ function openCallingCandidatesModal(callingName, callingId) {
 }
 
 // Function to populate the Members dropdown
-function fetchMembers(statusFilter = '') {
-    const url = statusFilter ? `get_members.php?status=${encodeURIComponent(statusFilter)}` : 'get_members.php';
-    
-    fetch(url)
+function fetchMembers() {
+    fetch('get_members.php')
         .then(response => response.json())
         .then(data => {
             allMembersData = data; // Store all data for search filtering
@@ -3462,10 +3423,9 @@ function displayMembers(membersData) {
     }
 }
 
-// Function to filter members based on search and status
+// Function to filter members based on search
 function filterMembers() {
     const searchTerm = document.getElementById('member-search-input').value.toLowerCase();
-    const statusFilter = document.getElementById('status-filter-select').value;
     
     let filteredData = allMembersData;
     
@@ -3476,11 +3436,6 @@ function filterMembers() {
             member.last_name.toLowerCase().includes(searchTerm) ||
             `${member.first_name} ${member.last_name}`.toLowerCase().includes(searchTerm)
         );
-    }
-    
-    // Filter by status (this is already handled by the initial fetch, but we can refine it)
-    if (statusFilter) {
-        filteredData = filteredData.filter(member => member.status === statusFilter);
     }
     
     displayMembers(filteredData);
