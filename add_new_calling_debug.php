@@ -120,7 +120,7 @@ try {
     }
     
     // Step 8: Insert new calling
-    $sql = "INSERT INTO callings (calling_name, organization, grouping, priority) VALUES (?, ?, ?, ?)";
+    $sql = "INSERT INTO callings (calling_name, organization, `grouping`, priority) VALUES (?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         throw new Exception('Database prepare failed for insert: ' . $conn->error);

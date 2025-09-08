@@ -117,7 +117,7 @@ try {
     }
     
     // Insert new calling with validated and sanitized data
-    $sql = "INSERT INTO callings (calling_name, organization, grouping, priority) VALUES (?, ?, ?, ?)";
+    $sql = "INSERT INTO callings (calling_name, organization, `grouping`, priority) VALUES (?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("sssi", 
         $cleanData['calling_name'], 
