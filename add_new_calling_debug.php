@@ -1,38 +1,35 @@
 <?php
-// Enable error reporting for debugging
+// Debug version of add_new_calling.php with extensive error reporting
 error_reporting(E_ALL);
-ini_set('display_errors', 0); // Don't display errors in JSON response
+ini_set('display_errors', 1);
 ini_set('log_errors', 1);
-
-// Require authentication for this endpoint
-try {
-    require_once __DIR__ . '/auth_required.php';
-} catch (Exception $e) {
-    error_log('Failed to load auth_required.php: ' . $e->getMessage());
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Authentication module not found']);
-    exit;
-}
-
-try {
-    require_once __DIR__ . '/InputValidator.php';
-} catch (Exception $e) {
-    error_log('Failed to load InputValidator.php: ' . $e->getMessage());
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Validation module not found']);
-    exit;
-}
 
 // Set JSON response header
 header('Content-Type: application/json');
 
-// Log this high-risk access for auditing
-logUserActivity('add_new_calling', ['risk_level' => 'high', 'file' => 'add_new_calling.php']);
-
-require_once 'db_connect.php';
-
 try {
-    // Validate and sanitize input data
+    // Step 1: Check file includes
+    if (!file_exists(__DIR__ . '/auth_required.php')) {
+        throw new Exception('auth_required.php file not found');
+    }
+    require_once __DIR__ . '/auth_required.php';
+    
+    if (!file_exists(__DIR__ . '/InputValidator.php')) {
+        throw new Exception('InputValidator.php file not found');
+    }
+    require_once __DIR__ . '/InputValidator.php';
+    
+    if (!file_exists(__DIR__ . '/db_connect.php')) {
+        throw new Exception('db_connect.php file not found');
+    }
+    require_once 'db_connect.php';
+    
+    // Step 2: Log this access
+    if (function_exists('logUserActivity')) {
+        logUserActivity('add_new_calling_debug', ['risk_level' => 'high', 'file' => 'add_new_calling_debug.php']);
+    }
+    
+    // Step 3: Validate input data
     $inputData = [
         'calling_name' => $_POST['calling_name'] ?? '',
         'organization' => $_POST['organization'] ?? '',
@@ -45,7 +42,7 @@ try {
         $inputData['priority'] = (int)$inputData['priority'];
     }
     
-    // Define sanitization rules
+    // Step 4: Define sanitization rules
     $sanitizeRules = [
         'calling_name' => 'alphanumeric',
         'organization' => 'string',
@@ -53,7 +50,15 @@ try {
         'priority' => 'integer'
     ];
     
-    // Validate and sanitize
+    // Step 5: Check if classes exist
+    if (!class_exists('InputValidator')) {
+        throw new Exception('InputValidator class not found');
+    }
+    if (!class_exists('ValidationRules')) {
+        throw new Exception('ValidationRules class not found');
+    }
+    
+    // Step 6: Validate and sanitize
     $validation = InputValidator::validateAndSanitize(
         $inputData, 
         ValidationRules::calling(), 
@@ -65,29 +70,33 @@ try {
         echo json_encode([
             'success' => false,
             'error' => 'Validation failed',
-            'details' => $validation['errors']
+            'details' => $validation['errors'],
+            'debug_info' => [
+                'input_data' => $inputData,
+                'validation_result' => $validation
+            ]
         ]);
-        
-        // Log validation failure
-        logUserActivity('add_new_calling_validation_failed', [
-            'errors' => $validation['errors'],
-            'input_data_keys' => array_keys($inputData)
-        ]);
-        
         exit;
     }
     
     // Use sanitized data
     $cleanData = $validation['data'];
     
-    // Additional business logic validation
+    // Step 7: Additional business logic validation
     $errors = [];
     
     // Check if calling with same name already exists
     $checkSql = "SELECT COUNT(*) as count FROM callings WHERE calling_name = ?";
     $checkStmt = $conn->prepare($checkSql);
+    if (!$checkStmt) {
+        throw new Exception('Database prepare failed: ' . $conn->error);
+    }
+    
     $checkStmt->bind_param("s", $cleanData['calling_name']);
-    $checkStmt->execute();
+    if (!$checkStmt->execute()) {
+        throw new Exception('Database execute failed: ' . $checkStmt->error);
+    }
+    
     $result = $checkStmt->get_result();
     $row = $result->fetch_assoc();
     
@@ -107,18 +116,16 @@ try {
             'error' => 'Business validation failed',
             'details' => $errors
         ]);
-        
-        logUserActivity('add_new_calling_business_validation_failed', [
-            'errors' => $errors,
-            'data' => $cleanData
-        ]);
-        
         exit;
     }
     
-    // Insert new calling with validated and sanitized data
+    // Step 8: Insert new calling
     $sql = "INSERT INTO callings (calling_name, organization, grouping, priority) VALUES (?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        throw new Exception('Database prepare failed for insert: ' . $conn->error);
+    }
+    
     $stmt->bind_param("sssi", 
         $cleanData['calling_name'], 
         $cleanData['organization'], 
@@ -132,27 +139,24 @@ try {
         echo json_encode([
             'success' => true,
             'message' => 'Calling added successfully',
-            'calling_id' => $newCallingId
+            'calling_id' => $newCallingId,
+            'debug_info' => [
+                'clean_data' => $cleanData,
+                'server_php_version' => phpversion()
+            ]
         ]);
         
         // Log successful calling creation
-        logUserActivity('add_new_calling_success', [
-            'calling_id' => $newCallingId,
-            'calling_name' => $cleanData['calling_name'],
-            'organization' => $cleanData['organization']
-        ]);
+        if (function_exists('logUserActivity')) {
+            logUserActivity('add_new_calling_debug_success', [
+                'calling_id' => $newCallingId,
+                'calling_name' => $cleanData['calling_name'],
+                'organization' => $cleanData['organization']
+            ]);
+        }
         
     } else {
-        http_response_code(500);
-        echo json_encode([
-            'success' => false,
-            'error' => 'Database error occurred',
-            'message' => 'Failed to add calling'
-        ]);
-        
-        // Log database error (but don't expose it to client)
-        error_log('Database error in add_new_calling.php: ' . $stmt->error);
-        logUserActivity('add_new_calling_db_error', ['error' => $stmt->error]);
+        throw new Exception('Database insert failed: ' . $stmt->error);
     }
     
     $stmt->close();
@@ -162,12 +166,18 @@ try {
     echo json_encode([
         'success' => false,
         'error' => 'Server error',
-        'message' => 'An unexpected error occurred'
+        'message' => $e->getMessage(),
+        'debug_info' => [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+            'php_version' => phpversion(),
+            'post_data' => $_POST
+        ]
     ]);
     
-    // Log the exception
-    error_log('Exception in add_new_calling.php: ' . $e->getMessage());
-    logUserActivity('add_new_calling_exception', ['error' => $e->getMessage()]);
+    // Also log to PHP error log
+    error_log('Exception in add_new_calling_debug.php: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
     
 } finally {
     if (isset($conn)) {
