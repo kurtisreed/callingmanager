@@ -3637,17 +3637,19 @@ function saveNewCalling() {
     const callingName = document.getElementById('calling-name-input').value;
     const callingOrganization = document.getElementById('calling-organization-input').value;
     const callingGrouping = document.getElementById('calling-grouping-input').value;
-    const callingPriority = parseInt(document.getElementById('calling-priority-input').value) || 0;
+    const callingPriorityInput = document.getElementById('calling-priority-input').value;
+    const callingPriority = parseInt(callingPriorityInput) || 0;
 
-    if (!callingName || !callingOrganization || !callingGrouping || callingPriority === '') {
+    if (!callingName || !callingOrganization || !callingGrouping || callingPriorityInput === '') {
         alert("Please fill in all fields.");
         return;
     }
 
+    // Send priority as string representation of integer since POST data is always strings
     fetch('add_new_calling.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `calling_name=${encodeURIComponent(callingName)}&organization=${encodeURIComponent(callingOrganization)}&grouping=${encodeURIComponent(callingGrouping)}&priority=${callingPriority}`
+        body: `calling_name=${encodeURIComponent(callingName)}&organization=${encodeURIComponent(callingOrganization)}&grouping=${encodeURIComponent(callingGrouping)}&priority=${callingPriority.toString()}`
     })
     .then(response => response.text())
     .then(data => {

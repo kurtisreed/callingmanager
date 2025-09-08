@@ -90,7 +90,7 @@ class InputValidator {
     private function validateRule($field, $value, $rule, $ruleValue = null) {
         switch ($rule) {
             case self::REQUIRED:
-                if (empty($value) && $value !== '0') {
+                if (empty($value) && $value !== '0' && $value !== 0) {
                     $this->addError($field, "Field '$field' is required");
                     return false;
                 }
@@ -104,7 +104,7 @@ class InputValidator {
                 break;
                 
             case self::INTEGER:
-                if (!filter_var($value, FILTER_VALIDATE_INT) && !is_null($value)) {
+                if (!is_null($value) && filter_var($value, FILTER_VALIDATE_INT) === false) {
                     $this->addError($field, "Field '$field' must be an integer");
                     return false;
                 }

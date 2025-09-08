@@ -20,6 +20,11 @@ try {
         'priority' => $_POST['priority'] ?? ''
     ];
     
+    // Convert priority to integer for validation if it's a numeric string
+    if (isset($inputData['priority']) && is_numeric($inputData['priority'])) {
+        $inputData['priority'] = (int)$inputData['priority'];
+    }
+    
     // Define sanitization rules
     $sanitizeRules = [
         'calling_name' => 'alphanumeric',
