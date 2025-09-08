@@ -795,6 +795,28 @@ table td input[type="checkbox"] {
     position: relative;
 }
 
+/* Add Calling Modal input styling */
+#add-calling-modal input[type="text"],
+#add-calling-modal input[type="number"],
+#add-calling-modal select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #555;
+    box-sizing: border-box;
+}
+
+#add-calling-modal input[type="text"]:focus,
+#add-calling-modal input[type="number"]:focus,
+#add-calling-modal select:focus {
+    border-color: #424242;
+    outline: none;
+    box-shadow: 0 0 5px rgba(66, 66, 66, 0.3);
+}
+
 /* Add Calling History Modal */
 #add-calling-history-modal {
     position: fixed;
