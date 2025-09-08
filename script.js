@@ -3646,19 +3646,44 @@ function saveNewCalling() {
     }
 
     // Send priority as string representation of integer since POST data is always strings
-    fetch('add_new_calling.php', {
+    fetch('add_new_calling_debug.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `calling_name=${encodeURIComponent(callingName)}&organization=${encodeURIComponent(callingOrganization)}&grouping=${encodeURIComponent(callingGrouping)}&priority=${callingPriority.toString()}`
     })
-    .then(response => response.text())
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.text();
+    })
     .then(data => {
+        console.log('Response data:', data);
+        
+        // Try to parse as JSON to check for errors
+        try {
+            const jsonData = JSON.parse(data);
+            if (!jsonData.success) {
+                console.error('Server error:', jsonData);
+                alert('Error: ' + (jsonData.message || jsonData.error) + '\nDetails: ' + JSON.stringify(jsonData.debug_info || jsonData.details));
+                return;
+            }
+        } catch (e) {
+            // Not JSON, might be HTML error page
+            console.log('Non-JSON response:', data);
+            if (data.includes('error') || data.includes('Error')) {
+                alert('Server error occurred. Check console for details.');
+                return;
+            }
+        }
+        
         closeAddCallingModal();
         
         // Optionally reload the dropdown list to include the new member
         fetchCallings();
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Fetch error:', error);
+        alert('Network error: ' + error.message);
+    });
 }
 
 
