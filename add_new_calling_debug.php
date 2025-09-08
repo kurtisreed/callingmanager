@@ -120,17 +120,18 @@ try {
     }
     
     // Step 8: Insert new calling
-    $sql = "INSERT INTO callings (calling_name, organization, `grouping`, priority) VALUES (?, ?, ?, ?)";
+    $sql = "INSERT INTO callings (calling_name, organization, `grouping`, priority, comments) VALUES (?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         throw new Exception('Database prepare failed for insert: ' . $conn->error);
     }
     
-    $stmt->bind_param("sssi", 
+    $stmt->bind_param("sssis", 
         $cleanData['calling_name'], 
         $cleanData['organization'], 
         $cleanData['grouping'], 
-        $cleanData['priority']
+        $cleanData['priority'],
+        '' // Empty string for comments field
     );
     
     if ($stmt->execute()) {

@@ -3646,7 +3646,7 @@ function saveNewCalling() {
     }
 
     // Send priority as string representation of integer since POST data is always strings
-    fetch('add_new_calling_debug.php', {
+    fetch('add_new_calling.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `calling_name=${encodeURIComponent(callingName)}&organization=${encodeURIComponent(callingOrganization)}&grouping=${encodeURIComponent(callingGrouping)}&priority=${callingPriority.toString()}`

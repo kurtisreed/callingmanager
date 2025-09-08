@@ -117,13 +117,14 @@ try {
     }
     
     // Insert new calling with validated and sanitized data
-    $sql = "INSERT INTO callings (calling_name, organization, `grouping`, priority) VALUES (?, ?, ?, ?)";
+    $sql = "INSERT INTO callings (calling_name, organization, `grouping`, priority, comments) VALUES (?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("sssi", 
+    $stmt->bind_param("sssis", 
         $cleanData['calling_name'], 
         $cleanData['organization'], 
         $cleanData['grouping'], 
-        $cleanData['priority']
+        $cleanData['priority'],
+        '' // Empty string for comments field
     );
     
     if ($stmt->execute()) {
