@@ -142,7 +142,8 @@ try {
             'calling_id' => $newCallingId,
             'debug_info' => [
                 'clean_data' => $cleanData,
-                'server_php_version' => phpversion()
+                'server_php_version' => phpversion(),
+                'sql_used' => $sql
             ]
         ]);
         
