@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Read(C:\\k1ward/**)"
+      "Read(C:\\k1ward/**)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
