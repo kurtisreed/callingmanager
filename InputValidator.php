@@ -104,7 +104,12 @@ class InputValidator {
                 break;
                 
             case self::INTEGER:
-                if (!is_null($value) && filter_var($value, FILTER_VALIDATE_INT) === false) {
+                if (!is_null($value) && !is_numeric($value) && !is_int($value)) {
+                    $this->addError($field, "Field '$field' must be an integer");
+                    return false;
+                }
+                // Additional check for non-integer numeric values
+                if (!is_null($value) && is_numeric($value) && (int)$value != $value) {
                     $this->addError($field, "Field '$field' must be an integer");
                     return false;
                 }

@@ -3634,55 +3634,48 @@ function saveNewMember() {
 
 // Function to save a new calling
 function saveNewCalling() {
-    const callingName = document.getElementById('calling-name-input').value;
+    const callingName = document.getElementById('calling-name-input').value.trim();
     const callingOrganization = document.getElementById('calling-organization-input').value;
     const callingGrouping = document.getElementById('calling-grouping-input').value;
-    const callingPriorityInput = document.getElementById('calling-priority-input').value;
-    const callingPriority = parseInt(callingPriorityInput) || 0;
+    const callingPriority = document.getElementById('calling-priority-input').value.trim();
 
-    if (!callingName || !callingOrganization || !callingGrouping || callingPriorityInput === '') {
+    // Simple validation
+    if (!callingName || !callingOrganization || !callingGrouping || callingPriority === '') {
         alert("Please fill in all fields.");
         return;
     }
 
-    // Send priority as string representation of integer since POST data is always strings
-    fetch('add_new_calling.php', {
+    // Validate priority is a number
+    const priority = parseInt(callingPriority);
+    if (isNaN(priority) || priority < 0 || priority > 999) {
+        alert("Priority must be a number between 0 and 999.");
+        return;
+    }
+
+    // Submit to server
+    const formData = new FormData();
+    formData.append('calling_name', callingName);
+    formData.append('organization', callingOrganization);
+    formData.append('grouping', callingGrouping);
+    formData.append('priority', priority);
+
+    fetch('create_calling.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `calling_name=${encodeURIComponent(callingName)}&organization=${encodeURIComponent(callingOrganization)}&grouping=${encodeURIComponent(callingGrouping)}&priority=${callingPriority.toString()}`
+        body: formData
     })
-    .then(response => {
-        console.log('Response status:', response.status);
-        return response.text();
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log('Response data:', data);
-        
-        // Try to parse as JSON to check for errors
-        try {
-            const jsonData = JSON.parse(data);
-            if (!jsonData.success) {
-                console.error('Server error:', jsonData);
-                alert('Error: ' + (jsonData.message || jsonData.error) + '\nDetails: ' + JSON.stringify(jsonData.debug_info || jsonData.details));
-                return;
-            }
-        } catch (e) {
-            // Not JSON, might be HTML error page
-            console.log('Non-JSON response:', data);
-            if (data.includes('error') || data.includes('Error')) {
-                alert('Server error occurred. Check console for details.');
-                return;
-            }
+        if (data.success) {
+            alert('Calling created successfully!');
+            closeAddCallingModal();
+            fetchCallings(); // Refresh the calling list
+        } else {
+            alert('Error: ' + data.error);
         }
-        
-        closeAddCallingModal();
-        
-        // Optionally reload the dropdown list to include the new member
-        fetchCallings();
     })
     .catch(error => {
-        console.error('Fetch error:', error);
-        alert('Network error: ' + error.message);
+        console.error('Error:', error);
+        alert('Error creating calling. Please try again.');
     });
 }
 
