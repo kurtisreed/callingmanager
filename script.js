@@ -3659,7 +3659,7 @@ function saveNewCalling() {
     formData.append('grouping', callingGrouping);
     formData.append('priority', priority);
 
-    fetch('create_calling_debug.php', {
+    fetch('create_calling.php', {
         method: 'POST',
         body: formData
     })
