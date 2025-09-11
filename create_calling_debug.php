@@ -101,15 +101,16 @@ try {
         exit;
     }
     
-    // Test the insert statement preparation
-    $insert_sql = "INSERT INTO callings (calling_name, organization, `grouping`, priority) VALUES (?, ?, ?, ?)";
+    // Test the insert statement preparation (include comments field)
+    $insert_sql = "INSERT INTO callings (calling_name, organization, `grouping`, priority, comments) VALUES (?, ?, ?, ?, ?)";
     $insert_stmt = $conn->prepare($insert_sql);
     if (!$insert_stmt) {
         echo json_encode(['success' => false, 'error' => 'Insert prepare failed: ' . $conn->error, 'sql' => $insert_sql, 'debug' => true]);
         exit;
     }
     
-    $bind_result = $insert_stmt->bind_param("sssi", $calling_name, $organization, $grouping, $priority_num);
+    $comments = ''; // Empty comments field
+    $bind_result = $insert_stmt->bind_param("sssis", $calling_name, $organization, $grouping, $priority_num, $comments);
     if (!$bind_result) {
         echo json_encode(['success' => false, 'error' => 'Bind param failed: ' . $insert_stmt->error, 'debug' => true]);
         exit;

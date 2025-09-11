@@ -71,14 +71,15 @@ try {
         exit;
     }
 
-    // Insert new calling
-    $insert_sql = "INSERT INTO callings (calling_name, organization, `grouping`, priority) VALUES (?, ?, ?, ?)";
+    // Insert new calling (include comments field with empty value)
+    $insert_sql = "INSERT INTO callings (calling_name, organization, `grouping`, priority, comments) VALUES (?, ?, ?, ?, ?)";
     $insert_stmt = $conn->prepare($insert_sql);
     if (!$insert_stmt) {
         throw new Exception('Database prepare failed: ' . $conn->error);
     }
 
-    $insert_stmt->bind_param("sssi", $calling_name, $organization, $grouping, $priority_num);
+    $comments = ''; // Empty comments field
+    $insert_stmt->bind_param("sssis", $calling_name, $organization, $grouping, $priority_num, $comments);
     
     if ($insert_stmt->execute()) {
         $calling_id = $conn->insert_id;
