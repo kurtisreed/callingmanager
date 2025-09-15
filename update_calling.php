@@ -22,7 +22,7 @@ if (!$callingId) {
 $columnsToUpdate = [
     'calling-name' => 'calling_name',
     'organization' => 'organization',
-    'grouping' => 'grouping',
+    'grouping' => '`grouping`',
     'priority' => 'priority'
 ];
 

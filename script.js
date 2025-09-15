@@ -3079,7 +3079,7 @@ function displayCallingProcessTable(processes, statusFilter) {
     const container = document.getElementById('dashboard-detail-content');
     
     if (filteredProcesses.length === 0) {
-        container.innerHTML = '<p>No callings in this status.</p>';
+        container.innerHTML = '<p>None</p>';
         return;
     }
     
