@@ -38,7 +38,10 @@
             <button class="tablinks" id="tab2-title" onclick="openTab(event, 'Tab2')">Assign/Release Callings</button>
             <button class="tablinks" id="tab3-title" onclick="openTab(event, 'Tab3')">Member Information</button>
             <button class="tablinks" id="tab4-title" onclick="openTab(event, 'Tab4')">Calling Information</button>
-            
+            <button class="tablinks logout-tab" onclick="logout()" title="Logout">
+                <span class="logout-icon">⏻</span>
+                <span class="logout-text">Logout</span>
+            </button>
         </div>
         
         <!-- Mobile Menu -->
@@ -53,7 +56,10 @@
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab2')">Assign/Release Callings</button>
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab3')">Member Information</button>
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab4')">Calling Information</button>
-                
+                <button class="mobile-tablink mobile-logout" onclick="logout(); toggleMobileMenu();">
+                    <span class="logout-icon">⏻</span>
+                    <span class="logout-text">Logout</span>
+                </button>
             </div>
         </div>
     </div>

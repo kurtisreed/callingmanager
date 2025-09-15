@@ -1,3 +1,84 @@
+// Global authentication handler
+function handleAuthenticationError(response) {
+    if (response.status === 401) {
+        alert('Your session has expired. Please log in again.');
+        // Hide the main app content
+        document.getElementById('app-content').style.display = 'none';
+        // Show the authentication container
+        document.getElementById('auth-container').style.display = 'block';
+        // Clear any stored session data
+        sessionStorage.clear();
+        localStorage.clear();
+        // Reset the PIN input
+        document.getElementById('pin').value = '';
+        document.getElementById('pin').focus();
+        return true; // Indicates auth error was handled
+    }
+    return false; // No auth error
+}
+
+// Function to manually test session timeout (for testing purposes)
+function testSessionTimeout() {
+    fetch('create_calling.php', {
+        method: 'POST',
+        body: new FormData()
+    }).catch(error => {
+        console.log('Session timeout test completed');
+    });
+}
+
+// Logout functionality
+function logout() {
+    fetch('logout.php', {
+        method: 'POST'
+    })
+    .then(() => {
+        // Always redirect to login regardless of response
+        // Hide the main app content
+        document.getElementById('app-content').style.display = 'none';
+        // Show the authentication container
+        document.getElementById('auth-container').style.display = 'block';
+        // Clear any stored session data
+        sessionStorage.clear();
+        localStorage.clear();
+        // Reset the PIN input
+        document.getElementById('pin').value = '';
+        document.getElementById('pin').focus();
+    })
+    .catch(error => {
+        console.error('Logout error:', error);
+        // Even if logout fails, still redirect to login for security
+        document.getElementById('app-content').style.display = 'none';
+        document.getElementById('auth-container').style.display = 'block';
+        document.getElementById('pin').value = '';
+        document.getElementById('pin').focus();
+    });
+}
+
+// Store the original fetch function
+const originalFetch = window.fetch;
+
+// Enhanced fetch wrapper that handles authentication
+function authenticatedFetch(url, options = {}) {
+    return originalFetch(url, options)
+        .then(response => {
+            if (handleAuthenticationError(response)) {
+                throw new Error('Authentication required');
+            }
+            return response;
+        });
+}
+
+// Override the global fetch function to automatically handle authentication
+window.fetch = function(url, options = {}) {
+    // Only apply authentication handling to PHP endpoints (not external URLs)
+    if (typeof url === 'string' && url.endsWith('.php')) {
+        return authenticatedFetch(url, options);
+    }
+    // For non-PHP URLs, use original fetch
+    return originalFetch(url, options);
+};
+
 function openTab(evt, tabName, data = null) {
     var i, tabcontent, tablinks, subcontent;
     
@@ -244,40 +325,8 @@ function filterTab2Callings() {
 }
 
 // Global flag to track authentication status
-let isUserAuthenticated = false;
-
-// Helper function for authenticated API calls
-function authenticatedFetch(url, options = {}) {
-    if (!isUserAuthenticated) {
-        console.log('API call blocked: User not authenticated');
-        return Promise.reject(new Error('User not authenticated'));
-    }
-    
-    return fetch(url, options)
-        .then(response => {
-            // Check if the response indicates an authentication error
-            if (response.status === 401) {
-                console.log('Authentication expired, redirecting to login');
-                isUserAuthenticated = false;
-                location.reload(); // Reload to show login form
-                throw new Error('Authentication expired');
-            }
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            return response;
-        })
-        .catch(error => {
-            console.error('API call failed:', error);
-            throw error;
-        });
-}
-
 // Load default tab only after authentication
 function initializeApplication() {
-    isUserAuthenticated = true;
     
     // Now it's safe to load the default tab and data
     document.querySelector('.tablinks').click(); // Simulate click on first tab to load content
@@ -303,14 +352,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 function populateMembers(selectedMemberId = '', callback = null) {
-    // Check authentication before making request
-    if (!isUserAuthenticated) {
-        console.log('Cannot populate members: User not authenticated');
-        return;
-    }
-    
-
-    
     fetch('get_members.php')
         .then(response => response.json())
         .then(data => {
@@ -360,10 +401,6 @@ function populateMembers(selectedMemberId = '', callback = null) {
 
 function populateCallings(selectedCallingId = '', callback = null) {
     // Check authentication before making request
-    if (!isUserAuthenticated) {
-        console.log('Cannot populate callings: User not authenticated');
-        return;
-    }
     
     console.log('PopulateCallings called with selectedCallingId:', selectedCallingId);
     
@@ -560,10 +597,6 @@ let allCandidates = []; // Store all candidates initially
 
 function showPopup(title, callingId) {
     // Check authentication before making request
-    if (!isUserAuthenticated) {
-        console.log('Cannot show popup: User not authenticated');
-        return;
-    }
     
     // Set the modal title
     document.getElementById('popup-title').textContent = title + " Candidates";
@@ -617,10 +650,6 @@ function showPopup(title, callingId) {
 // load the comments about callings
 function loadCallingComments(callingId) {
     // Check authentication before making request
-    if (!isUserAuthenticated) {
-        console.log('Cannot load calling comments: User not authenticated');
-        return;
-    }
     
     // Ensure callingId is provided
     if (!callingId) {
@@ -655,10 +684,6 @@ function loadCallingComments(callingId) {
 
 function saveCallingComments(callingId) {
     // Check authentication before making request
-    if (!isUserAuthenticated) {
-        console.log('Cannot save calling comments: User not authenticated');
-        return;
-    }
     
     // Get the comments from the textarea
     const comments = document.getElementById('candidate-notes').value;
@@ -736,10 +761,6 @@ function applyFilters() {
 // Function to load and display current calling holder
 function loadCurrentCallingHolder(callingId) {
     // Check authentication before making request
-    if (!isUserAuthenticated) {
-        console.log('Cannot load current calling holder: User not authenticated');
-        return;
-    }
     
     fetch(`get_calling_members.php?calling_id=${encodeURIComponent(callingId)}`)
         .then(response => response.json())
@@ -804,10 +825,6 @@ function closePopup() {
 // Function to add member to possible callings
 function addToPossibleCallings(memberId, callingId) {
     // Check authentication before making request
-    if (!isUserAuthenticated) {
-        console.log('Cannot add to possible callings: User not authenticated');
-        return;
-    }
     
     fetch('add_possible_calling.php', {
         method: 'POST',
@@ -1020,17 +1037,6 @@ function removeFromConsideration(possibleCallingsId, callingId) {
 
 function buildSmallBoxes() {
     const largeBox = document.getElementById('large-box');
-    
-    // Check if user is authenticated before making requests
-    if (!isUserAuthenticated) {
-        largeBox.innerHTML = `
-            <div style="text-align: center; padding: 50px; color: #666;">
-                <h3>Welcome to Calling Manager</h3>
-                <p>Please log in to view and manage callings data.</p>
-            </div>
-        `;
-        return;
-    }
     
     largeBox.innerHTML = '<p>Loading callings...</p>';
 
@@ -1609,10 +1615,6 @@ function updateChangesPreview() {
 // Fetch and display current callings of the selected member
 function fetchCurrentCallings(memberId, memberName) {
     // Check authentication before making request
-    if (!isUserAuthenticated) {
-        console.log('Cannot fetch current callings: User not authenticated');
-        return;
-    }
     
     fetch(`get_member_callings.php?member_id=${encodeURIComponent(memberId)}`)
         .then(response => response.json())
@@ -1844,10 +1846,6 @@ function hideOtherCandidatesSection() {
 // Fetch and display members associated with the selected calling
 function fetchCallingMembers(callingId, callingName) {
     // Check authentication before making request
-    if (!isUserAuthenticated) {
-        console.log('Cannot fetch calling members: User not authenticated');
-        return;
-    }
     
     fetch(`get_calling_members.php?calling_id=${encodeURIComponent(callingId)}`)
         .then(response => response.json())
