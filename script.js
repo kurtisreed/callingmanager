@@ -775,21 +775,19 @@ function loadCurrentCallingHolder(callingId) {
                 
                 if (activeMembers.length === 1) {
                     const member = activeMembers[0];
-                    html += `<p style="margin: 2px;"><strong>${member.member_name}</strong>`;
+                    html += `<p style="margin: 2px;">${member.member_name}`;
                     if (member.date_set_apart) {
                         html += ` <em>(${member.date_set_apart})</em>`;
                     }
                     html += '</p>';
                 } else {
-                    html += '<ul>';
                     activeMembers.forEach(member => {
-                        html += `<li>${member.member_name}`;
+                        html += `<p style="margin: 2px;">${member.member_name}`;
                         if (member.date_set_apart) {
                             html += ` <em>(${member.date_set_apart})</em>`;
                         }
-                        html += '</li>';
+                        html += '</p>';
                     });
-                    html += '</ul>';
                 }
                 
                 html += '</div>';
@@ -1205,7 +1203,7 @@ function renderBoxes(groupedData) {
             if (calling.isApproved) {
                 indicatorHtml = '<span class="checkmark-symbol">✓</span>';
             } else if (calling.isConsidered) {
-                indicatorHtml = '<span class="delta-symbol">▲</span>';
+                indicatorHtml = '<span class="delta-symbol">👤</span>';
             }
 
             return `
