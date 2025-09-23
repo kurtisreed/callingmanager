@@ -100,8 +100,17 @@ try {
     if (!$stmt->execute()) {
         throw new Exception("Failed to add calling to process: " . $stmt->error);
     }
-    
+
     $processId = $conn->insert_id;
+
+    // Also set the considering flag for this calling
+    $update_sql = "UPDATE callings SET considering = 1 WHERE calling_id = ?";
+    $update_stmt = $conn->prepare($update_sql);
+    if ($update_stmt) {
+        $update_stmt->bind_param("i", $calling_id);
+        $update_stmt->execute();
+        $update_stmt->close();
+    }
     
     // Log the addition for audit trail
     logUserActivity('calling_process_added', [

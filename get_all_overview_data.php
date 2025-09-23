@@ -48,7 +48,7 @@ while ($row = $approved_result->fetch_row()) {
 // === QUERY 2: Get all callings and their currently assigned members ===
 $sql = "
     SELECT
-        c.calling_id, c.calling_name, c.grouping, c.priority, c.organization,
+        c.calling_id, c.calling_name, c.grouping, c.priority, c.organization, c.considering,
         m.member_id, m.first_name, m.last_name,
         cc.date_set_apart
     FROM
@@ -76,15 +76,19 @@ while ($row = $result->fetch_assoc()) {
 
     // If we haven't seen this calling yet, add its details
     if (!isset($callings_data[$calling_id])) {
+        $is_considered = isset($considered_ids[$calling_id]);
+        $is_approved = isset($approved_ids[$calling_id]);
+
         $callings_data[$calling_id] = [
             'details' => [
                 'calling_name' => $row['calling_name'],
                 'grouping' => $row['grouping'],
                 'priority' => (int)$row['priority'],
                 'organization' => $row['organization'],
-                // Check if this calling_id exists in our lookup set
-                'is_considered' => isset($considered_ids[$calling_id]),
-                'is_approved' => isset($approved_ids[$calling_id])
+                // Auto-set considering to true if there's activity, otherwise use database value
+                'considering' => $is_considered || $is_approved || (bool)$row['considering'],
+                'is_considered' => $is_considered,
+                'is_approved' => $is_approved
             ],
             'members' => []
         ];

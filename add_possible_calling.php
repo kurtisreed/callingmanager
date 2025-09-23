@@ -24,6 +24,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bind_param("ii", $memberId, $callingId);
 
     if ($stmt->execute()) {
+        // Also set the considering flag for this calling
+        $update_sql = "UPDATE callings SET considering = 1 WHERE calling_id = ?";
+        $update_stmt = $conn->prepare($update_sql);
+        if ($update_stmt) {
+            $update_stmt->bind_param("i", $callingId);
+            $update_stmt->execute();
+            $update_stmt->close();
+        }
+
         echo "Member added to possible callings successfully.";
     } else {
         echo "Error adding member: " . $stmt->error;

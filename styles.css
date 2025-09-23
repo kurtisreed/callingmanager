@@ -477,6 +477,19 @@ body {
     vertical-align: middle;
 }
 
+/* Considering styling */
+.calling-name.considering {
+    color: orange;
+    text-decoration: underline;
+    font-weight: bold;
+}
+
+/* Checkbox styling for considering checkboxes */
+.considering-checkbox {
+    margin-left: 8px;
+    cursor: pointer;
+}
+
 /* Legend Key Styling */
 .legend-key {
     background-color: #f8f9fa;
