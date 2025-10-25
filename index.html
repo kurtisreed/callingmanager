@@ -14,8 +14,9 @@
     <div class="overlay" id="popup-overlay" onclick="closePopup()"></div>
     <div class="overlay" id="add-member-overlay" onclick="closeAddMemberModal()"></div>
     <div class="overlay" id="add-calling-overlay" onclick="closeAddCallingModal()"></div>
-    
-    
+    <div class="overlay" id="finalize-calling-overlay" onclick="closeFinalizeCallingModal()"></div>
+
+
     <div id="auth-container">
     <form id="auth-form">
         <h2>Kimberly 1st Calling Manager</h2>
@@ -501,6 +502,53 @@
                 <button id="review-changes-btn" class="action-btn edit-btn" onclick="reviewMemberChanges()">Review Changes</button>
                 <button class="action-btn cancel-btn" onclick="closeUpdateMembersModal()">Cancel</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Finalize Calling Assignment Modal -->
+<div id="finalize-calling-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeFinalizeCallingModal()">✕ Close</button>
+        <h2>Finalize Calling Assignment</h2>
+
+        <p><strong id="finalize-member-name"></strong> → <strong id="finalize-calling-name"></strong></p>
+
+        <div class="section-header">
+            <h3>Current Information</h3>
+        </div>
+        <div class="details-section">
+            <div id="finalize-member-callings-container"></div>
+            <div id="finalize-calling-members-container"></div>
+        </div>
+
+        <div class="section-header">
+            <h3>Date & Actions</h3>
+        </div>
+        <div class="details-section">
+            <div id="finalize-changes-preview" style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin-bottom: 20px; display: none;">
+                <h5 style="margin: 0 0 10px 0; color: #495057;">Changes to be made:</h5>
+                <div id="finalize-changes-text" style="color: #212529; font-weight: 500;"></div>
+            </div>
+
+            <div id="finalize-remove-other-candidates-section" style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin-bottom: 20px; display: none;">
+                <h5 style="margin: 0 0 10px 0; color: #495057;">Other candidates for this calling:</h5>
+                <label style="color: #212529; font-weight: 500;">
+                    <input type="checkbox" id="finalize-remove-other-candidates-checkbox">
+                    Remove all other members under consideration for this calling:
+                </label>
+                <div id="finalize-other-candidates-list" style="margin-left: 20px; margin-top: 10px; font-style: italic; color: #666;">
+                    <!-- Other candidates will be listed here -->
+                </div>
+            </div>
+
+            <label for="finalize-date-set-apart">Date of Change:</label>
+            <input type="date" name="finalize_date_set_apart" id="finalize-date-set-apart">
+
+            <div class="action-buttons">
+                <button type="button" id="finalize-make-changes-btn" class="action-btn save-btn" disabled>Finalize These Changes</button>
+            </div>
+            <div id="finalize-form-response"></div>
         </div>
     </div>
 </div>

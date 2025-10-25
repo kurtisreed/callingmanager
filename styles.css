@@ -943,6 +943,28 @@ table td input[type="checkbox"] {
     position: relative;
 }
 
+/* Finalize Calling Modal */
+#finalize-calling-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+#finalize-calling-modal .modal-content {
+    background-color: #fff;
+    padding: 20px;
+    position: relative;
+}
+
 .last-update-info {
     margin-top: 8px;
     padding: 8px 12px;
@@ -2278,7 +2300,8 @@ textarea:focus {
     #add-calling-modal,
     #add-calling-history-modal,
     #update-members-modal,
-    #review-changes-modal {
+    #review-changes-modal,
+    #finalize-calling-modal {
         width: 95vw !important;
         max-width: 500px;
         max-height: 90vh;
@@ -2331,7 +2354,10 @@ textarea:focus {
     #add-calling-modal textarea,
     #add-calling-history-modal input,
     #add-calling-history-modal select,
-    #add-calling-history-modal textarea {
+    #add-calling-history-modal textarea,
+    #finalize-calling-modal input,
+    #finalize-calling-modal select,
+    #finalize-calling-modal textarea {
         font-size: 16px !important;
         padding: 12px !important;
         margin-bottom: 15px;
@@ -2368,7 +2394,8 @@ textarea:focus {
     #add-calling-modal,
     #add-calling-history-modal,
     #update-members-modal,
-    #review-changes-modal {
+    #review-changes-modal,
+    #finalize-calling-modal {
         width: 98vw !important;
         padding: 10px;
         top: 2vh;

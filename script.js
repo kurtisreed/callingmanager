@@ -2490,28 +2490,18 @@ function fetchCallingProcesses() {
 
 // Function to create visual progress indicator
 function createProgressIndicator(process) {
-    const steps = ['approved', 'interviewed', 'sustained', 'set_apart', 'activated'];
-    const stepLabels = ['Approved', 'Interviewed', 'Sustained', 'Set Apart', 'Activated'];
-    const dateFields = ['approved_date', 'interviewed_date', 'sustained_date', 'set_apart_date', 'activated_date'];
+    const steps = ['approved', 'interviewed', 'sustained', 'set_apart'];
+    const stepLabels = ['Approved', 'Interviewed', 'Sustained', 'Set Apart'];
+    const dateFields = ['approved_date', 'interviewed_date', 'sustained_date', 'set_apart_date'];
     const currentIndex = steps.indexOf(process.status);
-    
+
     return `
         <div class="progress-indicator">
             ${steps.map((step, index) => {
-                let isCompleted;
-                let stepDate;
-                
-                // Special handling for "Activated" step
-                if (step === 'activated') {
-                    isCompleted = process.is_activated;
-                    stepDate = process.activated_date;
-                } else {
-                    isCompleted = index <= currentIndex;
-                    stepDate = process[dateFields[index]];
-                }
-                
+                const isCompleted = index <= currentIndex;
+                const stepDate = process[dateFields[index]];
                 const formattedDate = stepDate ? formatDate(stepDate) : '';
-                
+
                 return `
                     <div class="progress-step ${isCompleted ? 'completed' : 'pending'}">
                         <div class="step-icon">${isCompleted ? '✓' : '○'}</div>
@@ -2539,26 +2529,14 @@ function createActionButtons(process) {
     const nextAction = nextActions[process.status];
     if (nextAction) {
         buttons += `
-            <button class="action-btn save-btn process-advance-btn" 
-                    data-id="${process.id}" 
+            <button class="action-btn save-btn process-advance-btn"
+                    data-id="${process.id}"
                     data-status="${process.status}"
                     data-member-id="${process.member_id}"
                     data-calling-id="${process.calling_id}"
                     data-member-name="${process.member_name}"
                     data-calling-name="${process.calling_name}">
                 ${nextAction}
-            </button>`;
-    }
-    
-    // Add Activate button (only if not activated)
-    if (!process.is_activated) {
-        buttons += `
-            <button class="action-btn edit-btn process-activate-btn" 
-                    data-member-id="${process.member_id}"
-                    data-calling-id="${process.calling_id}"
-                    data-member-name="${process.member_name}"
-                    data-calling-name="${process.calling_name}">
-                Activate
             </button>`;
     }
     
@@ -2586,25 +2564,26 @@ function createActionButtons(process) {
 
 // Function to add event listeners to action buttons
 function addProcessActionListeners() {
-    // Advance buttons (now only goes up to Set Apart)
+    // Advance buttons - special handling for "Mark Sustained" to update then redirect to Tab2
     document.querySelectorAll('.process-advance-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const id = this.dataset.id;
             const currentStatus = this.dataset.status;
-            advanceCallingProcess(id, currentStatus);
-        });
-    });
-    
-    // Activate buttons - redirect to Assign/Release tab
-    document.querySelectorAll('.process-activate-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const processData = {
-                memberId: this.dataset.memberId,
-                callingId: this.dataset.callingId,
-                memberName: this.dataset.memberName,
-                callingName: this.dataset.callingName
-            };
-            activateCalling(processData);
+
+            // If moving from interviewed to sustained, update status then redirect to Assign/Release tab
+            if (currentStatus === 'interviewed') {
+                const processData = {
+                    id: id,
+                    memberId: this.dataset.memberId,
+                    callingId: this.dataset.callingId,
+                    memberName: this.dataset.memberName,
+                    callingName: this.dataset.callingName
+                };
+                advanceToSustainedAndActivate(processData);
+            } else {
+                // Otherwise, proceed with normal advancement
+                advanceCallingProcess(id, currentStatus);
+            }
         });
     });
     
@@ -2680,12 +2659,18 @@ function completeCallingProcess(processData) {
     }
 }
 
+// Function to open finalize modal for sustained calling
+function advanceToSustainedAndActivate(processData) {
+    // Just open the modal - status will be updated when user clicks Finalize
+    openFinalizeCallingModal(processData);
+}
+
 // Function to activate a calling (redirect to Assign/Release tab)
 function activateCalling(processData) {
     if (confirm(`Activate the calling for ${processData.memberName} → ${processData.callingName}?\n\nThis will take you to the Assign/Release Callings tab where you can make the assignment official.`)) {
         // Redirect to Tab2 with pre-filled member and calling
-        openTab(null, 'Tab2', { 
-            memberId: processData.memberId, 
+        openTab(null, 'Tab2', {
+            memberId: processData.memberId,
             callingId: processData.callingId,
             memberName: processData.memberName,
             callingName: processData.callingName,
@@ -2693,6 +2678,355 @@ function activateCalling(processData) {
         });
     }
 }
+
+// Function to open the finalize calling modal
+function openFinalizeCallingModal(processData) {
+    // Show modal and overlay
+    document.getElementById('finalize-calling-modal').style.display = 'block';
+    document.getElementById('finalize-calling-overlay').style.display = 'block';
+
+    // Store process data globally for later use
+    window.finalizeCallingData = processData;
+
+    // Set member and calling names in header
+    document.getElementById('finalize-member-name').textContent = processData.memberName;
+    document.getElementById('finalize-calling-name').textContent = processData.callingName;
+
+    // Set default date to today
+    document.getElementById('finalize-date-set-apart').value = new Date().toISOString().substr(0, 10);
+
+    // Fetch and display current information
+    fetchFinalizeModalData(processData.memberId, processData.memberName, processData.callingId, processData.callingName);
+}
+
+// Function to close the finalize calling modal
+function closeFinalizeCallingModal() {
+    // Hide modal
+    document.getElementById('finalize-calling-modal').style.display = 'none';
+    document.getElementById('finalize-calling-overlay').style.display = 'none';
+
+    // Clear the modal content
+    document.getElementById('finalize-member-callings-container').innerHTML = '';
+    document.getElementById('finalize-calling-members-container').innerHTML = '';
+    document.getElementById('finalize-changes-preview').style.display = 'none';
+    document.getElementById('finalize-remove-other-candidates-section').style.display = 'none';
+    document.getElementById('finalize-form-response').textContent = '';
+    document.getElementById('finalize-make-changes-btn').disabled = true;
+
+    // Clear stored data
+    window.finalizeCallingData = null;
+
+    // Refresh the dashboard to show updated data
+    fetchProcessStats();
+    fetchDashboardStats();
+
+    // If we're currently showing a process detail view, refresh the table
+    const activeProcessStat = document.querySelector('.clickable-process-stat.active-stat');
+    if (activeProcessStat) {
+        const statusType = activeProcessStat.dataset.processStatus;
+        fetch('get_calling_processes.php')
+            .then(response => response.json())
+            .then(data => {
+                displayCallingProcessTable(data, statusType);
+            });
+    }
+
+    // Also check if we're showing a general stat detail view and refresh it
+    const activeGeneralStat = document.querySelector('.clickable-stat.active-stat');
+    if (activeGeneralStat) {
+        const statType = activeGeneralStat.dataset.stat;
+        const statLabel = activeGeneralStat.querySelector('.stat-label').textContent;
+        setTimeout(() => {
+            showStatDetails(statType, statLabel);
+        }, 100);
+    }
+}
+
+// Function to fetch and display data in finalize modal
+function fetchFinalizeModalData(memberId, memberName, callingId, callingName) {
+    // Fetch member's current callings
+    fetch(`get_member_callings.php?member_id=${encodeURIComponent(memberId)}`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('finalize-member-callings-container');
+            container.innerHTML = '';
+
+            let content = `<h4>${memberName}: Current Callings</h4>`;
+
+            if (data.length > 0) {
+                let table = '<table>';
+                table += `
+                    <tr>
+                        <th>Status</th>
+                        <th>Release?</th>
+                        <th>Calling Name</th>
+                        <th>Date Started</th>
+                        <th>Date Released</th>
+                    </tr>`;
+
+                data.forEach(calling => {
+                    const isActive = !calling.date_released;
+
+                    table += `
+                        <tr>
+                            <td>${isActive ? 'Active' : 'Old'}</td>
+                            <td>${isActive ? `<input type="checkbox" class="finalize-release-calling-checkbox" value="${calling.id}">` : ''}</td>
+                            <td>${calling.calling_name}</td>
+                            <td>${calling.date_set_apart}</td>
+                            <td>${calling.date_released ? calling.date_released : '—'}</td>
+                        </tr>
+                    `;
+                });
+
+                table += '</table>';
+                content += table;
+            } else {
+                content += '<p>No current or past callings for this member.</p>';
+            }
+
+            container.innerHTML = content;
+
+            // Add event listeners for checkboxes
+            const checkboxes = container.querySelectorAll('.finalize-release-calling-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateFinalizeChangesPreview);
+            });
+            updateFinalizeChangesPreview();
+        });
+
+    // Fetch calling's current members
+    fetch(`get_calling_members.php?calling_id=${encodeURIComponent(callingId)}`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('finalize-calling-members-container');
+            container.innerHTML = '';
+
+            let content = `<h4>${callingName}: Current Status</h4>`;
+
+            if (data.length > 0) {
+                let table = '<table>';
+                table += `
+                    <tr>
+                        <th>Status</th>
+                        <th>Release?</th>
+                        <th>Member Name</th>
+                        <th>Date Started</th>
+                        <th>Date Released</th>
+                    </tr>`;
+
+                data.forEach(member => {
+                    const isActive = !member.date_released;
+
+                    table += `
+                        <tr>
+                            <td>${isActive ? 'Active' : 'Old'}</td>
+                            <td>${isActive ? `<input type="checkbox" class="finalize-release-member-checkbox" value="${member.id}">` : ''}</td>
+                            <td>${member.member_name}</td>
+                            <td>${member.date_set_apart}</td>
+                            <td>${member.date_released ? member.date_released : '—'}</td>
+                        </tr>
+                    `;
+                });
+
+                table += '</table>';
+                content += table;
+            } else {
+                content += '<p>No members currently serving in this calling.</p>';
+            }
+
+            container.innerHTML = content;
+
+            // Add event listeners for checkboxes
+            const checkboxes = container.querySelectorAll('.finalize-release-member-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateFinalizeChangesPreview);
+            });
+            updateFinalizeChangesPreview();
+        });
+
+    // Fetch other candidates for this calling
+    fetchFinalizeCandidates(callingId);
+}
+
+// Function to fetch other candidates for finalize modal
+function fetchFinalizeCandidates(callingId) {
+    fetch(`get_calling_candidates.php?calling_id=${encodeURIComponent(callingId)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.length > 0) {
+                const section = document.getElementById('finalize-remove-other-candidates-section');
+                const list = document.getElementById('finalize-other-candidates-list');
+
+                list.innerHTML = data.map(candidate => candidate.member_name).join(', ');
+                section.style.display = 'block';
+
+                // Add event listener to checkbox
+                document.getElementById('finalize-remove-other-candidates-checkbox').addEventListener('change', updateFinalizeChangesPreview);
+            } else {
+                document.getElementById('finalize-remove-other-candidates-section').style.display = 'none';
+            }
+        });
+}
+
+// Function to update changes preview in finalize modal
+function updateFinalizeChangesPreview() {
+    const processData = window.finalizeCallingData;
+    if (!processData) return;
+
+    const previewDiv = document.getElementById('finalize-changes-preview');
+    const changesText = document.getElementById('finalize-changes-text');
+    const changes = [];
+
+    // Get member releases
+    const memberReleaseCheckboxes = document.querySelectorAll('.finalize-release-calling-checkbox:checked');
+    const memberReleases = [];
+    memberReleaseCheckboxes.forEach(checkbox => {
+        const row = checkbox.closest('tr');
+        const callingName = row.cells[2].textContent;
+        memberReleases.push(callingName);
+    });
+
+    // Get calling releases
+    const callingReleaseCheckboxes = document.querySelectorAll('.finalize-release-member-checkbox:checked');
+    const callingReleases = [];
+    callingReleaseCheckboxes.forEach(checkbox => {
+        const row = checkbox.closest('tr');
+        const memberName = row.cells[2].textContent;
+        callingReleases.push(memberName);
+    });
+
+    // Build changes text
+    if (memberReleases.length > 0) {
+        const releasesText = memberReleases.length === 1 ?
+            memberReleases[0] :
+            memberReleases.slice(0, -1).join(', ') + ' and ' + memberReleases.slice(-1);
+        changes.push(`${processData.memberName} will be released from ${releasesText}`);
+    }
+
+    changes.push(`${processData.memberName} will be assigned to ${processData.callingName}`);
+
+    if (callingReleases.length > 0) {
+        callingReleases.forEach(memberName => {
+            changes.push(`${memberName} will be released from ${processData.callingName}`);
+        });
+    }
+
+    // Check if removing other candidates
+    const removeOthersCheckbox = document.getElementById('finalize-remove-other-candidates-checkbox');
+    if (removeOthersCheckbox && removeOthersCheckbox.checked) {
+        changes.push('All other candidates will be removed from consideration for this calling');
+    }
+
+    const makeChangesBtn = document.getElementById('finalize-make-changes-btn');
+
+    if (changes.length > 0) {
+        let changeText = changes.join(', ');
+        if (!changeText.endsWith('.')) {
+            changeText += '.';
+        }
+        changeText = changeText.charAt(0).toUpperCase() + changeText.slice(1);
+
+        changesText.textContent = changeText;
+        previewDiv.style.display = 'block';
+
+        if (makeChangesBtn) {
+            makeChangesBtn.disabled = false;
+        }
+    } else {
+        previewDiv.style.display = 'none';
+
+        if (makeChangesBtn) {
+            makeChangesBtn.disabled = true;
+        }
+    }
+}
+
+// Function to finalize the calling assignment from modal
+function finalizeFinalizeCallingChanges() {
+    const processData = window.finalizeCallingData;
+    if (!processData) return;
+
+    const dateField = document.getElementById('finalize-date-set-apart');
+    const date = dateField.value;
+
+    if (!date) {
+        alert('Please select a date.');
+        return;
+    }
+
+    // Get member releases
+    const memberReleaseCheckboxes = document.querySelectorAll('.finalize-release-calling-checkbox:checked');
+    const memberReleases = Array.from(memberReleaseCheckboxes).map(cb => cb.value);
+
+    // Get calling releases
+    const callingReleaseCheckboxes = document.querySelectorAll('.finalize-release-member-checkbox:checked');
+    const callingReleases = Array.from(callingReleaseCheckboxes).map(cb => cb.value);
+
+    // Check if removing other candidates
+    const removeOthersCheckbox = document.getElementById('finalize-remove-other-candidates-checkbox');
+    const removeOthers = removeOthersCheckbox ? removeOthersCheckbox.checked : false;
+
+    // First, update the process status to sustained
+    fetch('update_calling_process.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            id: processData.id,
+            status: 'sustained',
+            date: date
+        })
+    })
+    .then(response => response.json())
+    .then(statusData => {
+        if (!statusData.success) {
+            throw new Error('Failed to update status: ' + statusData.message);
+        }
+
+        // Now make the calling assignment changes
+        const requestData = {
+            member_id: processData.memberId,
+            calling_id: processData.callingId,
+            change_date: date,
+            member_releases: memberReleases,
+            calling_releases: callingReleases,
+            remove_other_candidates: removeOthers,
+            update_possible_callings: true // Update status to 'assigned' in possible_callings table
+        };
+
+        return fetch('make_calling_changes.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        });
+    })
+    .then(response => response.text())
+    .then(data => {
+        document.getElementById('finalize-form-response').textContent = data;
+
+        if (data.includes('successfully')) {
+            // Close modal and refresh dashboard after a short delay
+            setTimeout(() => {
+                closeFinalizeCallingModal();
+            }, 1500);
+        }
+    })
+    .catch(error => {
+        console.error('Error making changes:', error);
+        document.getElementById('finalize-form-response').textContent = 'An error occurred while making changes: ' + error.message;
+    });
+}
+
+// Add event listener for finalize button when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    const finalizeBtn = document.getElementById('finalize-make-changes-btn');
+    if (finalizeBtn) {
+        finalizeBtn.addEventListener('click', finalizeFinalizeCallingChanges);
+    }
+});
 
 // Function to finalize calling process (remove from calling_process table only)
 function finalizeCallingProcess(id) {
@@ -2763,19 +3097,15 @@ function updateProcessStats(processes) {
         approved: 0,
         interviewed: 0,
         sustained: 0,
-        set_apart: 0 // This will count non-activated processes (needs activated)
+        set_apart: 0
     };
-    
+
     processes.forEach(process => {
-        // Count by status for the first 3 categories
+        // Count by status
         if (process.status === 'approved') stats.approved++;
         if (process.status === 'interviewed') stats.interviewed++;
         if (process.status === 'sustained') stats.sustained++;
-        
-        // Count non-activated processes for "Needs activated"
-        if (!process.is_activated) {
-            stats.set_apart++;
-        }
+        if (process.status === 'set_apart') stats.set_apart++;
     });
     
     // Update old-style stat elements if they exist
@@ -2844,7 +3174,7 @@ function loadDashboard() {
                             <span class="stat-value" id="stat-sustained">Loading...</span>
                         </div>
                         <div class="stat-item clickable-process-stat" data-process-status="set_apart">
-                            <span class="stat-label">Needs activated:</span>
+                            <span class="stat-label">Ready to finalize:</span>
                             <span class="stat-value" id="stat-set-apart">Loading...</span>
                         </div>
                     </div>
@@ -2995,19 +3325,15 @@ function updateDashboardProcessStats(processes) {
         approved: 0,
         interviewed: 0,
         sustained: 0,
-        set_apart: 0 // This will count non-activated processes (needs activated)
+        set_apart: 0
     };
-    
+
     processes.forEach(process => {
-        // Count by status for the first 4 categories
+        // Count by status
         if (process.status === 'approved') stats.approved++;
         if (process.status === 'interviewed') stats.interviewed++;
         if (process.status === 'sustained') stats.sustained++;
-        
-        // Count non-activated processes for "Needs activated"
-        if (!process.is_activated) {
-            stats.set_apart++;
-        }
+        if (process.status === 'set_apart') stats.set_apart++;
     });
     
     document.getElementById('stat-all').textContent = stats.all;
@@ -3064,13 +3390,8 @@ function displayCallingProcessTable(processes, statusFilter) {
     // Filter processes based on status
     let filteredProcesses = processes;
     if (statusFilter && statusFilter !== 'all') {
-        if (statusFilter === 'set_apart') {
-            // For "Needs activated", show all non-activated processes
-            filteredProcesses = processes.filter(process => !process.is_activated);
-        } else {
-            // For other statuses, filter by status
-            filteredProcesses = processes.filter(process => process.status === statusFilter);
-        }
+        // Filter by status
+        filteredProcesses = processes.filter(process => process.status === statusFilter);
     }
     
     const container = document.getElementById('dashboard-detail-content');
