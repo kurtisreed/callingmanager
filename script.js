@@ -1202,7 +1202,7 @@ function renderBoxes(groupedData) {
 
             let indicatorHtml = '';
             if (calling.isApproved) {
-                indicatorHtml = '<span class="checkmark-symbol">✓</span>';
+                indicatorHtml = '<span class="checkmark-symbol">⚙</span>';
             } else if (calling.isConsidered) {
                 indicatorHtml = '<span class="delta-symbol">👤</span>';
             }
