@@ -20,6 +20,8 @@ if (!$data) {
 $id = $data['id'] ?? null;
 $status = $data['status'] ?? null;
 $date = $data['date'] ?? null;
+$preserve_status = $data['preserve_status'] ?? false;
+$actual_status = $data['actual_status'] ?? null;
 
 if (!$id || !$status || !$date) {
     echo json_encode(['success' => false, 'message' => 'Missing required fields']);
@@ -30,6 +32,12 @@ if (!$id || !$status || !$date) {
 $validStatuses = ['approved', 'interviewed', 'sustained', 'set_apart'];
 if (!in_array($status, $validStatuses)) {
     echo json_encode(['success' => false, 'message' => 'Invalid status']);
+    exit;
+}
+
+// If preserving status, also validate the actual status
+if ($preserve_status && $actual_status && !in_array($actual_status, $validStatuses)) {
+    echo json_encode(['success' => false, 'message' => 'Invalid actual status']);
     exit;
 }
 
@@ -64,10 +72,13 @@ try {
             throw new Exception("Invalid status provided");
     }
     
+    // Determine which status to use for the update
+    $statusToUpdate = $preserve_status && $actual_status ? $actual_status : $status;
+
     $updateSql = "UPDATE calling_process SET status = ?, $dateField = ? WHERE id = ?";
     $stmt = $conn->prepare($updateSql);
-    $stmt->bind_param("ssi", $status, $date, $id);
-    
+    $stmt->bind_param("ssi", $statusToUpdate, $date, $id);
+
     if (!$stmt->execute()) {
         throw new Exception("Failed to update calling process: " . $stmt->error);
     }

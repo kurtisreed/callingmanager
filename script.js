@@ -2510,7 +2510,9 @@ function createProgressIndicator(process) {
                                               data-process-id="${process.id}"
                                               data-date-field="${dateFields[index]}"
                                               data-current-date="${stepDate}"
-                                              data-status="${steps[index]}"
+                                              data-step-status="${steps[index]}"
+                                              data-current-process-status="${process.status}"
+                                              data-step-label="${stepLabels[index]}"
                                               title="Click to edit date">${formattedDate}</div>` : ''}
                     </div>
                 `;
@@ -2618,16 +2620,18 @@ function addProcessActionListeners() {
             const processId = this.dataset.processId;
             const dateField = this.dataset.dateField;
             const currentDate = this.dataset.currentDate;
-            const status = this.dataset.status;
-            editProcessDate(processId, dateField, currentDate, status);
+            const stepStatus = this.dataset.stepStatus;
+            const currentProcessStatus = this.dataset.currentProcessStatus;
+            const stepLabel = this.dataset.stepLabel;
+            editProcessDate(processId, dateField, currentDate, stepStatus, currentProcessStatus, stepLabel);
         });
     });
 }
 
 // Function to edit a process date
-function editProcessDate(processId, dateField, currentDate, status) {
+function editProcessDate(processId, dateField, currentDate, stepStatus, currentProcessStatus, stepLabel) {
     // Prompt user for new date
-    const newDate = prompt(`Edit date for ${status}:\n(Format: YYYY-MM-DD)`, currentDate);
+    const newDate = prompt(`Edit date for ${stepLabel}:\n(Format: YYYY-MM-DD)`, currentDate);
 
     if (newDate === null) {
         // User cancelled
@@ -2640,7 +2644,8 @@ function editProcessDate(processId, dateField, currentDate, status) {
         return;
     }
 
-    // Update the date
+    // Update the date - use stepStatus for which date field to update,
+    // but currentProcessStatus to preserve the actual process status
     fetch('update_calling_process.php', {
         method: 'POST',
         headers: {
@@ -2648,8 +2653,10 @@ function editProcessDate(processId, dateField, currentDate, status) {
         },
         body: JSON.stringify({
             id: processId,
-            status: status,
-            date: newDate
+            status: stepStatus,
+            date: newDate,
+            preserve_status: true, // Flag to tell PHP not to change the actual status
+            actual_status: currentProcessStatus // Pass the actual current status
         })
     })
     .then(response => response.json())
