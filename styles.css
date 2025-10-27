@@ -2142,6 +2142,16 @@ textarea:focus {
     line-height: 1.2;
 }
 
+.editable-date {
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.editable-date:hover {
+    color: #0c2238;
+    text-decoration: underline;
+}
+
 .step-connector {
     width: 20px;
     height: 2px;

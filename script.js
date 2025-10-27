@@ -2506,7 +2506,12 @@ function createProgressIndicator(process) {
                     <div class="progress-step ${isCompleted ? 'completed' : 'pending'}">
                         <div class="step-icon">${isCompleted ? '✓' : '○'}</div>
                         <div class="step-label">${stepLabels[index]}</div>
-                        ${formattedDate ? `<div class="step-date">${formattedDate}</div>` : ''}
+                        ${formattedDate ? `<div class="step-date editable-date"
+                                              data-process-id="${process.id}"
+                                              data-date-field="${dateFields[index]}"
+                                              data-current-date="${stepDate}"
+                                              data-status="${steps[index]}"
+                                              title="Click to edit date">${formattedDate}</div>` : ''}
                     </div>
                 `;
             }).join('<div class="step-connector"></div>')}
@@ -2597,7 +2602,7 @@ function addProcessActionListeners() {
         });
     });
     
-    // Cancel buttons  
+    // Cancel buttons
     document.querySelectorAll('.process-cancel-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const id = this.dataset.id;
@@ -2605,6 +2610,71 @@ function addProcessActionListeners() {
                 cancelCallingProcess(id);
             }
         });
+    });
+
+    // Editable date click handlers
+    document.querySelectorAll('.editable-date').forEach(dateEl => {
+        dateEl.addEventListener('click', function() {
+            const processId = this.dataset.processId;
+            const dateField = this.dataset.dateField;
+            const currentDate = this.dataset.currentDate;
+            const status = this.dataset.status;
+            editProcessDate(processId, dateField, currentDate, status);
+        });
+    });
+}
+
+// Function to edit a process date
+function editProcessDate(processId, dateField, currentDate, status) {
+    // Prompt user for new date
+    const newDate = prompt(`Edit date for ${status}:\n(Format: YYYY-MM-DD)`, currentDate);
+
+    if (newDate === null) {
+        // User cancelled
+        return;
+    }
+
+    // Validate date format
+    if (!newDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        alert('Invalid date format. Please use YYYY-MM-DD format.');
+        return;
+    }
+
+    // Update the date
+    fetch('update_calling_process.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            id: processId,
+            status: status,
+            date: newDate
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Refresh the dashboard
+            fetchProcessStats();
+
+            // If we're currently showing a process detail view, refresh the table
+            const activeProcessStat = document.querySelector('.clickable-process-stat.active-stat');
+            if (activeProcessStat) {
+                const statusType = activeProcessStat.dataset.processStatus;
+                fetch('get_calling_processes.php')
+                    .then(response => response.json())
+                    .then(data => {
+                        displayCallingProcessTable(data, statusType);
+                    });
+            }
+        } else {
+            alert('Error updating date: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error updating date:', error);
+        alert('An error occurred while updating the date.');
     });
 }
 
@@ -3393,9 +3463,16 @@ function displayCallingProcessTable(processes, statusFilter) {
         // Filter by status
         filteredProcesses = processes.filter(process => process.status === statusFilter);
     }
-    
+
+    // Sort alphabetically by last name
+    filteredProcesses.sort((a, b) => {
+        const aLastName = a.member_name.split(' ').pop().toLowerCase();
+        const bLastName = b.member_name.split(' ').pop().toLowerCase();
+        return aLastName.localeCompare(bLastName);
+    });
+
     const container = document.getElementById('dashboard-detail-content');
-    
+
     if (filteredProcesses.length === 0) {
         container.innerHTML = '<p>None</p>';
         return;
