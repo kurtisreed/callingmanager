@@ -2546,19 +2546,7 @@ function createActionButtons(process) {
                 ${nextAction}
             </button>`;
     }
-    
-    // Add Finalize Calling button (only if all progression steps are completed)
-    const allStepsCompleted = process.approved_date && process.interviewed_date &&
-                             process.sustained_date && process.set_apart_date;
-    
-    if (allStepsCompleted) {
-        buttons += `
-            <button class="action-btn save-btn process-finalize-btn" 
-                    data-id="${process.id}">
-                Finalize Calling
-            </button>`;
-    }
-    
+
     // Add Cancel button
     buttons += `
         <button class="action-btn remove-btn process-cancel-btn" 
@@ -2593,17 +2581,7 @@ function addProcessActionListeners() {
             }
         });
     });
-    
-    // Finalize Calling buttons - only removes from calling_process table
-    document.querySelectorAll('.process-finalize-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.dataset.id;
-            if (confirm('Are you sure you want to finalize this calling?')) {
-                finalizeCallingProcess(id);
-            }
-        });
-    });
-    
+
     // Cancel buttons
     document.querySelectorAll('.process-cancel-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -2696,29 +2674,72 @@ function advanceCallingProcess(id, currentStatus) {
     const nextStatus = nextStatusMap[currentStatus];
     if (!nextStatus) return;
     
-    fetch('update_calling_process.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            id: id,
-            status: nextStatus,
-            date: new Date().toISOString().substr(0, 10)
+    // If advancing to set_apart, update then finalize (delete) automatically
+    if (nextStatus === 'set_apart') {
+        fetch('update_calling_process.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: id,
+                status: nextStatus,
+                date: new Date().toISOString().substr(0, 10)
+            })
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            fetchCallingProcesses(); // Refresh the table
-        } else {
-            alert('Error updating process: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error advancing process:', error);
-        alert('An error occurred while updating the process.');
-    });
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Now finalize by removing from calling_process table
+                return fetch('cancel_calling_process.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id: id })
+                });
+            } else {
+                throw new Error(data.message);
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                fetchCallingProcesses(); // Refresh the table
+            } else {
+                alert('Error finalizing process: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error advancing/finalizing process:', error);
+            alert('An error occurred: ' + error.message);
+        });
+    } else {
+        // Normal advancement (not set_apart)
+        fetch('update_calling_process.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: id,
+                status: nextStatus,
+                date: new Date().toISOString().substr(0, 10)
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                fetchCallingProcesses(); // Refresh the table
+            } else {
+                alert('Error updating process: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error advancing process:', error);
+            alert('An error occurred while updating the process.');
+        });
+    }
 }
 
 // Function to complete a calling process by redirecting to Assign/Release tab
@@ -2922,23 +2943,23 @@ function fetchFinalizeModalData(memberId, memberName, callingId, callingName) {
         });
 
     // Fetch other candidates for this calling
-    fetchFinalizeCandidates(callingId);
+    fetchFinalizeCandidates(callingId, memberId);
 }
 
 // Function to fetch other candidates for finalize modal
-function fetchFinalizeCandidates(callingId) {
+function fetchFinalizeCandidates(callingId, excludeMemberId) {
     fetch(`get_calling_candidates.php?calling_id=${encodeURIComponent(callingId)}`)
         .then(response => response.json())
         .then(data => {
-            if (data.length > 0) {
+            // Filter out the member being assigned
+            const otherCandidates = data.filter(candidate => candidate.member_id != excludeMemberId);
+
+            if (otherCandidates.length > 0) {
                 const section = document.getElementById('finalize-remove-other-candidates-section');
                 const list = document.getElementById('finalize-other-candidates-list');
 
-                list.innerHTML = data.map(candidate => candidate.member_name).join(', ');
+                list.innerHTML = otherCandidates.map(candidate => candidate.member_name).join(', ');
                 section.style.display = 'block';
-
-                // Add event listener to checkbox
-                document.getElementById('finalize-remove-other-candidates-checkbox').addEventListener('change', updateFinalizeChangesPreview);
             } else {
                 document.getElementById('finalize-remove-other-candidates-section').style.display = 'none';
             }
@@ -2988,12 +3009,6 @@ function updateFinalizeChangesPreview() {
         });
     }
 
-    // Check if removing other candidates
-    const removeOthersCheckbox = document.getElementById('finalize-remove-other-candidates-checkbox');
-    if (removeOthersCheckbox && removeOthersCheckbox.checked) {
-        changes.push('All other candidates will be removed from consideration for this calling');
-    }
-
     const makeChangesBtn = document.getElementById('finalize-make-changes-btn');
 
     if (changes.length > 0) {
@@ -3039,10 +3054,6 @@ function finalizeFinalizeCallingChanges() {
     const callingReleaseCheckboxes = document.querySelectorAll('.finalize-release-member-checkbox:checked');
     const callingReleases = Array.from(callingReleaseCheckboxes).map(cb => cb.value);
 
-    // Check if removing other candidates
-    const removeOthersCheckbox = document.getElementById('finalize-remove-other-candidates-checkbox');
-    const removeOthers = removeOthersCheckbox ? removeOthersCheckbox.checked : false;
-
     // First, update the process status to sustained
     fetch('update_calling_process.php', {
         method: 'POST',
@@ -3068,7 +3079,6 @@ function finalizeFinalizeCallingChanges() {
             change_date: date,
             member_releases: memberReleases,
             calling_releases: callingReleases,
-            remove_other_candidates: removeOthers,
             update_possible_callings: true // Update status to 'assigned' in possible_callings table
         };
 

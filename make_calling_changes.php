@@ -23,7 +23,6 @@ $change_date = $data['change_date'] ?? null;
 $member_releases = $data['member_releases'] ?? [];
 $calling_releases = $data['calling_releases'] ?? [];
 $update_possible_callings = $data['update_possible_callings'] ?? false;
-$remove_other_candidates = $data['remove_other_candidates'] ?? false;
 
 if (!$change_date) {
     echo "Change date is required.";
@@ -205,31 +204,41 @@ try {
     // Handle possible_callings updates if new assignment was made
     if ($update_possible_callings && $member_id && $calling_id) {
         // Update the assigned member's status to 'assigned'
-        $update_assigned_sql = "UPDATE possible_callings 
-                               SET status = 'assigned' 
+        $update_assigned_sql = "UPDATE possible_callings
+                               SET status = 'assigned'
                                WHERE member_id = '$member_id' AND calling_id = '$calling_id' AND status = 'considered'";
-        
+
         if ($conn->query($update_assigned_sql)) {
             $affected_rows = $conn->affected_rows;
             if ($affected_rows > 0) {
                 $changes_made[] = "Updated possible calling status to assigned";
             }
         }
-        
-        // If checkbox was checked, dismiss other candidates
-        if ($remove_other_candidates) {
-            $dismiss_others_sql = "UPDATE possible_callings 
-                                  SET status = 'dismissed' 
-                                  WHERE calling_id = '$calling_id' AND member_id != '$member_id' AND status = 'considered'";
-            
-            if ($conn->query($dismiss_others_sql)) {
-                $dismissed_count = $conn->affected_rows;
-                if ($dismissed_count > 0) {
-                    $changes_made[] = "Dismissed $dismissed_count other candidate(s) from consideration";
-                }
-            } else {
-                throw new Exception("Failed to dismiss other candidates");
+
+        // Always dismiss other candidates when finalizing
+        $dismiss_others_sql = "UPDATE possible_callings
+                              SET status = 'dismissed'
+                              WHERE calling_id = '$calling_id' AND member_id != '$member_id' AND status = 'considered'";
+
+        if ($conn->query($dismiss_others_sql)) {
+            $dismissed_count = $conn->affected_rows;
+            if ($dismissed_count > 0) {
+                $changes_made[] = "Dismissed $dismissed_count other candidate(s) from consideration";
             }
+        } else {
+            throw new Exception("Failed to dismiss other candidates");
+        }
+
+        // Clear the considering checkbox for this calling
+        $calling_id_escaped = $conn->real_escape_string($calling_id);
+        $clear_considering_sql = "UPDATE callings
+                                 SET considering = 0
+                                 WHERE calling_id = '$calling_id_escaped'";
+
+        if ($conn->query($clear_considering_sql)) {
+            $changes_made[] = "Cleared considering status for calling (calling_id: $calling_id)";
+        } else {
+            throw new Exception("Failed to clear considering status: " . $conn->error);
         }
     }
     
