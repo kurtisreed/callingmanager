@@ -967,24 +967,22 @@ table td input[type="checkbox"] {
 
 /* Add Process Modal */
 #add-process-modal {
-    display: none;
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     background-color: white;
-    border: 1px solid #ccc;
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
-    width: 400px;
-    max-height: 80vh;
-    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    z-index: 1000; /* Above overlay */
+    display: none; /* Hidden by default */
 }
 
 #add-process-modal .modal-content {
     background-color: #fff;
     padding: 20px;
+    width: 400px;
     position: relative;
 }
 
