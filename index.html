@@ -15,6 +15,7 @@
     <div class="overlay" id="add-member-overlay" onclick="closeAddMemberModal()"></div>
     <div class="overlay" id="add-calling-overlay" onclick="closeAddCallingModal()"></div>
     <div class="overlay" id="finalize-calling-overlay" onclick="closeFinalizeCallingModal()"></div>
+    <div class="overlay" id="add-process-overlay" onclick="closeAddProcessModal()"></div>
 
 
     <div id="auth-container">
@@ -546,6 +547,33 @@
             </div>
             <div id="finalize-form-response"></div>
         </div>
+    </div>
+</div>
+
+<!-- Add New Calling to Process Modal -->
+<div id="add-process-modal" class="modal">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeAddProcessModal()">✕ Close</button>
+        <h2>Add New Calling to Process</h2>
+
+        <label for="add-process-member-search">Search Members:</label>
+        <input type="text" id="add-process-member-search" placeholder="Type name to search..." />
+
+        <label for="add-process-member-select">Select Member:</label>
+        <select id="add-process-member-select">
+            <option value="">Select a Member</option>
+        </select>
+
+        <label for="add-process-calling-search">Search Callings:</label>
+        <input type="text" id="add-process-calling-search" placeholder="Type calling name to search..." />
+
+        <label for="add-process-calling-select">Select Calling:</label>
+        <select id="add-process-calling-select">
+            <option value="">Select a Calling</option>
+        </select>
+
+        <button id="save-process-btn" class="action-btn save-btn" onclick="saveNewCallingProcess()">Add to Process</button>
+        <div id="add-process-response"></div>
     </div>
 </div>
 

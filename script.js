@@ -3491,12 +3491,20 @@ function displayCallingProcessTable(processes, statusFilter) {
     const container = document.getElementById('dashboard-detail-content');
 
     if (filteredProcesses.length === 0) {
-        container.innerHTML = '<p>None</p>';
+        container.innerHTML = `
+            <div style="margin-bottom: 15px;">
+                <button class="action-btn save-btn" onclick="openAddProcessModal()" style="margin-bottom: 10px;">+ Add New Calling</button>
+            </div>
+            <p>None</p>
+        `;
         return;
     }
-    
-    // Generate table HTML
+
+    // Generate table HTML with Add button above it
     const tableHTML = `
+        <div style="margin-bottom: 15px;">
+            <button class="action-btn save-btn" onclick="openAddProcessModal()" style="margin-bottom: 10px;">+ Add New Calling</button>
+        </div>
         <table class="detail-table process-table">
             <thead>
                 <tr>
@@ -3522,7 +3530,7 @@ function displayCallingProcessTable(processes, statusFilter) {
             </tbody>
         </table>
     `;
-    
+
     container.innerHTML = tableHTML;
     
     // Add event listeners for action buttons
@@ -5372,6 +5380,184 @@ function toggleCallingConsidering(checkbox, event) {
         }
         console.error('Error updating considering status:', error);
         alert('Error updating considering status. Please try again.');
+    });
+}
+
+// ============================================
+// Add New Calling to Process Modal Functions
+// ============================================
+
+// Store data for filtering
+let allAddProcessMembers = [];
+let allAddProcessCallings = [];
+
+// Open the Add Process modal
+function openAddProcessModal() {
+    document.getElementById('add-process-modal').style.display = 'block';
+    document.getElementById('add-process-overlay').style.display = 'block';
+
+    // Clear search inputs
+    document.getElementById('add-process-member-search').value = '';
+    document.getElementById('add-process-calling-search').value = '';
+
+    // Set up search event listeners (only once)
+    const memberSearchInput = document.getElementById('add-process-member-search');
+    if (!memberSearchInput.hasAttribute('data-listener-added')) {
+        memberSearchInput.addEventListener('input', filterAddProcessMembers);
+        memberSearchInput.setAttribute('data-listener-added', 'true');
+    }
+
+    const callingSearchInput = document.getElementById('add-process-calling-search');
+    if (!callingSearchInput.hasAttribute('data-listener-added')) {
+        callingSearchInput.addEventListener('input', filterAddProcessCallings);
+        callingSearchInput.setAttribute('data-listener-added', 'true');
+    }
+
+    populateAddProcessDropdowns();
+}
+
+// Close the Add Process modal
+function closeAddProcessModal() {
+    document.getElementById('add-process-modal').style.display = 'none';
+    document.getElementById('add-process-overlay').style.display = 'none';
+    // Clear selections and response
+    document.getElementById('add-process-member-select').value = '';
+    document.getElementById('add-process-calling-select').value = '';
+    document.getElementById('add-process-member-search').value = '';
+    document.getElementById('add-process-calling-search').value = '';
+    document.getElementById('add-process-response').innerHTML = '';
+}
+
+// Populate the member and calling dropdowns in the Add Process modal
+function populateAddProcessDropdowns() {
+    // Fetch and populate members
+    fetch('get_members.php')
+        .then(response => response.json())
+        .then(data => {
+            allAddProcessMembers = data; // Store for filtering
+            updateAddProcessMemberDropdown(data);
+        })
+        .catch(error => {
+            console.error('Error fetching members:', error);
+            document.getElementById('add-process-response').innerHTML =
+                '<p style="color: red;">Error loading members. Please try again.</p>';
+        });
+
+    // Fetch and populate callings
+    fetch('get_callings.php')
+        .then(response => response.json())
+        .then(data => {
+            allAddProcessCallings = data; // Store for filtering
+            updateAddProcessCallingDropdown(data);
+        })
+        .catch(error => {
+            console.error('Error fetching callings:', error);
+            document.getElementById('add-process-response').innerHTML =
+                '<p style="color: red;">Error loading callings. Please try again.</p>';
+        });
+}
+
+// Update member dropdown with data
+function updateAddProcessMemberDropdown(members) {
+    const memberSelect = document.getElementById('add-process-member-select');
+    memberSelect.innerHTML = '<option value="">Select a Member</option>';
+    members.forEach(member => {
+        const option = document.createElement('option');
+        option.value = member.member_id;
+        option.textContent = `${member.first_name} ${member.last_name}`;
+        memberSelect.appendChild(option);
+    });
+}
+
+// Update calling dropdown with data
+function updateAddProcessCallingDropdown(callings) {
+    const callingSelect = document.getElementById('add-process-calling-select');
+    callingSelect.innerHTML = '<option value="">Select a Calling</option>';
+    callings.forEach(calling => {
+        const option = document.createElement('option');
+        option.value = calling.calling_id;
+        option.textContent = calling.calling_name;
+        callingSelect.appendChild(option);
+    });
+}
+
+// Filter members based on search input
+function filterAddProcessMembers() {
+    const searchTerm = document.getElementById('add-process-member-search').value.toLowerCase();
+
+    if (!searchTerm) {
+        updateAddProcessMemberDropdown(allAddProcessMembers);
+        return;
+    }
+
+    const filtered = allAddProcessMembers.filter(member => {
+        const firstName = member.first_name.toLowerCase();
+        const lastName = member.last_name.toLowerCase();
+        return firstName.includes(searchTerm) ||
+               lastName.includes(searchTerm) ||
+               `${firstName} ${lastName}`.includes(searchTerm);
+    });
+
+    updateAddProcessMemberDropdown(filtered);
+}
+
+// Filter callings based on search input
+function filterAddProcessCallings() {
+    const searchTerm = document.getElementById('add-process-calling-search').value.toLowerCase();
+
+    if (!searchTerm) {
+        updateAddProcessCallingDropdown(allAddProcessCallings);
+        return;
+    }
+
+    const filtered = allAddProcessCallings.filter(calling => {
+        return calling.calling_name.toLowerCase().includes(searchTerm);
+    });
+
+    updateAddProcessCallingDropdown(filtered);
+}
+
+// Save the new calling process (same backend as green checkmark)
+function saveNewCallingProcess() {
+    const memberId = document.getElementById('add-process-member-select').value;
+    const callingId = document.getElementById('add-process-calling-select').value;
+
+    if (!memberId || !callingId) {
+        document.getElementById('add-process-response').innerHTML =
+            '<p style="color: red;">Please select both a member and a calling.</p>';
+        return;
+    }
+
+    // Same data structure as green checkmark functionality
+    const data = {
+        member_id: parseInt(memberId),
+        calling_id: parseInt(callingId),
+        proposed_by: 'Dashboard Direct Add',
+        notes: 'Added directly from Dashboard'
+    };
+
+    // Call the same endpoint as green checkmark
+    fetch('add_calling_process.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert(`✓ ${result.message}\n\nThe calling can now be managed in the Dashboard.`);
+            closeAddProcessModal();
+            // Refresh the dashboard to show the new process
+            showProcessDetails('all', 'All');
+        } else {
+            document.getElementById('add-process-response').innerHTML =
+                `<p style="color: red;">Error: ${result.message}</p>`;
+        }
+    })
+    .catch(error => {
+        console.error('Error adding to calling process:', error);
+        document.getElementById('add-process-response').innerHTML =
+            '<p style="color: red;">An error occurred. Please try again.</p>';
     });
 }
 
