@@ -507,6 +507,57 @@ body {
     align-items: center;
 }
 
+/* Overview Notes Styling */
+.overview-notes-wrapper {
+    width: 95%;
+    margin: 2px;
+    display: flex;
+    gap: 10px;
+    box-sizing: border-box;
+}
+
+.overview-notes-box {
+    flex: 1;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.overview-notes-box label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 14px;
+    color: #495057;
+}
+
+.overview-notes-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.overview-notes-textarea:focus {
+    outline: none;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Responsive: Stack on smaller screens */
+@media (max-width: 768px) {
+    .overview-notes-wrapper {
+        flex-direction: column;
+    }
+}
+
 /* Recent Calling Changes Styling */
 .time-period-selector {
     margin-bottom: 15px;

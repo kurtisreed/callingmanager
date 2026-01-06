@@ -121,6 +121,7 @@ function openTab(evt, tabName, data = null) {
         // Call buildSmallBoxes when Tab1 is opened
     if (tabName === 'Tab1') {
         buildSmallBoxes();
+        initializeOverviewNotes();
     }
     
     if (tabName === 'Tab2') {
@@ -1304,6 +1305,132 @@ function loadData(callingId, targetElementId) {
             console.error('There was a problem with the fetch operation:', error);
             document.getElementById(targetElementId).innerHTML = 'Error loading data.';
         });
+}
+
+// ============ OVERVIEW NOTES FUNCTIONS ============
+
+// Debounce timers for auto-saving notes (separate for each field)
+let callingsNotesTimeout = null;
+let peopleNotesTimeout = null;
+
+// Function to load overview notes from the server
+function loadOverviewNotes() {
+    fetch('get_overview_notes.php')
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to load overview notes');
+            return response.json();
+        })
+        .then(data => {
+            const callingsNotesTextarea = document.getElementById('callings-notes');
+            const peopleNotesTextarea = document.getElementById('people-notes');
+
+            if (callingsNotesTextarea) {
+                callingsNotesTextarea.value = data.callings_notes || '';
+            }
+            if (peopleNotesTextarea) {
+                peopleNotesTextarea.value = data.people_notes || '';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading overview notes:', error);
+        });
+}
+
+// Function to save callings notes to the server
+function saveCallingsNotes(notes) {
+    fetch('update_overview_notes.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ callings_notes: notes })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to save callings notes');
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            console.log('Callings notes saved successfully');
+        } else {
+            console.error('Failed to save callings notes:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error saving callings notes:', error);
+    });
+}
+
+// Function to save people notes to the server
+function savePeopleNotes(notes) {
+    fetch('update_overview_notes.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ people_notes: notes })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to save people notes');
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            console.log('People notes saved successfully');
+        } else {
+            console.error('Failed to save people notes:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error saving people notes:', error);
+    });
+}
+
+// Function to handle auto-save for callings notes with debouncing
+function handleCallingsNotesChange(event) {
+    const notes = event.target.value;
+
+    // Clear the previous timeout
+    if (callingsNotesTimeout) {
+        clearTimeout(callingsNotesTimeout);
+    }
+
+    // Set a new timeout to save after 1 second of inactivity
+    callingsNotesTimeout = setTimeout(() => {
+        saveCallingsNotes(notes);
+    }, 1000);
+}
+
+// Function to handle auto-save for people notes with debouncing
+function handlePeopleNotesChange(event) {
+    const notes = event.target.value;
+
+    // Clear the previous timeout
+    if (peopleNotesTimeout) {
+        clearTimeout(peopleNotesTimeout);
+    }
+
+    // Set a new timeout to save after 1 second of inactivity
+    peopleNotesTimeout = setTimeout(() => {
+        savePeopleNotes(notes);
+    }, 1000);
+}
+
+// Initialize overview notes event listeners
+function initializeOverviewNotes() {
+    const callingsNotesTextarea = document.getElementById('callings-notes');
+    const peopleNotesTextarea = document.getElementById('people-notes');
+
+    // Load notes when initialized
+    loadOverviewNotes();
+
+    // Add event listeners for auto-save
+    if (callingsNotesTextarea) {
+        callingsNotesTextarea.addEventListener('input', handleCallingsNotesChange);
+    }
+    if (peopleNotesTextarea) {
+        peopleNotesTextarea.addEventListener('input', handlePeopleNotesChange);
+    }
 }
 
 
