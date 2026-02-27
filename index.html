@@ -158,18 +158,16 @@
                         </div>
                         <div class="search-section">
                             <div class="search-column">
-                                <div class="search-field">
+                                <div class="search-field" style="position: relative;">
                                     <label for="member-search-tab2">Search Members:</label>
-                                    <input type="text" id="member-search-tab2" placeholder="Type name to search..." />
+                                    <input type="text" id="member-search-tab2" placeholder="Type name to search..." autocomplete="off" />
+                                    <div id="tab2-member-dropdown" class="member-autocomplete-dropdown" style="display: none;"></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="selection-section">
-                            <label for="member">Select Member:</label>
-                            <select name="member_id" id="member-select" required>
-                                <option value="">Select a Member</option>
-                            </select>
-                        </div>
+                        <select name="member_id" id="member-select" style="display: none;">
+                            <option value="">Select a Member</option>
+                        </select>
 
                         <!-- Calling Search & Selection Section -->
                         <div class="section-header">
@@ -177,18 +175,16 @@
                         </div>
                         <div class="search-section">
                             <div class="search-column">
-                                <div class="search-field">
+                                <div class="search-field" style="position: relative;">
                                     <label for="calling-search-tab2">Search Callings:</label>
-                                    <input type="text" id="calling-search-tab2" placeholder="Type calling name to search..." />
+                                    <input type="text" id="calling-search-tab2" placeholder="Type calling name to search..." autocomplete="off" />
+                                    <div id="tab2-calling-dropdown" class="member-autocomplete-dropdown" style="display: none;"></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="selection-section">
-                            <label for="calling">Select Calling:</label>
-                            <select name="calling_id" id="calling-select" required>
-                                <option value="">Select a Calling</option>
-                            </select>
-                        </div>
+                        <select name="calling_id" id="calling-select" style="display: none;">
+                            <option value="">Select a Calling</option>
+                        </select>
                     </div>
                     
                     <!-- Right Column: Tables and Details -->
@@ -273,10 +269,11 @@
         </div>
         
         <label for="candidate-search">Search by Name:</label>
-        <input type="text" id="candidate-search" placeholder="Type name to search..." oninput="applyFilters()" />
-        
-        <label for="callingDropdown">Select Candidate:</label>
-        <select id="callingDropdown">
+        <div style="position: relative;">
+            <input type="text" id="candidate-search" placeholder="Type name to search..." oninput="applyFilters()" autocomplete="off" />
+            <div id="candidate-search-dropdown" class="member-autocomplete-dropdown" style="display: none;"></div>
+        </div>
+        <select id="callingDropdown" style="display: none;">
             <option value="">Select a Candidate</option>
         </select>
         
@@ -569,18 +566,20 @@
         <h2>Add New Calling to Process</h2>
 
         <label for="add-process-member-search">Search Members:</label>
-        <input type="text" id="add-process-member-search" placeholder="Type name to search..." />
-
-        <label for="add-process-member-select">Select Member:</label>
-        <select id="add-process-member-select">
+        <div style="position: relative;">
+            <input type="text" id="add-process-member-search" placeholder="Type name to search..." autocomplete="off" />
+            <div id="add-process-member-dropdown" class="member-autocomplete-dropdown" style="display: none;"></div>
+        </div>
+        <select id="add-process-member-select" style="display: none;">
             <option value="">Select a Member</option>
         </select>
 
         <label for="add-process-calling-search">Search Callings:</label>
-        <input type="text" id="add-process-calling-search" placeholder="Type calling name to search..." />
-
-        <label for="add-process-calling-select">Select Calling:</label>
-        <select id="add-process-calling-select">
+        <div style="position: relative;">
+            <input type="text" id="add-process-calling-search" placeholder="Type calling name to search..." autocomplete="off" />
+            <div id="add-process-calling-dropdown" class="member-autocomplete-dropdown" style="display: none;"></div>
+        </div>
+        <select id="add-process-calling-select" style="display: none;">
             <option value="">Select a Calling</option>
         </select>
 

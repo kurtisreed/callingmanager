@@ -129,6 +129,12 @@ function openTab(evt, tabName, data = null) {
         if (!data || !data.fromProcess) {
             document.getElementById('member-select').value = "";
             document.getElementById('calling-select').value = "";
+            const mst = document.getElementById('member-search-tab2');
+            if (mst) mst.value = '';
+            const cst = document.getElementById('calling-search-tab2');
+            if (cst) cst.value = '';
+            hideTab2MemberDropdown();
+            hideTab2CallingDropdown();
         }
         document.getElementById('member-callings-container').innerHTML = "";
         document.getElementById('calling-members-container').innerHTML = "";
@@ -202,14 +208,20 @@ function initializeTab2Search(skipRefresh = false) {
         memberSearchInput.addEventListener('input', function() {
             filterTab2Members();
         });
+        memberSearchInput.addEventListener('blur', function() {
+            setTimeout(hideTab2MemberDropdown, 150);
+        });
         memberSearchInput.setAttribute('data-listener-added', 'true');
     }
-    
+
     // Set up calling search
     const callingSearchInput = document.getElementById('calling-search-tab2');
     if (callingSearchInput && !callingSearchInput.hasAttribute('data-listener-added')) {
         callingSearchInput.addEventListener('input', function() {
             filterTab2Callings();
+        });
+        callingSearchInput.addEventListener('blur', function() {
+            setTimeout(hideTab2CallingDropdown, 150);
         });
         callingSearchInput.setAttribute('data-listener-added', 'true');
     }
@@ -266,34 +278,82 @@ function displayTab2Members(membersData) {
 
 // Function to filter Tab 2 members based on search
 function filterTab2Members() {
-    const searchTerm = document.getElementById('member-search-tab2').value.toLowerCase();
-    
-    // If no data is available yet, don't filter
-    if (!allTab2MembersData || allTab2MembersData.length === 0) {
-        console.log('No member data available for filtering');
+    const searchTerm = document.getElementById('member-search-tab2').value.toLowerCase().trim();
+
+    if (!searchTerm) {
+        hideTab2MemberDropdown();
         return;
     }
-    
-    let filteredData = allTab2MembersData;
-    
-    if (searchTerm) {
-        filteredData = filteredData.filter(member => 
-            (member.first_name || '').toLowerCase().includes(searchTerm) ||
-            (member.last_name || '').toLowerCase().includes(searchTerm) ||
-            `${member.first_name || ''} ${member.last_name || ''}`.toLowerCase().includes(searchTerm)
-        );
+
+    if (!allTab2MembersData || allTab2MembersData.length === 0) {
+        return;
     }
-    
-    displayTab2Members(filteredData);
+
+    const filteredData = allTab2MembersData.filter(member =>
+        (member.first_name || '').toLowerCase().includes(searchTerm) ||
+        (member.last_name || '').toLowerCase().includes(searchTerm) ||
+        `${member.first_name || ''} ${member.last_name || ''}`.toLowerCase().includes(searchTerm)
+    );
+
+    showTab2MemberDropdown(filteredData);
+}
+
+function showTab2MemberDropdown(members) {
+    const dropdown = document.getElementById('tab2-member-dropdown');
+    if (!dropdown) return;
+
+    dropdown.innerHTML = '';
+
+    if (members.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'member-autocomplete-item no-results';
+        noResults.textContent = 'No members found';
+        dropdown.appendChild(noResults);
+        dropdown.style.display = 'block';
+        return;
+    }
+
+    members.forEach(member => {
+        const item = document.createElement('div');
+        item.className = 'member-autocomplete-item';
+        const statusBadge = getStatusBadge(member.status);
+        item.textContent = `${member.first_name} ${member.last_name}${statusBadge ? ' ' + statusBadge : ''}`;
+        item.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            selectTab2Member(member.member_id, member);
+        });
+        dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = 'block';
+}
+
+function hideTab2MemberDropdown() {
+    const dropdown = document.getElementById('tab2-member-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function selectTab2Member(memberId, member) {
+    const memberSelect = document.getElementById('member-select');
+    const searchInput = document.getElementById('member-search-tab2');
+    if (!memberSelect || !searchInput) return;
+
+    const statusBadge = getStatusBadge(member.status);
+    searchInput.value = `${member.first_name} ${member.last_name}${statusBadge ? ' ' + statusBadge : ''}`;
+
+    memberSelect.value = memberId;
+    memberSelect.dispatchEvent(new Event('change'));
+
+    hideTab2MemberDropdown();
 }
 
 // Function to display callings in Tab 2 dropdown
 function displayTab2Callings(callingsData) {
     const callingSelect = document.getElementById('calling-select');
     if (!callingSelect) return;
-    
+
     callingSelect.innerHTML = '<option value="">Select a Calling</option>';
-    
+
     callingsData.forEach(calling => {
         const option = document.createElement('option');
         option.value = calling.calling_id;
@@ -304,25 +364,71 @@ function displayTab2Callings(callingsData) {
 
 // Function to filter Tab 2 callings based on search
 function filterTab2Callings() {
-    const searchTerm = document.getElementById('calling-search-tab2').value.toLowerCase();
-    
-    // If no data is available yet, don't filter
-    if (!allTab2CallingsData || allTab2CallingsData.length === 0) {
-        console.log('No calling data available for filtering');
+    const searchTerm = document.getElementById('calling-search-tab2').value.toLowerCase().trim();
+
+    if (!searchTerm) {
+        hideTab2CallingDropdown();
         return;
     }
-    
-    let filteredData = allTab2CallingsData;
-    
-    if (searchTerm) {
-        filteredData = filteredData.filter(calling => 
-            (calling.calling_name || '').toLowerCase().includes(searchTerm) ||
-            (calling.organization || '').toLowerCase().includes(searchTerm) ||
-            (calling.grouping || '').toLowerCase().includes(searchTerm)
-        );
+
+    if (!allTab2CallingsData || allTab2CallingsData.length === 0) {
+        return;
     }
-    
-    displayTab2Callings(filteredData);
+
+    const filteredData = allTab2CallingsData.filter(calling =>
+        (calling.calling_name || '').toLowerCase().includes(searchTerm) ||
+        (calling.organization || '').toLowerCase().includes(searchTerm) ||
+        (calling.grouping || '').toLowerCase().includes(searchTerm)
+    );
+
+    showTab2CallingDropdown(filteredData);
+}
+
+function showTab2CallingDropdown(callings) {
+    const dropdown = document.getElementById('tab2-calling-dropdown');
+    if (!dropdown) return;
+
+    dropdown.innerHTML = '';
+
+    if (callings.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'member-autocomplete-item no-results';
+        noResults.textContent = 'No callings found';
+        dropdown.appendChild(noResults);
+        dropdown.style.display = 'block';
+        return;
+    }
+
+    callings.forEach(calling => {
+        const item = document.createElement('div');
+        item.className = 'member-autocomplete-item';
+        item.textContent = calling.calling_name;
+        item.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            selectTab2Calling(calling.calling_id, calling);
+        });
+        dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = 'block';
+}
+
+function hideTab2CallingDropdown() {
+    const dropdown = document.getElementById('tab2-calling-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function selectTab2Calling(callingId, calling) {
+    const callingSelect = document.getElementById('calling-select');
+    const searchInput = document.getElementById('calling-search-tab2');
+    if (!callingSelect || !searchInput) return;
+
+    searchInput.value = calling.calling_name;
+
+    callingSelect.value = callingId;
+    callingSelect.dispatchEvent(new Event('change'));
+
+    hideTab2CallingDropdown();
 }
 
 // Global flag to track authentication status
@@ -490,15 +596,21 @@ function simulateUserSelections(memberId, callingId, memberName, callingName) {
         populateDropdownOnly('calling-select', 'get_callings.php', callingId, 'calling_id', (c) => c.calling_name)
     ]).then(() => {
         console.log('Both dropdowns populated, now simulating user actions');
-        
+
+        // Fill search boxes with the pre-selected names
+        const memberSearch = document.getElementById('member-search-tab2');
+        if (memberSearch) memberSearch.value = memberName;
+        const callingSearch = document.getElementById('calling-search-tab2');
+        if (callingSearch) callingSearch.value = callingName;
+
         // Step 2: Do exactly what the user selection would do
         // This is what happens when user selects a member:
         fetchCurrentCallings(memberId, memberName);
-        
+
         // This is what happens when user selects a calling:
         fetchCallingMembers(callingId, callingName);
         fetchOtherCandidates(callingId);
-        
+
         // This is what happens after both selections:
         setTimeout(() => {
             updateChangesPreview();
@@ -604,8 +716,18 @@ function showPopup(title, callingId) {
     const popupTitle = document.getElementById("popup-title"); // or use querySelector if you need
     popupTitle.setAttribute("data-calling-id", callingId);
     
-    // Reset search input to default
-    document.getElementById('candidate-search').value = "";  // Clear search    
+    // Reset search input and autocomplete dropdown
+    document.getElementById('candidate-search').value = '';
+    hideCandidateDropdown();
+
+    // Add blur listener once to hide the autocomplete dropdown
+    const candidateSearchInput = document.getElementById('candidate-search');
+    if (!candidateSearchInput.hasAttribute('data-blur-listener-added')) {
+        candidateSearchInput.addEventListener('blur', function() {
+            setTimeout(hideCandidateDropdown, 150);
+        });
+        candidateSearchInput.setAttribute('data-blur-listener-added', 'true');
+    }
 
     fetch('get_calling_data_for_popup.php')
         .then(response => response.json())
@@ -737,25 +859,73 @@ function populateCandidateDropdown(data) {
 
 // Function to apply search filter
 function applyFilters() {
-    const searchTerm = document.getElementById('candidate-search').value.toLowerCase();
+    const searchTerm = document.getElementById('candidate-search').value.toLowerCase().trim();
+
+    if (!searchTerm) {
+        hideCandidateDropdown();
+        return;
+    }
 
     const filteredCandidates = allCandidates.filter(candidate => {
-        // Check name search filter
-        if (searchTerm) {
-            // Handle both field name formats (popup uses "First Name", member info uses "first_name")
-            const firstName = candidate['First Name'] || candidate.first_name || '';
-            const lastName = candidate['Last Name'] || candidate.last_name || '';
-            return firstName.toLowerCase().includes(searchTerm) ||
-                   lastName.toLowerCase().includes(searchTerm) ||
-                   `${firstName} ${lastName}`.toLowerCase().includes(searchTerm);
-        }
-        
-        // If no search term, return all candidates
-        return true;
+        const firstName = candidate['First Name'] || candidate.first_name || '';
+        const lastName = candidate['Last Name'] || candidate.last_name || '';
+        return firstName.toLowerCase().includes(searchTerm) ||
+               lastName.toLowerCase().includes(searchTerm) ||
+               `${firstName} ${lastName}`.toLowerCase().includes(searchTerm);
     });
 
-    // Update the dropdown with filtered candidates
-    populateCandidateDropdown(filteredCandidates);
+    showCandidateDropdown(filteredCandidates);
+}
+
+function showCandidateDropdown(candidates) {
+    const dropdown = document.getElementById('candidate-search-dropdown');
+    if (!dropdown) return;
+
+    dropdown.innerHTML = '';
+
+    if (candidates.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'member-autocomplete-item no-results';
+        noResults.textContent = 'No members found';
+        dropdown.appendChild(noResults);
+        dropdown.style.display = 'block';
+        return;
+    }
+
+    candidates.forEach(candidate => {
+        const item = document.createElement('div');
+        item.className = 'member-autocomplete-item';
+        const firstName = candidate['First Name'] || candidate.first_name || '';
+        const lastName = candidate['Last Name'] || candidate.last_name || '';
+        const callingsInfo = candidate['callings_info'] || '';
+        item.textContent = `${firstName} ${lastName}${callingsInfo ? ' - ' + callingsInfo : ''}`;
+        item.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            selectCandidate(candidate.member_id, firstName, lastName);
+        });
+        dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = 'block';
+}
+
+function hideCandidateDropdown() {
+    const dropdown = document.getElementById('candidate-search-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function selectCandidate(memberId, firstName, lastName) {
+    const callingDropdown = document.getElementById('callingDropdown');
+    const searchInput = document.getElementById('candidate-search');
+    if (!callingDropdown || !searchInput) return;
+
+    searchInput.value = `${firstName} ${lastName}`;
+    callingDropdown.value = memberId;
+    callingDropdown.dispatchEvent(new Event('change'));
+
+    hideCandidateDropdown();
+    // Clear search so the user can add another candidate
+    setTimeout(() => { searchInput.value = ''; }, 300);
 }
 
 
@@ -816,7 +986,8 @@ function closePopup() {
 
     document.getElementById('popup-overlay').style.display = 'none';
     document.getElementById('popup-modal').style.display = 'none';
-    
+    hideCandidateDropdown();
+
     saveCallingComments(callingId);
     buildSmallBoxes(); // Rebuild the small boxes to reflect any changes
 }
@@ -2129,18 +2300,16 @@ function loadMembersForm() {
                     </div>
                     <div class="search-section">
                         <div class="search-column">
-                            <div class="search-field">
+                            <div class="search-field" style="position: relative;">
                                 <label for="member-search-input">Search Members:</label>
-                                <input type="text" id="member-search-input" placeholder="Type name to search..." />
+                                <input type="text" id="member-search-input" placeholder="Type name to search..." autocomplete="off" />
+                                <div id="member-search-dropdown" class="member-autocomplete-dropdown" style="display: none;"></div>
                             </div>
                         </div>
                     </div>
-                    <div class="selection-section">
-                        <label for="member-form-select">Select Member:</label>
-                        <select id="member-form-select">
-                            <option value="">Select a Member</option>
-                        </select>
-                    </div>
+                    <select id="member-form-select" style="display: none;">
+                        <option value="">Select a Member</option>
+                    </select>
 
                     <!-- Action Buttons Section -->
                     <div class="section-header">
@@ -2318,8 +2487,10 @@ function loadMembersForm() {
         saveButton.style.display = 'none';
         cancelButton.style.display = 'none';
         memberSelect.selectedIndex = 0;
+        const si = document.getElementById('member-search-input');
+        if (si) si.value = '';
     });
-    
+
     function resetForm() {
         fields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
@@ -2331,15 +2502,21 @@ function loadMembersForm() {
         saveButton.style.display = 'none';
         cancelButton.style.display = 'none';
         memberSelect.selectedIndex = 0;
-
+        const si = document.getElementById('member-search-input');
+        if (si) si.value = '';
     }
     
     // Add event listeners for search
     const searchInput = document.getElementById('member-search-input');
-    
+
     // Real-time search as user types
     searchInput.addEventListener('input', function() {
         filterMembers();
+    });
+
+    // Hide dropdown when focus leaves the input
+    searchInput.addEventListener('blur', function() {
+        setTimeout(hideMemberDropdown, 150);
     });
     
     fetchMembers(); // Populate dropdown initially
@@ -2362,18 +2539,16 @@ function loadCallingsForm() {
                     </div>
                     <div class="search-section">
                         <div class="search-column">
-                            <div class="search-field">
+                            <div class="search-field" style="position: relative;">
                                 <label for="calling-search-input">Search Callings:</label>
-                                <input type="text" id="calling-search-input" placeholder="Type calling name to search..." />
+                                <input type="text" id="calling-search-input" placeholder="Type calling name to search..." autocomplete="off" />
+                                <div id="calling-search-dropdown" class="member-autocomplete-dropdown" style="display: none;"></div>
                             </div>
                         </div>
                     </div>
-                    <div class="selection-section">
-                        <label for="calling-form-select">Select Calling:</label>
-                        <select id="calling-form-select">
-                            <option value="">Select a Calling</option>
-                        </select>
-                    </div>
+                    <select id="calling-form-select" style="display: none;">
+                        <option value="">Select a Calling</option>
+                    </select>
 
                     <!-- Action Buttons Section -->
                     <div class="section-header">
@@ -2567,8 +2742,10 @@ function loadCallingsForm() {
         saveButton.style.display = 'none';
         cancelButton.style.display = 'none';
         callingSelect.selectedIndex = 0;
+        const csi = document.getElementById('calling-search-input');
+        if (csi) csi.value = '';
     });
-    
+
     function resetForm() {
         fields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
@@ -2580,13 +2757,17 @@ function loadCallingsForm() {
         saveButton.style.display = 'none';
         cancelButton.style.display = 'none';
         callingSelect.selectedIndex = 0;
-
+        const csi = document.getElementById('calling-search-input');
+        if (csi) csi.value = '';
     }
-    
+
     // Add event listener for search functionality
     const callingSearchInput = document.getElementById('calling-search-input');
     callingSearchInput.addEventListener('input', filterCallings);
-    
+    callingSearchInput.addEventListener('blur', function() {
+        setTimeout(hideCallingDropdown, 150);
+    });
+
     fetchCallings(); // Populate dropdown
 }
 
@@ -3972,20 +4153,69 @@ function displayMembers(membersData) {
 
 // Function to filter members based on search
 function filterMembers() {
-    const searchTerm = document.getElementById('member-search-input').value.toLowerCase();
-    
-    let filteredData = allMembersData;
-    
-    // Filter by search term
-    if (searchTerm) {
-        filteredData = filteredData.filter(member => 
-            member.first_name.toLowerCase().includes(searchTerm) ||
-            member.last_name.toLowerCase().includes(searchTerm) ||
-            `${member.first_name} ${member.last_name}`.toLowerCase().includes(searchTerm)
-        );
+    const searchTerm = document.getElementById('member-search-input').value.toLowerCase().trim();
+
+    if (!searchTerm) {
+        hideMemberDropdown();
+        return;
     }
-    
-    displayMembers(filteredData);
+
+    const filteredData = allMembersData.filter(member =>
+        member.first_name.toLowerCase().includes(searchTerm) ||
+        member.last_name.toLowerCase().includes(searchTerm) ||
+        `${member.first_name} ${member.last_name}`.toLowerCase().includes(searchTerm)
+    );
+
+    showMemberDropdown(filteredData);
+}
+
+function showMemberDropdown(members) {
+    const dropdown = document.getElementById('member-search-dropdown');
+    if (!dropdown) return;
+
+    dropdown.innerHTML = '';
+
+    if (members.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'member-autocomplete-item no-results';
+        noResults.textContent = 'No members found';
+        dropdown.appendChild(noResults);
+        dropdown.style.display = 'block';
+        return;
+    }
+
+    members.forEach(member => {
+        const item = document.createElement('div');
+        item.className = 'member-autocomplete-item';
+        const statusBadge = getStatusBadge(member.status);
+        item.textContent = `${member.first_name} ${member.last_name}${statusBadge ? ' ' + statusBadge : ''}`;
+        item.addEventListener('mousedown', function(e) {
+            e.preventDefault(); // prevent blur from firing before selection
+            selectMemberFromDropdown(member.member_id, member);
+        });
+        dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = 'block';
+}
+
+function hideMemberDropdown() {
+    const dropdown = document.getElementById('member-search-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function selectMemberFromDropdown(memberId, member) {
+    const memberSelect = document.getElementById('member-form-select');
+    const searchInput = document.getElementById('member-search-input');
+    if (!memberSelect || !searchInput) return;
+
+    const statusBadge = getStatusBadge(member.status);
+    searchInput.value = `${member.first_name} ${member.last_name}${statusBadge ? ' ' + statusBadge : ''}`;
+
+    memberSelect.value = memberId;
+    memberSelect.dispatchEvent(new Event('change'));
+
+    hideMemberDropdown();
 }
 
 // Helper function to get status badge text
@@ -4071,20 +4301,67 @@ function displayCallings(callingsData) {
 
 // Function to filter callings based on search
 function filterCallings() {
-    const searchTerm = document.getElementById('calling-search-input').value.toLowerCase();
-    
-    let filteredData = allCallingsData;
-    
-    // Filter by search term
-    if (searchTerm) {
-        filteredData = filteredData.filter(calling => 
-            calling.calling_name.toLowerCase().includes(searchTerm) ||
-            (calling.organization && calling.organization.toLowerCase().includes(searchTerm)) ||
-            (calling.grouping && calling.grouping.toLowerCase().includes(searchTerm))
-        );
+    const searchTerm = document.getElementById('calling-search-input').value.toLowerCase().trim();
+
+    if (!searchTerm) {
+        hideCallingDropdown();
+        return;
     }
-    
-    displayCallings(filteredData);
+
+    const filteredData = allCallingsData.filter(calling =>
+        calling.calling_name.toLowerCase().includes(searchTerm) ||
+        (calling.organization && calling.organization.toLowerCase().includes(searchTerm)) ||
+        (calling.grouping && calling.grouping.toLowerCase().includes(searchTerm))
+    );
+
+    showCallingDropdown(filteredData);
+}
+
+function showCallingDropdown(callings) {
+    const dropdown = document.getElementById('calling-search-dropdown');
+    if (!dropdown) return;
+
+    dropdown.innerHTML = '';
+
+    if (callings.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'member-autocomplete-item no-results';
+        noResults.textContent = 'No callings found';
+        dropdown.appendChild(noResults);
+        dropdown.style.display = 'block';
+        return;
+    }
+
+    callings.forEach(calling => {
+        const item = document.createElement('div');
+        item.className = 'member-autocomplete-item';
+        item.textContent = calling.calling_name;
+        item.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            selectCallingFromDropdown(calling.calling_id, calling);
+        });
+        dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = 'block';
+}
+
+function hideCallingDropdown() {
+    const dropdown = document.getElementById('calling-search-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function selectCallingFromDropdown(callingId, calling) {
+    const callingSelect = document.getElementById('calling-form-select');
+    const searchInput = document.getElementById('calling-search-input');
+    if (!callingSelect || !searchInput) return;
+
+    searchInput.value = calling.calling_name;
+
+    callingSelect.value = callingId;
+    callingSelect.dispatchEvent(new Event('change'));
+
+    hideCallingDropdown();
 }
 
 // Fetch specific member details
@@ -5531,12 +5808,18 @@ function openAddProcessModal() {
     const memberSearchInput = document.getElementById('add-process-member-search');
     if (!memberSearchInput.hasAttribute('data-listener-added')) {
         memberSearchInput.addEventListener('input', filterAddProcessMembers);
+        memberSearchInput.addEventListener('blur', function() {
+            setTimeout(hideAddProcessMemberDropdown, 150);
+        });
         memberSearchInput.setAttribute('data-listener-added', 'true');
     }
 
     const callingSearchInput = document.getElementById('add-process-calling-search');
     if (!callingSearchInput.hasAttribute('data-listener-added')) {
         callingSearchInput.addEventListener('input', filterAddProcessCallings);
+        callingSearchInput.addEventListener('blur', function() {
+            setTimeout(hideAddProcessCallingDropdown, 150);
+        });
         callingSearchInput.setAttribute('data-listener-added', 'true');
     }
 
@@ -5553,6 +5836,8 @@ function closeAddProcessModal() {
     document.getElementById('add-process-member-search').value = '';
     document.getElementById('add-process-calling-search').value = '';
     document.getElementById('add-process-response').innerHTML = '';
+    hideAddProcessMemberDropdown();
+    hideAddProcessCallingDropdown();
 }
 
 // Populate the member and calling dropdowns in the Add Process modal
@@ -5610,10 +5895,10 @@ function updateAddProcessCallingDropdown(callings) {
 
 // Filter members based on search input
 function filterAddProcessMembers() {
-    const searchTerm = document.getElementById('add-process-member-search').value.toLowerCase();
+    const searchTerm = document.getElementById('add-process-member-search').value.toLowerCase().trim();
 
     if (!searchTerm) {
-        updateAddProcessMemberDropdown(allAddProcessMembers);
+        hideAddProcessMemberDropdown();
         return;
     }
 
@@ -5625,23 +5910,111 @@ function filterAddProcessMembers() {
                `${firstName} ${lastName}`.includes(searchTerm);
     });
 
-    updateAddProcessMemberDropdown(filtered);
+    showAddProcessMemberDropdown(filtered);
+}
+
+function showAddProcessMemberDropdown(members) {
+    const dropdown = document.getElementById('add-process-member-dropdown');
+    if (!dropdown) return;
+
+    dropdown.innerHTML = '';
+
+    if (members.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'member-autocomplete-item no-results';
+        noResults.textContent = 'No members found';
+        dropdown.appendChild(noResults);
+        dropdown.style.display = 'block';
+        return;
+    }
+
+    members.forEach(member => {
+        const item = document.createElement('div');
+        item.className = 'member-autocomplete-item';
+        item.textContent = `${member.first_name} ${member.last_name}`;
+        item.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            selectAddProcessMember(member.member_id, member);
+        });
+        dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = 'block';
+}
+
+function hideAddProcessMemberDropdown() {
+    const dropdown = document.getElementById('add-process-member-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function selectAddProcessMember(memberId, member) {
+    const memberSelect = document.getElementById('add-process-member-select');
+    const searchInput = document.getElementById('add-process-member-search');
+    if (!memberSelect || !searchInput) return;
+
+    searchInput.value = `${member.first_name} ${member.last_name}`;
+    memberSelect.value = memberId;
+    hideAddProcessMemberDropdown();
 }
 
 // Filter callings based on search input
 function filterAddProcessCallings() {
-    const searchTerm = document.getElementById('add-process-calling-search').value.toLowerCase();
+    const searchTerm = document.getElementById('add-process-calling-search').value.toLowerCase().trim();
 
     if (!searchTerm) {
-        updateAddProcessCallingDropdown(allAddProcessCallings);
+        hideAddProcessCallingDropdown();
         return;
     }
 
-    const filtered = allAddProcessCallings.filter(calling => {
-        return calling.calling_name.toLowerCase().includes(searchTerm);
+    const filtered = allAddProcessCallings.filter(calling =>
+        calling.calling_name.toLowerCase().includes(searchTerm)
+    );
+
+    showAddProcessCallingDropdown(filtered);
+}
+
+function showAddProcessCallingDropdown(callings) {
+    const dropdown = document.getElementById('add-process-calling-dropdown');
+    if (!dropdown) return;
+
+    dropdown.innerHTML = '';
+
+    if (callings.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'member-autocomplete-item no-results';
+        noResults.textContent = 'No callings found';
+        dropdown.appendChild(noResults);
+        dropdown.style.display = 'block';
+        return;
+    }
+
+    callings.forEach(calling => {
+        const item = document.createElement('div');
+        item.className = 'member-autocomplete-item';
+        item.textContent = calling.calling_name;
+        item.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            selectAddProcessCalling(calling.calling_id, calling);
+        });
+        dropdown.appendChild(item);
     });
 
-    updateAddProcessCallingDropdown(filtered);
+    dropdown.style.display = 'block';
+}
+
+function hideAddProcessCallingDropdown() {
+    const dropdown = document.getElementById('add-process-calling-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function selectAddProcessCalling(callingId, calling) {
+    const callingSelect = document.getElementById('add-process-calling-select');
+    const searchInput = document.getElementById('add-process-calling-search');
+    if (!callingSelect || !searchInput) return;
+
+    searchInput.value = calling.calling_name;
+    callingSelect.value = callingId;
+    hideAddProcessCallingDropdown();
 }
 
 // Save the new calling process (same backend as green checkmark)
