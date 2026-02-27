@@ -3575,6 +3575,18 @@ function loadDashboard() {
                     </div>
                 </div>
 
+                <!-- Member Updates Section -->
+                <div class="section-header">
+                    <h3>Update Member List from LCR</h3>
+                </div>
+                <div class="details-section">
+                    <div class="stat-item">
+                        <span class="stat-label">Last Update:</span>
+                        <span id="dashboard-last-update-value">Loading...</span>
+                    </div>
+                    <button type="button" class="action-btn save-btn" onclick="openUpdateMembersModal()" style="margin-top: 8px;">Update now</button>
+                </div>
+
                 <!-- Quick Stats Section -->
                 <div class="section-header">
                     <h3>Useful Information</h3>
@@ -3634,6 +3646,7 @@ function loadDashboard() {
     // Load the stats data
     fetchDashboardStats();
     fetchProcessStats();
+    loadDashboardMemberUpdateInfo();
     
     // Add click event listeners to stats
     addDashboardStatClickHandlers();
@@ -3643,6 +3656,33 @@ function loadDashboard() {
     setTimeout(() => {
         showProcessDetails('all', 'All');
     }, 100); // Small delay to ensure DOM is ready
+}
+
+// Fetch and display last member update info on the dashboard
+async function loadDashboardMemberUpdateInfo() {
+    const el = document.getElementById('dashboard-last-update-value');
+    if (!el) return;
+
+    try {
+        const response = await fetch('get_last_member_update.php');
+        const data = await response.json();
+
+        if (!data.has_update) {
+            el.textContent = 'Never';
+            el.style.color = '#dc3545';
+            return;
+        }
+
+        const update = data.last_update;
+        const daysSince = Math.floor((new Date() - new Date(update.date)) / 86400000);
+
+        el.textContent = `${update.formatted_date} (${update.time_since})`;
+        el.style.color = daysSince > 30 ? '#dc3545' : '';
+
+    } catch (error) {
+        el.textContent = 'Error loading';
+        el.style.color = '#dc3545';
+    }
 }
 
 // Function to fetch dashboard statistics
@@ -3801,7 +3841,7 @@ function displayCallingProcessTable(processes, statusFilter) {
     if (filteredProcesses.length === 0) {
         container.innerHTML = `
             <div style="margin-bottom: 15px;">
-                <button class="action-btn save-btn" onclick="openAddProcessModal()" style="margin-bottom: 10px;">+ Add New Calling</button>
+                <button class="action-btn save-btn" onclick="openAddProcessModal()" style="margin-bottom: 10px;">+ Approve New Calling</button>
             </div>
             <p>None</p>
         `;
@@ -3811,7 +3851,7 @@ function displayCallingProcessTable(processes, statusFilter) {
     // Generate table HTML with Add button above it
     const tableHTML = `
         <div style="margin-bottom: 15px;">
-            <button class="action-btn save-btn" onclick="openAddProcessModal()" style="margin-bottom: 10px;">+ Add New Calling</button>
+            <button class="action-btn save-btn" onclick="openAddProcessModal()" style="margin-bottom: 10px;">+ Approve New Calling</button>
         </div>
         <table class="detail-table process-table">
             <thead>
