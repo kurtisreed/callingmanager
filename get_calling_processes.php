@@ -28,10 +28,10 @@ try {
                 cp.updated_at,
                 CONCAT(m.first_name, ' ', m.last_name) AS member_name,
                 c.calling_name,
-                CASE 
-                    WHEN cc.member_id IS NOT NULL AND cc.calling_id IS NOT NULL AND cc.date_released IS NULL 
-                    THEN 1 
-                    ELSE 0 
+                CASE
+                    WHEN cc.member_id IS NOT NULL AND cc.calling_id IS NOT NULL AND cc.date_released IS NULL
+                    THEN 1
+                    ELSE 0
                 END AS is_activated
             FROM calling_process cp
             JOIN members m ON cp.member_id = m.member_id

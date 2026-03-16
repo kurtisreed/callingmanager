@@ -2720,6 +2720,18 @@ function addProcessActionListeners() {
         });
     });
 
+    // Member name links — show detail card
+    document.querySelectorAll('.process-member-link').forEach(link => {
+        link.addEventListener('click', function() {
+            showProcessMemberCard(
+                this.dataset.memberId,
+                this.dataset.callingId,
+                this.dataset.memberName,
+                this.dataset.callingName
+            );
+        });
+    });
+
     // Editable date click handlers
     document.querySelectorAll('.editable-date').forEach(dateEl => {
         dateEl.addEventListener('click', function() {
@@ -3604,7 +3616,7 @@ function displayCallingProcessTable(processes, statusFilter) {
             <tbody>
                 ${filteredProcesses.map(process => `
                     <tr>
-                        <td>${process.member_name}</td>
+                        <td><span class="process-member-link" data-member-id="${process.member_id}" data-calling-id="${process.calling_id}" data-member-name="${process.member_name}" data-calling-name="${process.calling_name}" style="cursor:pointer; color:#2D5B89; text-decoration:underline;">${process.member_name}</span></td>
                         <td>${process.calling_name}</td>
                         <td>${createProgressIndicator(process)}</td>
                         <td>
@@ -3619,9 +3631,58 @@ function displayCallingProcessTable(processes, statusFilter) {
     `;
 
     container.innerHTML = tableHTML;
-    
+
     // Add event listeners for action buttons
     addProcessActionListeners();
+}
+
+// Function to show member detail card from Callings in Progress table
+function showProcessMemberCard(memberId, callingId, memberName, callingName) {
+    const container = document.getElementById('dashboard-detail-content');
+    container.innerHTML = `
+        <div style="margin-bottom: 15px;">
+            <button class="action-btn edit-btn" onclick="fetchCallingProcesses()">← Back to Callings in Progress</button>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <div style="font-size: 18px; font-weight: bold;">${memberName}</div>
+            <div style="color: #555; margin-top: 4px;">Proposed Calling: <strong>${callingName}</strong></div>
+        </div>
+        <div class="section-header"><h3>Member's Current Callings</h3></div>
+        <div id="card-member-callings"><p>Loading...</p></div>
+        <div class="section-header" style="margin-top: 16px;"><h3>Members with this Calling</h3></div>
+        <div id="card-calling-members"><p>Loading...</p></div>
+    `;
+
+    // Fetch member's current callings
+    fetch(`get_member_callings.php?member_id=${encodeURIComponent(memberId)}`)
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('card-member-callings');
+            if (!data.length) { el.innerHTML = '<p>None</p>'; return; }
+            el.innerHTML = `<table class="detail-table">
+                <thead><tr><th>Calling</th><th>Date Started</th></tr></thead>
+                <tbody>${data.filter(c => !c.date_released).map(c => `
+                    <tr><td>${c.calling_name}</td><td>${c.date_set_apart || '—'}</td></tr>
+                `).join('')}</tbody>
+            </table>`;
+        })
+        .catch(() => document.getElementById('card-member-callings').innerHTML = '<p>Error loading.</p>');
+
+    // Fetch members with this calling
+    fetch(`get_calling_members.php?calling_id=${encodeURIComponent(callingId)}`)
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('card-calling-members');
+            const active = data.filter(m => !m.date_released);
+            if (!active.length) { el.innerHTML = '<p>None</p>'; return; }
+            el.innerHTML = `<table class="detail-table">
+                <thead><tr><th>Member</th><th>Date Started</th></tr></thead>
+                <tbody>${active.map(m => `
+                    <tr><td>${m.member_name}</td><td>${m.date_set_apart || '—'}</td></tr>
+                `).join('')}</tbody>
+            </table>`;
+        })
+        .catch(() => document.getElementById('card-calling-members').innerHTML = '<p>Error loading.</p>');
 }
 
 // Function to show detailed information for a selected stat
