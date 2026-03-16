@@ -2316,11 +2316,7 @@ function loadMembersForm() {
                         <h3>Actions</h3>
                     </div>
                     <div class="action-buttons">
-                        <button id="add-member-btn" type="button" class="action-btn save-btn" onclick="openAddMemberModal()">+ Add New Member</button>
-                        <button id="update-members-btn" type="button" class="action-btn edit-btn" onclick="openUpdateMembersModal()">Update Members from PDF</button>
-                        <button type="button" id="edit-btn" class="action-btn edit-btn" style="display: none;">Edit Member</button>
-                        <button type="button" id="add-calling-history-btn" class="action-btn edit-btn" style="display: none;" onclick="openAddCallingHistoryModal()">Add Calling History</button>
-                        <button type="button" id="remove-member-btn" class="action-btn remove-btn" style="display: none;">Remove Member</button>
+<button type="button" id="add-calling-history-btn" class="action-btn edit-btn" style="display: none;" onclick="openAddCallingHistoryModal()">Add Calling History</button>
                         <button type="button" id="save-btn" class="action-btn save-btn" style="display: none;">Save Changes</button>
                         <button type="button" id="cancel-btn" class="action-btn cancel-btn" style="display: none;">Cancel</button>
                     </div>
@@ -2335,36 +2331,10 @@ function loadMembersForm() {
                         <h3>Member Details</h3>
                     </div>
                     <div id="member-details" class="details-section">
-
-                <label>First Name:</label>
-                <input type="text" id="first-name" disabled>
-        
-                <label>Last Name:</label>
-                <input type="text" id="last-name" disabled>
-        
-                <label>Gender:</label>
-                <input type="text" id="gender" disabled>
-        
-                <label>Birthdate:</label>
-                <input type="date" id="birthdate" disabled>
-
-                <label>Status:</label>
-                <select id="member-status" disabled>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="moved">Moved Away</option>
-                    <option value="no_calling">No Current Calling</option>
-                    <option value="deceased">Deceased</option>
-                    <option value="unknown">Status Unknown</option>
-                </select>
-
-                <label>Status Notes:</label>
-                <textarea id="status-notes" disabled rows="3" placeholder="Additional notes about this member's status..."></textarea>
-                
-                <div id="member-status-display" style="margin-top: 10px;">
-                    <!-- Status badge will be displayed here -->
-                </div>
-            </div>
+                        <div id="member-details-display" style="font-size: 15px; line-height: 1.8;">
+                            <p style="color: #999;">Select a member to view details.</p>
+                        </div>
+                    </div>
             
                     <div id="member-callings"></div> 
                     <div id="member-calling-history"></div>
@@ -2375,136 +2345,7 @@ function loadMembersForm() {
     `;
 
     
-    // Now add the event listeners for the Edit, Save, and Cancel buttons
-    const editButton = document.getElementById('edit-btn');
-    const saveButton = document.getElementById('save-btn');
-    const cancelButton = document.getElementById('cancel-btn');
-    const removeButton = document.getElementById('remove-member-btn');
-    const formResponse = document.getElementById('form-response');
     const memberSelect = document.getElementById('member-form-select');
-    const fields = ['first-name', 'last-name', 'gender', 'birthdate', 'member-status', 'status-notes'];
-    let originalValues = {};
-
-    // Edit button event listener
-    editButton.addEventListener('click', () => {
-        fields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            field.disabled = false;
-            originalValues[fieldId] = field.value; // Store original values
-        });
-        editButton.style.display = 'none';
-        removeButton.style.display = 'none';
-        saveButton.style.display = 'inline-block';
-        cancelButton.style.display = 'inline-block';
-    });
-    
-    removeButton.addEventListener('click', () => {
-        const memberSelect = document.getElementById('member-form-select');
-        const memberId = memberSelect.value;
-        const messageContainer = document.getElementById('member-form-message');
-    
-        if (!memberId) {
-            messageContainer.textContent = "Please select a member to remove.";
-            return;
-        }
-    
-        const confirmation = confirm("Are you sure you want to remove this member?");
-        if (!confirmation) return;
-    
-        fetch('remove_member.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: `member_id=${encodeURIComponent(memberId)}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                messageContainer.textContent = "Member removed successfully.";
-                document.getElementById('member-form').reset(); // Clear form fields
-                memberSelect.remove(memberSelect.selectedIndex); // Remove the deleted member from dropdown
-            } else {
-                messageContainer.textContent = "Error: " + data.message;
-            }
-        })
-        .catch(error => {
-            console.error("Error removing member:", error);
-            messageContainer.textContent = "An error occurred while removing the member.";
-        });
-    });
-
-    // Save button event listener
-    saveButton.addEventListener('click', () => {
-        const updatedData = {};
-        const messageContainer = document.getElementById('member-form-message');
-        
-        // Get the member ID from the selected member in dropdown
-        const selectedMemberId = memberSelect.value;
-        if (!selectedMemberId) {
-            messageContainer.textContent = 'Please select a member first.';
-            return;
-        }
-        updatedData['member-id'] = selectedMemberId;
-        
-        // Get other field values
-        fields.forEach(fieldId => {
-            updatedData[fieldId] = document.getElementById(fieldId).value;
-        });
-        console.log(updatedData);
-        fetch('update_member.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updatedData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                messageContainer.textContent = 'Member updated successfully.';
-            } else {
-                messageContainer.textContent = 'Failed to update member.';
-            }
-            resetForm();
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            messageContainer.textContent = 'An error occurred. Please try again.';
-            resetForm();
-        });
-    });
-
-    // Cancel button event listener
-    cancelButton.addEventListener('click', () => {
-        fields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            field.value = originalValues[fieldId]; // Revert to original values
-            field.disabled = true;
-        });
-        editButton.style.display = 'inline-block';
-        removeButton.style.display = 'inline-block';
-        saveButton.style.display = 'none';
-        cancelButton.style.display = 'none';
-        memberSelect.selectedIndex = 0;
-        const si = document.getElementById('member-search-input');
-        if (si) si.value = '';
-    });
-
-    function resetForm() {
-        fields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            field.disabled = true;
-            field.value = ""; // Restore original values
-        });
-        editButton.style.display = 'inline-block';
-        removeButton.style.display = 'inline-block';
-        saveButton.style.display = 'none';
-        cancelButton.style.display = 'none';
-        memberSelect.selectedIndex = 0;
-        const si = document.getElementById('member-search-input');
-        if (si) si.value = '';
-    }
     
     // Add event listeners for search
     const searchInput = document.getElementById('member-search-input');
@@ -4064,8 +3905,7 @@ function displayMembers(membersData) {
         memberSelect.addEventListener('change', function () {
             const memberId = this.value;
             const editBtn = document.getElementById('edit-btn');
-            const removeBtn = document.getElementById('remove-member-btn');
-            
+
             if (memberId) {
                 fetchMemberDetails(memberId);
                 fetchCallingsForMember(memberId);
@@ -4076,13 +3916,11 @@ function displayMembers(membersData) {
                 if (editBtn) editBtn.style.display = 'inline-block';
                 const addCallingHistoryBtn = document.getElementById('add-calling-history-btn');
                 if (addCallingHistoryBtn) addCallingHistoryBtn.style.display = 'inline-block';
-                if (removeBtn) removeBtn.style.display = 'inline-block';
             } else {
-                // Hide Edit, Add Calling History, and Remove buttons when no member is selected
+                // Hide Edit and Add Calling History buttons when no member is selected
                 if (editBtn) editBtn.style.display = 'none';
                 const addCallingHistoryBtn = document.getElementById('add-calling-history-btn');
                 if (addCallingHistoryBtn) addCallingHistoryBtn.style.display = 'none';
-                if (removeBtn) removeBtn.style.display = 'none';
             }
         });
         memberSelect.setAttribute('data-listener-added', 'true');
@@ -4307,18 +4145,15 @@ function fetchMemberDetails(memberId) {
     fetch(`get_member_details.php?member_id=${encodeURIComponent(memberId)}`)
         .then(response => response.json())
         .then(member => {
-            document.getElementById('first-name').value = member.first_name;
-            document.getElementById('last-name').value = member.last_name;
-            document.getElementById('gender').value = member.gender;
-            document.getElementById('birthdate').value = member.birthdate;
-            document.getElementById('member-status').value = member.status || 'active';
-            document.getElementById('status-notes').value = member.status_notes || '';
-            
-            // Update status display badge
-            const statusDisplay = document.getElementById('member-status-display');
-            if (statusDisplay) {
-                const badgeHTML = createStatusBadgeHTML(member.status || 'active');
-                statusDisplay.innerHTML = badgeHTML ? `<strong>Current Status:</strong> ${badgeHTML}` : '';
+            const dob = member.birthdate
+                ? new Date(member.birthdate + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                : '—';
+            const display = document.getElementById('member-details-display');
+            if (display) {
+                display.innerHTML = `
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">${member.first_name} ${member.last_name}</div>
+                    <div style="color: #555;">DOB: ${dob}</div>
+                `;
             }
         })
         .catch(error => console.error('Error fetching member details:', error));

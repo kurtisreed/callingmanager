@@ -68,7 +68,7 @@ function addToCallingHistory($conn, $member_id, $calling_id, $date_set_apart, $d
             $period = 'Until ' . $released->format('M j, Y');
         }
         
-        $notes = "Automatically added when released from calling";
+        $notes = null;
         
         // Check for duplicate entry
         $duplicateCheck = $conn->prepare("SELECT id FROM calling_history WHERE member_id = ? AND calling_id = ?");
