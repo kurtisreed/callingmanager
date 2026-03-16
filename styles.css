@@ -2237,6 +2237,25 @@ textarea:focus {
     color: white;
 }
 
+.progress-step.clickable-step {
+    cursor: pointer;
+}
+
+.progress-step.clickable-step .step-icon {
+    background-color: #e0e0e0;
+    border: 2px dashed #2D5B89;
+    color: #2D5B89;
+}
+
+.progress-step.clickable-step:hover .step-icon {
+    background-color: #2D5B89;
+    color: white;
+}
+
+.progress-step.clickable-step .step-label {
+    color: #2D5B89;
+}
+
 .progress-step.pending .step-icon {
     background-color: #e0e0e0;
     color: #666;

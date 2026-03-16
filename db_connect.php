@@ -9,7 +9,7 @@ $password   = Config::get('DB_PASSWORD');
 $dbname     = Config::get('DB_NAME');
 
 // Validate required environment variables
-if (empty($username) || empty($password) || empty($dbname)) {
+if (empty($username) || $password === null || empty($dbname)) {
     http_response_code(500);
     error_log('Database configuration incomplete: Missing required environment variables');
     echo json_encode(['error' => 'Database configuration error']);

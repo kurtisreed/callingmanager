@@ -29,7 +29,7 @@ if (!$id || !$status || !$date) {
 }
 
 // Validate status
-$validStatuses = ['approved', 'interviewed', 'sustained', 'set_apart'];
+$validStatuses = ['approved', 'interviewed', 'leader_notified', 'sustained', 'set_apart', 'lcr'];
 if (!in_array($status, $validStatuses)) {
     echo json_encode(['success' => false, 'message' => 'Invalid status']);
     exit;
@@ -62,11 +62,17 @@ try {
         case 'interviewed':
             $dateField = 'interviewed_date';
             break;
+        case 'leader_notified':
+            $dateField = 'leader_notified_date';
+            break;
         case 'sustained':
             $dateField = 'sustained_date';
             break;
         case 'set_apart':
             $dateField = 'set_apart_date';
+            break;
+        case 'lcr':
+            $dateField = 'lcr_date';
             break;
         default:
             throw new Exception("Invalid status provided");

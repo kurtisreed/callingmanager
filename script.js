@@ -2778,12 +2778,10 @@ function fetchCallingProcesses() {
         .then(response => response.json())
         .then(data => {
             allCallingProcessesData = data; // Store data for filtering
-            
-            // If we're currently showing a process detail view, update it
-            const activeProcessStat = document.querySelector('.clickable-process-stat.active-stat');
-            if (activeProcessStat) {
-                const statusType = activeProcessStat.dataset.processStatus;
-                displayCallingProcessTable(data, statusType);
+
+            // Refresh the table if the dashboard detail panel is visible
+            if (document.getElementById('dashboard-detail-content')) {
+                displayCallingProcessTable(data, 'all');
             }
             
             // Update both dashboard stats and old-style stats
@@ -2798,27 +2796,36 @@ function fetchCallingProcesses() {
 
 // Function to create visual progress indicator
 function createProgressIndicator(process) {
-    const steps = ['approved', 'interviewed', 'sustained', 'set_apart'];
-    const stepLabels = ['Approved', 'Interviewed', 'Sustained', 'Set Apart'];
-    const dateFields = ['approved_date', 'interviewed_date', 'sustained_date', 'set_apart_date'];
-    const currentIndex = steps.indexOf(process.status);
+    const steps = ['approved', 'leader_notified', 'interviewed', 'sustained', 'set_apart', 'lcr'];
+    const stepLabels = ['Approved', 'Leader Notified', 'Interviewed', 'Sustained', 'Set Apart', 'LCR'];
+    const dateFields = ['approved_date', 'leader_notified_date', 'interviewed_date', 'sustained_date', 'set_apart_date', 'lcr_date'];
 
     return `
         <div class="progress-indicator">
             ${steps.map((step, index) => {
-                const isCompleted = index <= currentIndex;
                 const stepDate = process[dateFields[index]];
+                const isCompleted = !!stepDate;
                 const formattedDate = stepDate ? formatDate(stepDate) : '';
 
+                const stepClass = isCompleted ? 'completed' : 'pending clickable-step';
+                const clickAttrs = !isCompleted ? `
+                    data-process-id="${process.id}"
+                    data-step="${step}"
+                    data-member-id="${process.member_id}"
+                    data-calling-id="${process.calling_id}"
+                    data-member-name="${process.member_name}"
+                    data-calling-name="${process.calling_name}"
+                    title="Click to mark as ${stepLabels[index]}"` : '';
+
                 return `
-                    <div class="progress-step ${isCompleted ? 'completed' : 'pending'}">
+                    <div class="progress-step ${stepClass}" ${clickAttrs}>
                         <div class="step-icon">${isCompleted ? '✓' : '○'}</div>
                         <div class="step-label">${stepLabels[index]}</div>
                         ${formattedDate ? `<div class="step-date editable-date"
                                               data-process-id="${process.id}"
                                               data-date-field="${dateFields[index]}"
                                               data-current-date="${stepDate}"
-                                              data-step-status="${steps[index]}"
+                                              data-step-status="${step}"
                                               data-current-process-status="${process.status}"
                                               data-step-label="${stepLabels[index]}"
                                               title="Click to edit date">${formattedDate}</div>` : ''}
@@ -2831,50 +2838,23 @@ function createProgressIndicator(process) {
 
 // Function to create action buttons based on current status
 function createActionButtons(process) {
-    const nextActions = {
-        'approved': 'Mark Interviewed',
-        'interviewed': 'Mark Sustained',
-        'sustained': 'Mark Set Apart'
-        // Removed 'set_apart': 'Finalize Calling' from normal progression
-    };
-    
-    let buttons = '';
-    
-    // Add progression button (up to Set Apart)
-    const nextAction = nextActions[process.status];
-    if (nextAction) {
-        buttons += `
-            <button class="action-btn save-btn process-advance-btn"
-                    data-id="${process.id}"
-                    data-status="${process.status}"
-                    data-member-id="${process.member_id}"
-                    data-calling-id="${process.calling_id}"
-                    data-member-name="${process.member_name}"
-                    data-calling-name="${process.calling_name}">
-                ${nextAction}
-            </button>`;
-    }
-
-    // Add Cancel button
-    buttons += `
-        <button class="action-btn remove-btn process-cancel-btn" 
+    return `
+        <button class="action-btn remove-btn process-cancel-btn"
                 data-id="${process.id}">
             Cancel
         </button>`;
-    
-    return buttons;
 }
 
 // Function to add event listeners to action buttons
 function addProcessActionListeners() {
-    // Advance buttons - special handling for "Mark Sustained" to update then redirect to Tab2
-    document.querySelectorAll('.process-advance-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.dataset.id;
-            const currentStatus = this.dataset.status;
+    // Clickable incomplete progress steps
+    document.querySelectorAll('.progress-step.clickable-step').forEach(step => {
+        step.addEventListener('click', function(e) {
+            if (e.target.classList.contains('editable-date')) return;
+            const id = this.dataset.processId;
+            const targetStep = this.dataset.step;
 
-            // If moving from interviewed to sustained, update status then redirect to Assign/Release tab
-            if (currentStatus === 'interviewed') {
+            if (targetStep === 'sustained') {
                 const processData = {
                     id: id,
                     memberId: this.dataset.memberId,
@@ -2884,8 +2864,7 @@ function addProcessActionListeners() {
                 };
                 advanceToSustainedAndActivate(processData);
             } else {
-                // Otherwise, proceed with normal advancement
-                advanceCallingProcess(id, currentStatus);
+                markStepComplete(id, targetStep);
             }
         });
     });
@@ -2952,15 +2931,7 @@ function editProcessDate(processId, dateField, currentDate, stepStatus, currentP
             fetchProcessStats();
 
             // If we're currently showing a process detail view, refresh the table
-            const activeProcessStat = document.querySelector('.clickable-process-stat.active-stat');
-            if (activeProcessStat) {
-                const statusType = activeProcessStat.dataset.processStatus;
-                fetch('get_calling_processes.php')
-                    .then(response => response.json())
-                    .then(data => {
-                        displayCallingProcessTable(data, statusType);
-                    });
-            }
+            fetchCallingProcesses();
         } else {
             alert('Error updating date: ' + data.message);
         }
@@ -2971,83 +2942,60 @@ function editProcessDate(processId, dateField, currentDate, stepStatus, currentP
     });
 }
 
-// Function to advance a calling through the process
-function advanceCallingProcess(id, currentStatus) {
-    const nextStatusMap = {
-        'approved': 'interviewed',
-        'interviewed': 'sustained', 
-        'sustained': 'set_apart'
-    };
-    
-    const nextStatus = nextStatusMap[currentStatus];
-    if (!nextStatus) return;
-    
-    // If advancing to set_apart, update then finalize (delete) automatically
-    if (nextStatus === 'set_apart') {
-        fetch('update_calling_process.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                id: id,
-                status: nextStatus,
-                date: new Date().toISOString().substr(0, 10)
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Now finalize by removing from calling_process table
-                return fetch('cancel_calling_process.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ id: id })
-                });
-            } else {
-                throw new Error(data.message);
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                fetchCallingProcesses(); // Refresh the table
-            } else {
-                alert('Error finalizing process: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error advancing/finalizing process:', error);
-            alert('An error occurred: ' + error.message);
-        });
-    } else {
-        // Normal advancement (not set_apart)
-        fetch('update_calling_process.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                id: id,
-                status: nextStatus,
-                date: new Date().toISOString().substr(0, 10)
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                fetchCallingProcesses(); // Refresh the table
-            } else {
-                alert('Error updating process: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error advancing process:', error);
-            alert('An error occurred while updating the process.');
-        });
-    }
+// Returns true if all 6 steps have a date set
+function allStepsComplete(process) {
+    return !!(process.approved_date &&
+              process.interviewed_date &&
+              process.leader_notified_date &&
+              process.sustained_date &&
+              process.set_apart_date &&
+              process.lcr_date);
+}
+
+// Function to mark an individual step as complete
+function markStepComplete(id, targetStep) {
+    const today = new Date().toISOString().substr(0, 10);
+
+    fetch('update_calling_process.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, status: targetStep, date: today })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) throw new Error(data.message);
+
+        // Re-fetch to get the latest state and check if all steps are done
+        return fetch('get_calling_processes.php')
+            .then(r => r.json())
+            .then(processes => {
+                allCallingProcessesData = processes;
+                const process = processes.find(p => p.id == id);
+
+                if (process && allStepsComplete(process)) {
+                    // All steps done — remove from table
+                    return fetch('cancel_calling_process.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: id })
+                    })
+                    .then(r => r.json())
+                    .then(cancelData => {
+                        if (cancelData.success) {
+                            fetchCallingProcesses();
+                        } else {
+                            alert('Error finalizing process: ' + cancelData.message);
+                        }
+                    });
+                } else {
+                    displayCallingProcessTable(processes, 'all');
+                }
+            });
+    })
+    .catch(error => {
+        console.error('Error marking step complete:', error);
+        alert('An error occurred while updating the process.');
+    });
 }
 
 // Function to complete a calling process by redirecting to Assign/Release tab
@@ -3126,16 +3074,8 @@ function closeFinalizeCallingModal() {
     fetchProcessStats();
     fetchDashboardStats();
 
-    // If we're currently showing a process detail view, refresh the table
-    const activeProcessStat = document.querySelector('.clickable-process-stat.active-stat');
-    if (activeProcessStat) {
-        const statusType = activeProcessStat.dataset.processStatus;
-        fetch('get_calling_processes.php')
-            .then(response => response.json())
-            .then(data => {
-                displayCallingProcessTable(data, statusType);
-            });
-    }
+    // Refresh the process table
+    fetchCallingProcesses();
 
     // Also check if we're showing a general stat detail view and refresh it
     const activeGeneralStat = document.querySelector('.clickable-stat.active-stat');
@@ -3436,22 +3376,7 @@ function finalizeCallingProcess(id) {
     .then(data => {
         if (data.success) {
             console.log('Calling process finalized successfully');
-            // Refresh the calling processes data and table
-            fetchProcessStats();
-            
-            // If we're currently showing a process detail view, refresh the table
-            const activeProcessStat = document.querySelector('.clickable-process-stat.active-stat');
-            if (activeProcessStat) {
-                const statusType = activeProcessStat.dataset.processStatus;
-                // Refresh the process data and update the table display
-                fetch('get_calling_processes.php')
-                    .then(response => response.json())
-                    .then(processes => {
-                        allCallingProcessesData = processes;
-                        displayCallingProcessTable(processes, statusType);
-                    })
-                    .catch(error => console.error('Error refreshing process table:', error));
-            }
+            fetchCallingProcesses();
         } else {
             console.error('Error finalizing calling process:', data.message);
             alert('Error finalizing calling process: ' + data.message);
@@ -3546,53 +3471,16 @@ function loadDashboard() {
         <div class="two-column-layout">
             <!-- Left Column: Stats and Controls -->
             <div class="left-column">
-                <!-- Callings in Process Section -->
-                <div class="section-header">
-                    <h3>Callings in Process</h3>
-                </div>
-                <div class="details-section">
-                    <div id="process-stats">
-                        <div class="stat-item clickable-process-stat" data-process-status="all">
-                            <span class="stat-label">All:</span>
-                            <span class="stat-value" id="stat-all">Loading...</span>
-                        </div>
-                        <div class="stat-item clickable-process-stat" data-process-status="approved">
-                            <span class="stat-label">Needs interview:</span>
-                            <span class="stat-value" id="stat-approved">Loading...</span>
-                        </div>
-                        <div class="stat-item clickable-process-stat" data-process-status="interviewed">
-                            <span class="stat-label">Needs sustaining:</span>
-                            <span class="stat-value" id="stat-interviewed">Loading...</span>
-                        </div>
-                        <div class="stat-item clickable-process-stat" data-process-status="sustained">
-                            <span class="stat-label">Needs set apart:</span>
-                            <span class="stat-value" id="stat-sustained">Loading...</span>
-                        </div>
-                        <div class="stat-item clickable-process-stat" data-process-status="set_apart">
-                            <span class="stat-label">Ready to finalize:</span>
-                            <span class="stat-value" id="stat-set-apart">Loading...</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Member Updates Section -->
-                <div class="section-header">
-                    <h3>Update Member List from LCR</h3>
-                </div>
-                <div class="details-section">
-                    <div class="stat-item">
-                        <span class="stat-label">Last Update:</span>
-                        <span id="dashboard-last-update-value">Loading...</span>
-                    </div>
-                    <button type="button" class="action-btn save-btn" onclick="openUpdateMembersModal()" style="margin-top: 8px;">Update now</button>
-                </div>
-
                 <!-- Quick Stats Section -->
                 <div class="section-header">
-                    <h3>Useful Information</h3>
+                    <h3>Calling Helper</h3>
                 </div>
                 <div class="details-section">
                     <div id="dashboard-stats">
+                        <div class="stat-item clickable-process-stat" data-process-status="all" style="font-weight: bold;">
+                            <span class="stat-label">Callings in Progress</span>
+                            <span class="stat-value" id="stat-all">Loading...</span>
+                        </div>
                         <div class="stat-item clickable-stat" data-stat="callings-under-consideration">
                             <span class="stat-label">Callings under consideration:</span>
                             <span class="stat-value" id="stat-callings-under-consideration">Loading...</span>
@@ -3627,8 +3515,20 @@ function loadDashboard() {
                         </div>
                     </div>
                 </div>
+
+                <!-- Member Updates Section -->
+                <div class="section-header">
+                    <h3>Update Member List from LCR</h3>
+                </div>
+                <div class="details-section">
+                    <div class="stat-item">
+                        <span class="stat-label">Last Update:</span>
+                        <span id="dashboard-last-update-value">Loading...</span>
+                    </div>
+                    <button type="button" class="action-btn save-btn" onclick="openUpdateMembersModal()" style="margin-top: 8px;">Update now</button>
+                </div>
             </div>
-            
+
             <!-- Right Column: Detail Display -->
             <div class="right-column">
                 <div class="section-header">
@@ -3647,15 +3547,15 @@ function loadDashboard() {
     fetchDashboardStats();
     fetchProcessStats();
     loadDashboardMemberUpdateInfo();
-    
+
     // Add click event listeners to stats
     addDashboardStatClickHandlers();
     addProcessStatClickHandlers();
-    
+
     // Automatically load "Callings in Process - All" details
     setTimeout(() => {
         showProcessDetails('all', 'All');
-    }, 100); // Small delay to ensure DOM is ready
+    }, 100);
 }
 
 // Fetch and display last member update info on the dashboard
@@ -3745,11 +3645,7 @@ function fetchProcessStats() {
         .catch(error => {
             console.error('Error fetching process stats:', error);
             // Set error states
-            document.getElementById('stat-all').textContent = 'Error';
-            document.getElementById('stat-approved').textContent = 'Error';
-            document.getElementById('stat-interviewed').textContent = 'Error';
-            document.getElementById('stat-sustained').textContent = 'Error';
-            document.getElementById('stat-set-apart').textContent = 'Error';
+            // stat elements removed from UI, nothing to update
         });
 }
 
@@ -3771,11 +3667,12 @@ function updateDashboardProcessStats(processes) {
         if (process.status === 'set_apart') stats.set_apart++;
     });
     
-    document.getElementById('stat-all').textContent = stats.all;
-    document.getElementById('stat-approved').textContent = stats.approved;
-    document.getElementById('stat-interviewed').textContent = stats.interviewed;
-    document.getElementById('stat-sustained').textContent = stats.sustained;
-    document.getElementById('stat-set-apart').textContent = stats.set_apart;
+    const setIfExists = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setIfExists('stat-all', stats.all);
+    setIfExists('stat-approved', stats.approved);
+    setIfExists('stat-interviewed', stats.interviewed);
+    setIfExists('stat-sustained', stats.sustained);
+    setIfExists('stat-set-apart', stats.set_apart);
 }
 
 // Function to add click handlers to process stats
@@ -3793,15 +3690,16 @@ function addProcessStatClickHandlers() {
 // Function to show detailed process information for a selected status
 function showProcessDetails(statusType, statLabel) {
     // Update header
-    document.getElementById('detail-header').textContent = `Callings in Process - ${statLabel}`;
+    document.getElementById('detail-header').textContent = `Callings in Progress`;
     
     // Show loading state
     document.getElementById('dashboard-detail-content').innerHTML = '<p>Loading calling processes...</p>';
     
-    // Remove active class from all stats and add to clicked one
+    // Remove active class from all stats and add to clicked one (if element exists)
     document.querySelectorAll('.clickable-stat').forEach(s => s.classList.remove('active-stat'));
     document.querySelectorAll('.clickable-process-stat').forEach(s => s.classList.remove('active-stat'));
-    document.querySelector(`[data-process-status="${statusType}"]`).classList.add('active-stat');
+    const activeEl = document.querySelector(`[data-process-status="${statusType}"]`);
+    if (activeEl) activeEl.classList.add('active-stat');
     
     // Fetch and display calling process data
     fetch('get_calling_processes.php')
