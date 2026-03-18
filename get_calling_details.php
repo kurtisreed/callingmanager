@@ -24,7 +24,15 @@ try {
     }
 
     $callingId = (int)$_GET['calling_id'];
-    $sql = "SELECT calling_id, calling_name, organization, `grouping`, priority, grouping_priority, comments FROM callings WHERE calling_id = ?";
+    $sql = "SELECT calling_id, calling_name, leader, organization, `grouping`, priority, grouping_priority, comments,
+            (SELECT CONCAT(lm.first_name, ' ', lm.last_name)
+             FROM current_callings lcc
+             JOIN callings lc ON lcc.calling_id = lc.calling_id
+             JOIN members lm ON lcc.member_id = lm.member_id
+             WHERE lc.calling_name = callings.leader
+             AND lcc.date_released IS NULL
+             LIMIT 1) AS leader_name
+            FROM callings WHERE calling_id = ?";
     $stmt = $conn->prepare($sql);
     
     if (!$stmt) {

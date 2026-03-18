@@ -2415,7 +2415,14 @@ function loadCallingsForm() {
                                         
                         <label>Calling Name:</label>
                         <input type="text" id="calling-name" disabled>
-                
+
+                        <label>Leader:</label>
+                        <div style="position: relative;">
+                            <input type="text" id="calling-leader-search" placeholder="Type name to search..." autocomplete="off" disabled />
+                            <div id="calling-leader-dropdown" class="member-autocomplete-dropdown" style="display: none;"></div>
+                        </div>
+                        <input type="hidden" id="calling-leader" />
+
                         <label>Organization:</label>
                         <select id="organization" disabled>
                             <option value="Aaronic Priesthood Quorums">Aaronic Priesthood Quorums</option>
@@ -2476,7 +2483,7 @@ function loadCallingsForm() {
     const removeButton = document.getElementById('remove-calling-btn');
     const formResponse = document.getElementById('form-response');
     const callingSelect = document.getElementById('calling-form-select');
-    const fields = ['calling-name', 'organization', 'grouping', 'priority'];
+    const fields = ['calling-name', 'calling-leader', 'organization', 'grouping', 'priority'];
     let originalValues = {};
 
     // Edit button event listener
@@ -2486,6 +2493,11 @@ function loadCallingsForm() {
             field.disabled = false;
             originalValues[fieldId] = field.value; // Store original values
         });
+        const leaderSearch = document.getElementById('calling-leader-search');
+        if (leaderSearch) {
+            leaderSearch.disabled = false;
+            originalValues['calling-leader-search'] = leaderSearch.value;
+        }
         editButton.style.display = 'none';
         removeButton.style.display = 'none';
         saveButton.style.display = 'inline-block';
@@ -2578,6 +2590,12 @@ function loadCallingsForm() {
             field.value = originalValues[fieldId]; // Revert to original values
             field.disabled = true;
         });
+        const leaderSearch = document.getElementById('calling-leader-search');
+        if (leaderSearch) {
+            leaderSearch.value = originalValues['calling-leader-search'] || '';
+            leaderSearch.disabled = true;
+        }
+        hideLeaderDropdown();
         editButton.style.display = 'inline-block';
         removeButton.style.display = 'inline-block';
         saveButton.style.display = 'none';
@@ -2593,6 +2611,12 @@ function loadCallingsForm() {
             field.disabled = true;
             field.value = ""; // Restore original values
         });
+        const leaderSearch = document.getElementById('calling-leader-search');
+        if (leaderSearch) {
+            leaderSearch.value = '';
+            leaderSearch.disabled = true;
+        }
+        hideLeaderDropdown();
         editButton.style.display = 'inline-block';
         removeButton.style.display = 'inline-block';
         saveButton.style.display = 'none';
@@ -2608,6 +2632,19 @@ function loadCallingsForm() {
     callingSearchInput.addEventListener('blur', function() {
         setTimeout(hideCallingDropdown, 150);
     });
+
+    const leaderSearchInput = document.getElementById('calling-leader-search');
+    if (leaderSearchInput) {
+        leaderSearchInput.addEventListener('input', function() {
+            filterLeaderCallings();
+            // If user clears the field, clear hidden value too
+            const hiddenInput = document.getElementById('calling-leader');
+            if (hiddenInput && !leaderSearchInput.value.trim()) hiddenInput.value = '';
+        });
+        leaderSearchInput.addEventListener('blur', function() {
+            setTimeout(hideLeaderDropdown, 150);
+        });
+    }
 
     fetchCallings(); // Populate dropdown
 }
@@ -3646,12 +3683,22 @@ function showProcessMemberCard(memberId, callingId, memberName, callingName) {
         <div style="margin-bottom: 20px;">
             <div style="font-size: 18px; font-weight: bold;">${memberName}</div>
             <div style="color: #555; margin-top: 4px;">Proposed Calling: <strong>${callingName}</strong></div>
+            <div style="color: #555; margin-top: 4px;">Proposed Leader: <strong id="proposed-leader-name">Loading...</strong></div>
         </div>
         <div class="section-header"><h3>Member's Current Callings</h3></div>
         <div id="card-member-callings"><p>Loading...</p></div>
         <div class="section-header" style="margin-top: 16px;"><h3>Members with this Calling</h3></div>
         <div id="card-calling-members"><p>Loading...</p></div>
     `;
+
+    // Fetch proposed calling details for leader name
+    fetch(`get_calling_details.php?calling_id=${encodeURIComponent(callingId)}`)
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('proposed-leader-name');
+            if (el) el.textContent = data.leader_name || '—';
+        })
+        .catch(() => { const el = document.getElementById('proposed-leader-name'); if (el) el.textContent = '—'; });
 
     // Fetch member's current callings
     fetch(`get_member_callings.php?member_id=${encodeURIComponent(memberId)}`)
@@ -3660,9 +3707,9 @@ function showProcessMemberCard(memberId, callingId, memberName, callingName) {
             const el = document.getElementById('card-member-callings');
             if (!data.length) { el.innerHTML = '<p>None</p>'; return; }
             el.innerHTML = `<table class="detail-table">
-                <thead><tr><th>Calling</th><th>Date Started</th></tr></thead>
+                <thead><tr><th>Calling</th><th>Leader</th><th>Date Started</th></tr></thead>
                 <tbody>${data.filter(c => !c.date_released).map(c => `
-                    <tr><td>${c.calling_name}</td><td>${c.date_set_apart || '—'}</td></tr>
+                    <tr><td>${c.calling_name}</td><td>${c.leader_name || '—'}</td><td>${c.date_set_apart || '—'}</td></tr>
                 `).join('')}</tbody>
             </table>`;
         })
@@ -4201,6 +4248,57 @@ function selectCallingFromDropdown(callingId, calling) {
     hideCallingDropdown();
 }
 
+function filterLeaderCallings() {
+    const searchTerm = document.getElementById('calling-leader-search').value.toLowerCase().trim();
+    if (!searchTerm) {
+        hideLeaderDropdown();
+        return;
+    }
+    const filteredData = allCallingsData.filter(calling =>
+        calling.calling_name.toLowerCase().includes(searchTerm)
+    );
+    showLeaderDropdown(filteredData);
+}
+
+function showLeaderDropdown(callings) {
+    const dropdown = document.getElementById('calling-leader-dropdown');
+    if (!dropdown) return;
+    dropdown.innerHTML = '';
+    if (callings.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'member-autocomplete-item no-results';
+        noResults.textContent = 'No callings found';
+        dropdown.appendChild(noResults);
+        dropdown.style.display = 'block';
+        return;
+    }
+    callings.forEach(calling => {
+        const item = document.createElement('div');
+        item.className = 'member-autocomplete-item';
+        item.textContent = calling.calling_name;
+        item.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            selectLeaderCalling(calling.calling_name);
+        });
+        dropdown.appendChild(item);
+    });
+    dropdown.style.display = 'block';
+}
+
+function hideLeaderDropdown() {
+    const dropdown = document.getElementById('calling-leader-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function selectLeaderCalling(callingName) {
+    const searchInput = document.getElementById('calling-leader-search');
+    const hiddenInput = document.getElementById('calling-leader');
+    if (!searchInput || !hiddenInput) return;
+    searchInput.value = callingName;
+    hiddenInput.value = callingName;
+    hideLeaderDropdown();
+}
+
 // Fetch specific member details
 function fetchMemberDetails(memberId) {
     fetch(`get_member_details.php?member_id=${encodeURIComponent(memberId)}`)
@@ -4229,6 +4327,9 @@ function fetchCallingDetails(callingId) {
         .then(response => response.json())
         .then(calling => {
             document.getElementById('calling-name').value = calling.calling_name;
+            document.getElementById('calling-leader').value = calling.leader || '';
+            const leaderSearch = document.getElementById('calling-leader-search');
+            if (leaderSearch) leaderSearch.value = calling.leader || '';
             document.getElementById('organization').value = calling.organization;
             document.getElementById('grouping').value = calling.grouping;
             document.getElementById('priority').value = calling.priority;
@@ -5669,7 +5770,6 @@ function closeAddProcessModal() {
     document.getElementById('add-process-calling-select').value = '';
     document.getElementById('add-process-member-search').value = '';
     document.getElementById('add-process-calling-search').value = '';
-    document.getElementById('add-process-response').innerHTML = '';
     hideAddProcessMemberDropdown();
     hideAddProcessCallingDropdown();
 }
@@ -5857,8 +5957,7 @@ function saveNewCallingProcess() {
     const callingId = document.getElementById('add-process-calling-select').value;
 
     if (!memberId || !callingId) {
-        document.getElementById('add-process-response').innerHTML =
-            '<p style="color: red;">Please select both a member and a calling.</p>';
+        alert('Please select both a member and a calling.');
         return;
     }
 
@@ -5879,19 +5978,15 @@ function saveNewCallingProcess() {
     .then(response => response.json())
     .then(result => {
         if (result.success) {
-            alert(`✓ ${result.message}\n\nThe calling can now be managed in the Dashboard.`);
             closeAddProcessModal();
-            // Refresh the dashboard to show the new process
-            showProcessDetails('all', 'All');
+            fetchCallingProcesses();
         } else {
-            document.getElementById('add-process-response').innerHTML =
-                `<p style="color: red;">Error: ${result.message}</p>`;
+            alert('Error: ' + result.message);
         }
     })
     .catch(error => {
         console.error('Error adding to calling process:', error);
-        document.getElementById('add-process-response').innerHTML =
-            '<p style="color: red;">An error occurred. Please try again.</p>';
+        alert('An error occurred. Please try again.');
     });
 }
 

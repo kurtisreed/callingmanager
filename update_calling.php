@@ -21,6 +21,7 @@ if (!$callingId) {
 // Map the input data to the correct column names for `callings` table
 $columnsToUpdate = [
     'calling-name' => 'calling_name',
+    'calling-leader' => 'leader',
     'organization' => 'organization',
     'grouping' => '`grouping`',
     'priority' => 'priority'
