@@ -1396,7 +1396,7 @@ function renderBoxes(groupedData) {
         const boxHtml = `
             <div class="small-box ${orgClassName}" data-grouping="${groupingName}">
                 <div class="box-header">${groupingName}</div>
-                <div class="box-content-wrapper" style="padding: 10px;">
+                <div class="box-content-wrapper" style="padding: 5px 8px;">
                     ${groupContentHtml}
                 </div>
             </div>
