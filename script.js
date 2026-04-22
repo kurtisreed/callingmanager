@@ -1063,7 +1063,7 @@ function loadSelectionList(newCalling) {
                 // Add click event listener for the checkmark action
                 checkButton.addEventListener('click', function () {
                     // Placeholder for the function you want to define later
-                    confirmSelection(item['Member ID'], item['Calling ID']);
+                    confirmSelection(item['Member ID'], item['Calling ID'], `${item['First Name']} ${item['Last Name']}`, item['Calling']);
                 });
 
                 // Add the delete button, text, and checkmark button
@@ -1142,13 +1142,12 @@ function updateCandidateToApproved(memberId, possibleCallingsId) {
 }
 
 //function to handle the green checkmarks
-function confirmSelection(memberId, callingId) {
-    // Add the calling to the process instead of direct assignment
-    addToCallingProcess(memberId, callingId);
+function confirmSelection(memberId, callingId, memberName, callingName) {
+    addToCallingProcess(memberId, callingId, memberName, callingName);
 }
 
 // Function to add calling to the process system
-function addToCallingProcess(memberId, callingId) {
+function addToCallingProcess(memberId, callingId, memberName, callingName) {
     const data = {
         member_id: memberId,
         calling_id: callingId,
@@ -1158,17 +1157,14 @@ function addToCallingProcess(memberId, callingId) {
 
     fetch('add_calling_process.php', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
     .then(response => response.json())
     .then(result => {
         if (result.success) {
-            alert(`✓ ${result.message}\n\nThe calling can be managed in the Dashboard.`);
-            closePopup();
-
+            // Show pending releases modal; popup closes only after modal is dismissed
+            openPendingReleasesModal(memberId, callingId, memberName, callingName, closePopup);
         } else {
             alert(`Error: ${result.message}`);
         }
@@ -3581,9 +3577,9 @@ function addProcessStatClickHandlers() {
 function showProcessDetails(statusType, statLabel) {
     // Update header
     document.getElementById('detail-header').textContent = `Callings in Progress`;
-    
+
     // Show loading state
-    document.getElementById('dashboard-detail-content').innerHTML = '<p>Loading calling processes...</p>';
+    document.getElementById('dashboard-detail-content').innerHTML = '<p>Loading...</p>';
     
     // Remove active class from all stats and add to clicked one (if element exists)
     document.querySelectorAll('.clickable-stat').forEach(s => s.classList.remove('active-stat'));
@@ -3613,7 +3609,6 @@ function displayCallingProcessTable(processes, statusFilter) {
     // Filter processes based on status
     let filteredProcesses = processes;
     if (statusFilter && statusFilter !== 'all') {
-        // Filter by status
         filteredProcesses = processes.filter(process => process.status === statusFilter);
     }
 
@@ -3626,20 +3621,27 @@ function displayCallingProcessTable(processes, statusFilter) {
 
     const container = document.getElementById('dashboard-detail-content');
 
-    if (filteredProcesses.length === 0) {
-        container.innerHTML = `
-            <div style="margin-bottom: 15px;">
-                <button class="action-btn save-btn" onclick="openAddProcessModal()" style="margin-bottom: 10px;">+ Approve New Calling</button>
-            </div>
-            <p>None</p>
-        `;
-        return;
-    }
+    const callingsRows = filteredProcesses.length === 0
+        ? `<tr><td colspan="4" class="no-data">None</td></tr>`
+        : filteredProcesses.map(process => `
+            <tr>
+                <td><span class="process-member-link" data-member-id="${process.member_id}" data-calling-id="${process.calling_id}" data-member-name="${process.member_name}" data-calling-name="${process.calling_name}" style="cursor:pointer; color:#2D5B89; text-decoration:underline;">${process.member_name}</span></td>
+                <td>${process.calling_name}</td>
+                <td>${createProgressIndicator(process)}</td>
+                <td>
+                    <div class="process-actions">
+                        ${createActionButtons(process)}
+                    </div>
+                </td>
+            </tr>
+        `).join('');
 
-    // Generate table HTML with Add button above it
-    const tableHTML = `
-        <div style="margin-bottom: 15px;">
-            <button class="action-btn save-btn" onclick="openAddProcessModal()" style="margin-bottom: 10px;">+ Approve New Calling</button>
+    container.innerHTML = `
+        <div style="margin-bottom: 8px;">
+            <button class="action-btn save-btn" onclick="openAddProcessModal()">+ Approve New Calling</button>
+        </div>
+        <div class="section-header">
+            <h3>Callings</h3>
         </div>
         <table class="detail-table process-table">
             <thead>
@@ -3650,27 +3652,61 @@ function displayCallingProcessTable(processes, statusFilter) {
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
-                ${filteredProcesses.map(process => `
-                    <tr>
-                        <td><span class="process-member-link" data-member-id="${process.member_id}" data-calling-id="${process.calling_id}" data-member-name="${process.member_name}" data-calling-name="${process.calling_name}" style="cursor:pointer; color:#2D5B89; text-decoration:underline;">${process.member_name}</span></td>
-                        <td>${process.calling_name}</td>
-                        <td>${createProgressIndicator(process)}</td>
-                        <td>
-                            <div class="process-actions">
-                                ${createActionButtons(process)}
-                            </div>
-                        </td>
-                    </tr>
-                `).join('')}
+            <tbody>${callingsRows}</tbody>
+        </table>
+
+        <div class="section-header" style="margin-top: 24px;">
+            <h3>Releases</h3>
+        </div>
+        <table class="detail-table releases-table" id="releases-table">
+            <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>Calling</th>
+                    <th>Progress</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="releases-tbody">
+                <tr><td colspan="4" class="no-data">Loading releases...</td></tr>
             </tbody>
         </table>
     `;
 
-    container.innerHTML = tableHTML;
-
-    // Add event listeners for action buttons
+    // Add event listeners for calling action buttons
     addProcessActionListeners();
+
+    // Fetch and populate the releases table
+    fetchAndDisplayReleases();
+}
+
+// Stub: fetch pending releases and render into the releases table
+function fetchAndDisplayReleases() {
+    const tbody = document.getElementById('releases-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="4" class="no-data">Loading...</td></tr>`;
+
+    fetch('get_release_processes.php')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.length) {
+                tbody.innerHTML = `<tr><td colspan="4" class="no-data">No pending releases.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = data.map(row => `
+                <tr>
+                    <td>${row.member_name}</td>
+                    <td>${row.calling_name}</td>
+                    <td><span class="status-badge status-inactive">Pending</span></td>
+                    <td>
+                        <button class="action-btn remove-btn" onclick="removeReleaseProcess(${row.id})">Remove</button>
+                    </td>
+                </tr>
+            `).join('');
+        })
+        .catch(() => {
+            tbody.innerHTML = `<tr><td colspan="4" class="no-data">Error loading releases.</td></tr>`;
+        });
 }
 
 // Function to show member detail card from Callings in Progress table
@@ -5961,7 +5997,9 @@ function saveNewCallingProcess() {
         return;
     }
 
-    // Same data structure as green checkmark functionality
+    const memberName = document.getElementById('add-process-member-search').value.trim();
+    const callingName = document.getElementById('add-process-calling-search').value.trim();
+
     const data = {
         member_id: parseInt(memberId),
         calling_id: parseInt(callingId),
@@ -5969,7 +6007,6 @@ function saveNewCallingProcess() {
         notes: 'Added directly from Dashboard'
     };
 
-    // Call the same endpoint as green checkmark
     fetch('add_calling_process.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -5980,6 +6017,11 @@ function saveNewCallingProcess() {
         if (result.success) {
             closeAddProcessModal();
             fetchCallingProcesses();
+            openPendingReleasesModal(
+                parseInt(memberId), parseInt(callingId),
+                memberName, callingName,
+                fetchAndDisplayReleases
+            );
         } else {
             alert('Error: ' + result.message);
         }
@@ -5990,4 +6032,160 @@ function saveNewCallingProcess() {
     });
 }
 
+// ─── Pending Releases Modal ───────────────────────────────────────────────────
+
+let _pendingReleasesCallback = null;
+
+function openPendingReleasesModal(memberId, callingId, memberName, callingName, onComplete) {
+    _pendingReleasesCallback = onComplete || null;
+
+    const modal = document.getElementById('pending-releases-modal');
+    modal.dataset.memberId  = memberId;
+    modal.dataset.callingId = callingId;
+
+    document.getElementById('pending-releases-subtitle').textContent =
+        `${memberName} is being approved for ${callingName}`;
+    document.getElementById('pending-releases-calling-members-header').textContent =
+        `Members Currently Serving in ${callingName}`;
+
+    modal.style.display = 'block';
+    document.getElementById('pending-releases-overlay').style.display = 'block';
+
+    document.getElementById('pending-releases-member-callings-container').innerHTML = '<p>Loading...</p>';
+    document.getElementById('pending-releases-calling-members-container').innerHTML = '<p>Loading...</p>';
+    document.getElementById('pending-releases-response').textContent = '';
+
+    // Table 1 — member's current callings
+    fetch(`get_member_callings.php?member_id=${encodeURIComponent(memberId)}`)
+        .then(r => r.json())
+        .then(data => {
+            const container = document.getElementById('pending-releases-member-callings-container');
+            const active = data.filter(row => !row.date_released);
+            if (!active.length) {
+                container.innerHTML = `<p>${memberName} has no current callings.</p>`;
+                return;
+            }
+            let table = `<table><thead><tr>
+                <th>Calling</th><th>Date Started</th><th>Release?</th>
+            </tr></thead><tbody>`;
+            active.forEach(row => {
+                table += `<tr>
+                    <td>${row.calling_name}</td>
+                    <td>${row.date_set_apart || '—'}</td>
+                    <td><input type="checkbox" class="pending-release-calling-checkbox" value="${row.id}" checked></td>
+                </tr>`;
+            });
+            table += '</tbody></table>';
+            container.innerHTML = table;
+        })
+        .catch(() => {
+            document.getElementById('pending-releases-member-callings-container').innerHTML =
+                '<p>Error loading callings.</p>';
+        });
+
+    // Table 2 — current holders of that calling
+    fetch(`get_calling_members.php?calling_id=${encodeURIComponent(callingId)}`)
+        .then(r => r.json())
+        .then(data => {
+            const container = document.getElementById('pending-releases-calling-members-container');
+            const active = data.filter(row => !row.date_released);
+            if (!active.length) {
+                container.innerHTML = '<p>No one is currently serving in this calling.</p>';
+                return;
+            }
+            let table = `<table><thead><tr>
+                <th>Member</th><th>Date Started</th><th>Release?</th>
+            </tr></thead><tbody>`;
+            active.forEach(row => {
+                table += `<tr>
+                    <td>${row.member_name}</td>
+                    <td>${row.date_set_apart || '—'}</td>
+                    <td><input type="checkbox" class="pending-release-member-checkbox" value="${row.id}" checked></td>
+                </tr>`;
+            });
+            table += '</tbody></table>';
+            container.innerHTML = table;
+        })
+        .catch(() => {
+            document.getElementById('pending-releases-calling-members-container').innerHTML =
+                '<p>Error loading members.</p>';
+        });
+}
+
+function closePendingReleasesModal() {
+    document.getElementById('pending-releases-modal').style.display = 'none';
+    document.getElementById('pending-releases-overlay').style.display = 'none';
+    document.getElementById('pending-releases-member-callings-container').innerHTML = '';
+    document.getElementById('pending-releases-calling-members-container').innerHTML = '';
+    document.getElementById('pending-releases-response').textContent = '';
+    _pendingReleasesCallback = null;
+}
+
+function skipPendingReleases() {
+    const cb = _pendingReleasesCallback;
+    closePendingReleasesModal();
+    if (cb) cb();
+}
+
+function savePendingReleases() {
+    const modal = document.getElementById('pending-releases-modal');
+    const memberId  = parseInt(modal.dataset.memberId);
+    const callingId = parseInt(modal.dataset.callingId);
+
+    const recordIds = [];
+    modal.querySelectorAll('.pending-release-calling-checkbox:checked').forEach(cb => {
+        recordIds.push(parseInt(cb.value));
+    });
+    modal.querySelectorAll('.pending-release-member-checkbox:checked').forEach(cb => {
+        recordIds.push(parseInt(cb.value));
+    });
+
+    if (!recordIds.length) {
+        skipPendingReleases();
+        return;
+    }
+
+    document.getElementById('pending-releases-response').textContent = 'Saving...';
+
+    fetch('add_release_process.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ member_id: memberId, calling_id: callingId, record_ids: recordIds })
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            const cb = _pendingReleasesCallback;
+            closePendingReleasesModal();
+            if (cb) cb();
+            if (document.getElementById('releases-tbody')) {
+                fetchAndDisplayReleases();
+            }
+        } else {
+            document.getElementById('pending-releases-response').textContent =
+                'Error: ' + (result.message || 'Unknown error');
+        }
+    })
+    .catch(() => {
+        document.getElementById('pending-releases-response').textContent =
+            'Network error. Please try again.';
+    });
+}
+
+function removeReleaseProcess(id) {
+    fetch('remove_release_process.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: parseInt(id) })
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            fetchAndDisplayReleases();
+        } else {
+            alert('Error removing release: ' + (result.message || 'Unknown error'));
+        }
+    })
+    .catch(() => alert('Network error removing release.'));
+}
 

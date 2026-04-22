@@ -19,6 +19,7 @@
     <div class="overlay" id="add-calling-overlay" onclick="closeAddCallingModal()"></div>
     <div class="overlay" id="finalize-calling-overlay" onclick="closeFinalizeCallingModal()"></div>
     <div class="overlay" id="add-process-overlay" onclick="closeAddProcessModal()"></div>
+    <div class="overlay" id="pending-releases-overlay" onclick="closePendingReleasesModal()"></div>
 
 
     <div id="auth-container">
@@ -587,6 +588,29 @@
         </select>
 
         <button id="save-process-btn" class="action-btn save-btn" onclick="saveNewCallingProcess()">Approve</button>
+    </div>
+</div>
+
+<!-- Pending Releases Modal -->
+<div id="pending-releases-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 700px;">
+        <button class="close-btn" onclick="closePendingReleasesModal()">✕ Close</button>
+        <h2>Plan Releases</h2>
+        <p id="pending-releases-subtitle"></p>
+
+        <div class="section-header"><h3>Callings to Consider Releasing</h3></div>
+        <div id="pending-releases-member-callings-container"><p>Loading...</p></div>
+
+        <div class="section-header">
+            <h3 id="pending-releases-calling-members-header">Members Currently Serving</h3>
+        </div>
+        <div id="pending-releases-calling-members-container"><p>Loading...</p></div>
+
+        <div class="action-buttons" style="margin-top: 24px;">
+            <button class="action-btn save-btn" onclick="savePendingReleases()">Save Pending Releases</button>
+            <button class="action-btn cancel-btn" onclick="skipPendingReleases()">Skip</button>
+        </div>
+        <div id="pending-releases-response"></div>
     </div>
 </div>
 
