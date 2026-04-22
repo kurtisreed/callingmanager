@@ -3681,6 +3681,33 @@ function displayCallingProcessTable(processes, statusFilter) {
 }
 
 // Stub: fetch pending releases and render into the releases table
+function createReleaseProgressIndicator(release) {
+    const steps      = ['approved', 'leader_notified', 'interviewed', 'announced', 'lcr'];
+    const stepLabels = ['Approved', 'Leader Notified', 'Interviewed', 'Announced', 'LCR'];
+    const dateFields = ['approved_date', 'leader_notified_date', 'interviewed_date', 'announced_date', 'lcr_date'];
+
+    return `
+        <div class="progress-indicator">
+            ${steps.map((step, index) => {
+                const stepDate    = release[dateFields[index]];
+                const isCompleted = !!stepDate;
+                const formatted   = stepDate ? formatDate(stepDate) : '';
+                const stepClass   = isCompleted ? 'completed' : 'pending clickable-step';
+                const clickAttrs  = !isCompleted
+                    ? `data-release-id="${release.id}" data-step="${step}" title="Click to mark as ${stepLabels[index]}"`
+                    : '';
+                return `
+                    <div class="progress-step ${stepClass}" ${clickAttrs}>
+                        <div class="step-icon">${isCompleted ? '✓' : '○'}</div>
+                        <div class="step-label">${stepLabels[index]}</div>
+                        ${formatted ? `<div class="step-date">${formatted}</div>` : ''}
+                    </div>
+                `;
+            }).join('<div class="step-connector"></div>')}
+        </div>
+    `;
+}
+
 function fetchAndDisplayReleases() {
     const tbody = document.getElementById('releases-tbody');
     if (!tbody) return;
@@ -3697,12 +3724,35 @@ function fetchAndDisplayReleases() {
                 <tr>
                     <td>${row.member_name}</td>
                     <td>${row.calling_name}</td>
-                    <td><span class="status-badge status-inactive">Pending</span></td>
+                    <td>${createReleaseProgressIndicator(row)}</td>
                     <td>
                         <button class="action-btn remove-btn" onclick="removeReleaseProcess(${row.id})">Remove</button>
                     </td>
                 </tr>
             `).join('');
+
+            // Wire up click-to-mark-complete on pending steps
+            tbody.querySelectorAll('.progress-step.clickable-step[data-release-id]').forEach(step => {
+                step.addEventListener('click', function () {
+                    const releaseId = this.dataset.releaseId;
+                    const stepName  = this.dataset.step;
+                    const today     = new Date().toISOString().split('T')[0];
+                    fetch('update_release_process.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: parseInt(releaseId), step: stepName, date: today })
+                    })
+                    .then(r => r.json())
+                    .then(result => {
+                        if (result.success) {
+                            fetchAndDisplayReleases();
+                        } else {
+                            alert('Error updating step: ' + (result.message || 'Unknown error'));
+                        }
+                    })
+                    .catch(() => alert('Network error updating step.'));
+                });
+            });
         })
         .catch(() => {
             tbody.innerHTML = `<tr><td colspan="4" class="no-data">Error loading releases.</td></tr>`;
@@ -6045,6 +6095,8 @@ function openPendingReleasesModal(memberId, callingId, memberName, callingName, 
 
     document.getElementById('pending-releases-subtitle').textContent =
         `${memberName} is being approved for ${callingName}`;
+    document.getElementById('pending-releases-member-callings-header').textContent =
+        `${memberName}'s Current Callings`;
     document.getElementById('pending-releases-calling-members-header').textContent =
         `Members Currently Serving in ${callingName}`;
 

@@ -10,13 +10,17 @@ try {
                 rp.id,
                 rp.status,
                 rp.added_date,
-                rp.member_id,
-                rp.calling_id,
+                rp.approved_date,
+                rp.leader_notified_date,
+                rp.interviewed_date,
+                rp.announced_date,
+                rp.lcr_date,
                 CONCAT(m.first_name, ' ', m.last_name) AS member_name,
                 c.calling_name
             FROM release_process rp
-            JOIN members m ON rp.member_id = m.member_id
-            JOIN callings c ON rp.calling_id = c.calling_id
+            JOIN current_callings cc ON rp.current_calling_record_id = cc.id
+            JOIN members m ON cc.member_id = m.member_id
+            JOIN callings c ON cc.calling_id = c.calling_id
             WHERE rp.status = 'pending'
             ORDER BY rp.added_date DESC";
 
@@ -29,13 +33,16 @@ try {
     $releases = [];
     while ($row = $result->fetch_assoc()) {
         $releases[] = [
-            'id'          => (int) $row['id'],
-            'member_id'   => (int) $row['member_id'],
-            'calling_id'  => (int) $row['calling_id'],
-            'member_name' => $row['member_name'],
-            'calling_name'=> $row['calling_name'],
-            'status'      => $row['status'],
-            'added_date'  => $row['added_date'],
+            'id'                   => (int) $row['id'],
+            'member_name'          => $row['member_name'],
+            'calling_name'         => $row['calling_name'],
+            'status'               => $row['status'],
+            'added_date'           => $row['added_date'],
+            'approved_date'        => $row['approved_date'],
+            'leader_notified_date' => $row['leader_notified_date'],
+            'interviewed_date'     => $row['interviewed_date'],
+            'announced_date'       => $row['announced_date'],
+            'lcr_date'             => $row['lcr_date'],
         ];
     }
 
