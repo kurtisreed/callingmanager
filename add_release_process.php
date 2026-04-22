@@ -38,8 +38,9 @@ try {
     }
     $check_stmt->close();
 
-    // Insert only non-duplicates
-    $insert_sql = "INSERT INTO release_process (current_calling_record_id, member_id, calling_id) VALUES (?, ?, ?)";
+    // Insert only non-duplicates, auto-setting approved_date to today
+    $today = date('Y-m-d');
+    $insert_sql = "INSERT INTO release_process (current_calling_record_id, member_id, calling_id, approved_date) VALUES (?, ?, ?, ?)";
     $insert_stmt = $conn->prepare($insert_sql);
 
     $inserted = 0;
@@ -47,7 +48,7 @@ try {
         if (in_array($record_id, $existing)) {
             continue; // skip duplicate
         }
-        $insert_stmt->bind_param('iii', $record_id, $member_id, $calling_id);
+        $insert_stmt->bind_param('iiis', $record_id, $member_id, $calling_id, $today);
         if ($insert_stmt->execute()) {
             $inserted++;
         }
