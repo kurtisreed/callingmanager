@@ -1005,8 +1005,23 @@ table td input[type="checkbox"] {
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     padding: 20px;
-    z-index: 1000; /* Above overlay */
-    display: none; /* Hidden by default */
+    z-index: 1000;
+    display: none;
+}
+
+#pending-releases-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    z-index: 1000;
+    width: 700px;
+    max-height: 80vh;
+    overflow-y: auto;
 }
 
 #add-process-modal .modal-content {
@@ -2441,7 +2456,8 @@ textarea:focus {
     #update-members-modal,
     #review-changes-modal,
     #finalize-calling-modal,
-    #add-process-modal {
+    #add-process-modal,
+    #pending-releases-modal {
         width: 95vw !important;
         max-width: 500px;
         max-height: 90vh;
