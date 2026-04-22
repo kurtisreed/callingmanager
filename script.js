@@ -988,6 +988,10 @@ function closePopup() {
     document.getElementById('popup-modal').style.display = 'none';
     hideCandidateDropdown();
 
+    // Clear candidates list and search input for next open
+    document.getElementById('selectionList').innerHTML = '';
+    document.getElementById('candidate-search').value = '';
+
     saveCallingComments(callingId);
     buildSmallBoxes(); // Rebuild the small boxes to reflect any changes
 }
