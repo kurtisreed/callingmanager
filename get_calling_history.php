@@ -1,16 +1,14 @@
 <?php
-// Require authentication for this endpoint
 require_once __DIR__ . '/auth_required.php';
-
-// Log this access for auditing
 logUserActivity('get_calling_history', ['risk_level' => 'medium', 'file' => 'get_calling_history.php']);
 
+header('Content-Type: application/json');
 require_once 'db_connect.php';
 
 try {
     $member_id = (int) $_GET['member_id'];
 
-    // Ensure calling_history table exists (legacy manual entries)
+    // Ensure calling_history table exists (used for legacy manual entries)
     $conn->query("CREATE TABLE IF NOT EXISTS calling_history (
         id INT AUTO_INCREMENT PRIMARY KEY,
         member_id INT NOT NULL,
@@ -18,14 +16,12 @@ try {
         approximate_period VARCHAR(100) DEFAULT NULL,
         notes TEXT DEFAULT NULL,
         added_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (member_id) REFERENCES members(member_id) ON DELETE CASCADE,
-        FOREIGN KEY (calling_id) REFERENCES callings(calling_id) ON DELETE CASCADE,
         INDEX idx_member_id (member_id),
         INDEX idx_calling_id (calling_id)
     )");
 
-    // Union both sources — no deduplication, a member may hold the same calling multiple times.
-    // Wrapped in a subquery so ORDER BY works on all MySQL versions (5.7 and 8.0+).
+    // Union released current_callings (real dates) with legacy calling_history entries.
+    // Subquery wrapper keeps ORDER BY compatible with MySQL 5.7+.
     $sql = "
         SELECT calling_name, approximate_period, notes
         FROM (
@@ -59,6 +55,10 @@ try {
     ";
 
     $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        throw new Exception('Query prepare failed: ' . $conn->error);
+    }
+
     $stmt->bind_param('ii', $member_id, $member_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -73,12 +73,9 @@ try {
     }
 
     $stmt->close();
-
-    header('Content-Type: application/json');
     echo json_encode($history);
 
 } catch (Exception $e) {
-    header('Content-Type: application/json');
     echo json_encode(['error' => $e->getMessage()]);
 } finally {
     $conn->close();
