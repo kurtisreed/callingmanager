@@ -10,11 +10,25 @@ require_once 'db_connect.php';
 try {
     $member_id = (int) $_GET['member_id'];
 
-    // Union both sources — no deduplication, a member may hold the same calling multiple times
-    // Primary: released current_callings rows (real dates)
-    // Secondary: legacy calling_history entries (manually added, approximate periods)
+    // Ensure calling_history table exists (legacy manual entries)
+    $conn->query("CREATE TABLE IF NOT EXISTS calling_history (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        member_id INT NOT NULL,
+        calling_id INT NOT NULL,
+        approximate_period VARCHAR(100) DEFAULT NULL,
+        notes TEXT DEFAULT NULL,
+        added_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (member_id) REFERENCES members(member_id) ON DELETE CASCADE,
+        FOREIGN KEY (calling_id) REFERENCES callings(calling_id) ON DELETE CASCADE,
+        INDEX idx_member_id (member_id),
+        INDEX idx_calling_id (calling_id)
+    )");
+
+    // Union both sources — no deduplication, a member may hold the same calling multiple times.
+    // Wrapped in a subquery so ORDER BY works on all MySQL versions (5.7 and 8.0+).
     $sql = "
-        (
+        SELECT calling_name, approximate_period, notes
+        FROM (
             SELECT
                 c.calling_name,
                 CASE
@@ -29,9 +43,9 @@ try {
             FROM current_callings cc
             JOIN callings c ON cc.calling_id = c.calling_id
             WHERE cc.member_id = ? AND cc.date_released IS NOT NULL
-        )
-        UNION ALL
-        (
+
+            UNION ALL
+
             SELECT
                 c.calling_name,
                 ch.approximate_period,
@@ -40,7 +54,7 @@ try {
             FROM calling_history ch
             JOIN callings c ON ch.calling_id = c.calling_id
             WHERE ch.member_id = ?
-        )
+        ) AS combined
         ORDER BY sort_date DESC
     ";
 
@@ -52,9 +66,9 @@ try {
     $history = [];
     while ($row = $result->fetch_assoc()) {
         $history[] = [
-            'calling_name'      => $row['calling_name'],
-            'approximate_period'=> $row['approximate_period'],
-            'notes'             => $row['notes'],
+            'calling_name'       => $row['calling_name'],
+            'approximate_period' => $row['approximate_period'],
+            'notes'              => $row['notes'],
         ];
     }
 
@@ -65,7 +79,7 @@ try {
 
 } catch (Exception $e) {
     header('Content-Type: application/json');
-    echo json_encode([]);
+    echo json_encode(['error' => $e->getMessage()]);
 } finally {
     $conn->close();
 }
