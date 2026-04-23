@@ -10,9 +10,9 @@ require_once 'db_connect.php';
 try {
     $member_id = (int) $_GET['member_id'];
 
-    // Primary source: released callings from current_callings (real dates, ground truth)
-    // Supplement: calling_history entries for callings not in released current_callings
-    // (preserves legacy/manual entries that pre-date the current_callings tracking)
+    // Union both sources — no deduplication, a member may hold the same calling multiple times
+    // Primary: released current_callings rows (real dates)
+    // Secondary: legacy calling_history entries (manually added, approximate periods)
     $sql = "
         (
             SELECT
@@ -40,16 +40,12 @@ try {
             FROM calling_history ch
             JOIN callings c ON ch.calling_id = c.calling_id
             WHERE ch.member_id = ?
-            AND ch.calling_id NOT IN (
-                SELECT calling_id FROM current_callings
-                WHERE member_id = ? AND date_released IS NOT NULL
-            )
         )
         ORDER BY sort_date DESC
     ";
 
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param('iii', $member_id, $member_id, $member_id);
+    $stmt->bind_param('ii', $member_id, $member_id);
     $stmt->execute();
     $result = $stmt->get_result();
 
