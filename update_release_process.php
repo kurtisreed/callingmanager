@@ -43,6 +43,9 @@ $dateFieldMap = [
 $dateField = $dateFieldMap[$step];
 
 try {
+    $conn->begin_transaction();
+
+    // Update the step date on the release process record
     $stmt = $conn->prepare("UPDATE release_process SET $dateField = ? WHERE id = ?");
     $stmt->bind_param('si', $date, $id);
     $stmt->execute();
@@ -50,11 +53,26 @@ try {
     if ($stmt->affected_rows === 0) {
         throw new Exception('No release process found with that ID');
     }
-
-    echo json_encode(['success' => true]);
     $stmt->close();
 
+    // When Announced: officially release the calling in current_callings
+    if ($step === 'announced') {
+        $release_stmt = $conn->prepare(
+            "UPDATE current_callings cc
+             JOIN release_process rp ON cc.id = rp.current_calling_record_id
+             SET cc.date_released = ?
+             WHERE rp.id = ? AND cc.date_released IS NULL"
+        );
+        $release_stmt->bind_param('si', $date, $id);
+        $release_stmt->execute();
+        $release_stmt->close();
+    }
+
+    $conn->commit();
+    echo json_encode(['success' => true]);
+
 } catch (Exception $e) {
+    $conn->rollback();
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 
