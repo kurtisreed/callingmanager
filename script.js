@@ -1376,7 +1376,7 @@ function renderBoxes(groupedData) {
                     ? `<span style="color: red;">${member.first_name} ${member.last_name} (${member.date_set_apart})</span>`
                     : `${member.first_name} ${member.last_name} (${member.date_set_apart})`;
                 return `<div data-member-id="${member.member_id}">     - ${releaseTag}${nameHtml}</div>`;
-            }).join('') || `<div style="font-style: italic;color: red;">     - (Vacant)</div>`;
+            }).join('') || `<div style="font-style: italic; color: green;">     - (Vacant)</div>`;
 
             let indicatorHtml = '';
             if (calling.isApproved) {
