@@ -3733,7 +3733,9 @@ function fetchAndDisplayReleases() {
                     <td>${row.calling_name}</td>
                     <td>${createReleaseProgressIndicator(row)}</td>
                     <td>
-                        <button class="action-btn remove-btn" onclick="removeReleaseProcess(${row.id})">Remove</button>
+                        <div class="process-actions">
+                            <button class="action-btn remove-btn" onclick="removeReleaseProcess(${row.id})">Cancel</button>
+                        </div>
                     </td>
                 </tr>
             `).join('');
