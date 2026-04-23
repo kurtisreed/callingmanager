@@ -1368,9 +1368,12 @@ function renderBoxes(groupedData) {
         const callingsInGroup = groupInfo.callings; 
 
         let groupContentHtml = callingsInGroup.map(calling => {
-            const membersHtml = calling.members.map(member =>
-                `<div data-member-id="${member.member_id}">     - ${member.first_name} ${member.last_name} (${member.date_set_apart})</div>`
-            ).join('') || `<div style="font-style: italic;color: red;">     - (Vacant)</div>`;
+            const membersHtml = calling.members.map(member => {
+                const releaseTag = member.pending_release
+                    ? ` <span class="release-indicator">Release</span>`
+                    : '';
+                return `<div data-member-id="${member.member_id}">     - ${member.first_name} ${member.last_name} (${member.date_set_apart})${releaseTag}</div>`;
+            }).join('') || `<div style="font-style: italic;color: red;">     - (Vacant)</div>`;
 
             let indicatorHtml = '';
             if (calling.isApproved) {

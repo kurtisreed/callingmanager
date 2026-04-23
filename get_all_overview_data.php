@@ -50,13 +50,16 @@ $sql = "
     SELECT
         c.calling_id, c.calling_name, c.grouping, c.priority, c.organization, c.considering,
         m.member_id, m.first_name, m.last_name,
-        cc.date_set_apart
+        cc.date_set_apart,
+        (rp.id IS NOT NULL) AS pending_release
     FROM
         callings c
     LEFT JOIN
         current_callings cc ON c.calling_id = cc.calling_id AND cc.date_released IS NULL
     LEFT JOIN
         members m ON cc.member_id = m.member_id
+    LEFT JOIN
+        release_process rp ON cc.id = rp.current_calling_record_id AND rp.status = 'pending'
     ORDER BY
         c.priority, c.calling_name, m.last_name;
 ";
@@ -97,10 +100,11 @@ while ($row = $result->fetch_assoc()) {
     // If there is a member in this calling, add them to the members array
     if ($row['member_id']) {
         $callings_data[$calling_id]['members'][] = [
-            'member_id' => $row['member_id'],
-            'first_name' => $row['first_name'],
-            'last_name' => $row['last_name'],
-            'date_set_apart' => $row['date_set_apart']
+            'member_id'      => $row['member_id'],
+            'first_name'     => $row['first_name'],
+            'last_name'      => $row['last_name'],
+            'date_set_apart' => $row['date_set_apart'],
+            'pending_release' => (bool)$row['pending_release']
         ];
     }
 }
