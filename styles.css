@@ -465,11 +465,6 @@ body {
     font-weight: bold;
 }
 
-/* Checkbox styling for considering checkboxes */
-.considering-checkbox {
-    margin-left: 8px;
-    cursor: pointer;
-}
 
 /* Legend Key Styling */
 .legend-key {

@@ -1388,7 +1388,6 @@ function renderBoxes(groupedData) {
             return `
                 <div class="box-title" data-calling-id="${calling.callingId}" data-title="${calling.callingName}">
                     ${indicatorHtml} <span class="calling-name ${calling.considering ? 'considering' : ''}">${calling.callingName}</span>
-                    <input type="checkbox" class="considering-checkbox" data-calling-id="${calling.callingId}" ${calling.considering ? 'checked' : ''} onchange="toggleCallingConsidering(this, event)" onclick="event.stopPropagation()">
                 </div>
                 <div class="box-content">
                     ${membersHtml}
@@ -5764,64 +5763,6 @@ function saveCallingHistory() {
     });
 }
 
-// Function to handle considering checkbox changes
-function toggleCallingConsidering(checkbox, event) {
-    // Stop the event from bubbling up to prevent modal from opening
-    if (event) {
-        event.stopPropagation();
-        event.preventDefault();
-    }
-
-    const callingId = checkbox.getAttribute('data-calling-id');
-    const considering = checkbox.checked;
-
-    // Find the calling name span to update styling
-    const callingNameSpan = checkbox.parentElement.querySelector('.calling-name');
-
-    // Update the UI immediately for responsiveness
-    if (considering) {
-        callingNameSpan.classList.add('considering');
-    } else {
-        callingNameSpan.classList.remove('considering');
-    }
-
-    // Send update to backend
-    fetch('update_calling_considering.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            calling_id: parseInt(callingId),
-            considering: considering
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (!data.success) {
-            // Revert the UI change if the backend failed
-            checkbox.checked = !considering;
-            if (considering) {
-                callingNameSpan.classList.remove('considering');
-            } else {
-                callingNameSpan.classList.add('considering');
-            }
-            console.error('Failed to update considering status:', data.error);
-            alert('Failed to update considering status. Please try again.');
-        }
-    })
-    .catch(error => {
-        // Revert the UI change if the request failed
-        checkbox.checked = !considering;
-        if (considering) {
-            callingNameSpan.classList.remove('considering');
-        } else {
-            callingNameSpan.classList.add('considering');
-        }
-        console.error('Error updating considering status:', error);
-        alert('Error updating considering status. Please try again.');
-    });
-}
 
 // ============================================
 // Add New Calling to Process Modal Functions
