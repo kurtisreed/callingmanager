@@ -452,18 +452,10 @@ body {
     vertical-align: middle;
 }
 
-.release-indicator {
-    display: inline-block;
-    background: #e53935;
-    color: #fff;
-    font-size: 9px;
-    font-weight: 700;
-    padding: 1px 5px;
-    border-radius: 10px;
+.release-symbol {
+    font-size: 13px;
     vertical-align: middle;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-left: 4px;
+    margin-left: 3px;
 }
 
 /* Considering styling */
