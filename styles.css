@@ -461,7 +461,6 @@ body {
 /* Considering styling */
 .calling-name.considering {
     color: orange;
-    text-decoration: underline;
     font-weight: bold;
 }
 
