@@ -46,12 +46,12 @@ try {
                 c.calling_name,
                 ch.approximate_period,
                 ch.notes,
-                ch.added_date AS sort_date
+                NULL AS sort_date
             FROM calling_history ch
             JOIN callings c ON ch.calling_id = c.calling_id
             WHERE ch.member_id = ?
         ) AS combined
-        ORDER BY sort_date DESC
+        ORDER BY sort_date IS NULL ASC, sort_date DESC
     ";
 
     $stmt = $conn->prepare($sql);
