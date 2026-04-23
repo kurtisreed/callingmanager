@@ -1372,7 +1372,10 @@ function renderBoxes(groupedData) {
                 const releaseTag = member.pending_release
                     ? ` <span class="release-symbol">🚢</span>`
                     : '';
-                return `<div data-member-id="${member.member_id}">     - ${releaseTag}${member.first_name} ${member.last_name} (${member.date_set_apart})</div>`;
+                const nameHtml = member.pending_release
+                    ? `<span style="color: red;">${member.first_name} ${member.last_name} (${member.date_set_apart})</span>`
+                    : `${member.first_name} ${member.last_name} (${member.date_set_apart})`;
+                return `<div data-member-id="${member.member_id}">     - ${releaseTag}${nameHtml}</div>`;
             }).join('') || `<div style="font-style: italic;color: red;">     - (Vacant)</div>`;
 
             let indicatorHtml = '';
