@@ -3659,7 +3659,10 @@ function displayCallingProcessTable(processes, statusFilter) {
             <tbody>${callingsRows}</tbody>
         </table>
 
-        <div class="section-header" style="margin-top: 24px;">
+        <div style="margin-bottom: 8px; margin-top: 24px;">
+            <button class="action-btn save-btn" onclick="openAddReleaseOnlyModal()">+ Add Release Only</button>
+        </div>
+        <div class="section-header">
             <h3>Releases</h3>
         </div>
         <table class="detail-table releases-table" id="releases-table">
@@ -6243,5 +6246,182 @@ function removeReleaseProcess(id) {
         }
     })
     .catch(() => alert('Network error removing release.'));
+}
+
+// ─── Add Release Only Modal ───────────────────────────────────────────────────
+
+let allAddReleaseOnlyMembers = [];
+
+function openAddReleaseOnlyModal() {
+    const modal = document.getElementById('add-release-only-modal');
+    const overlay = document.getElementById('add-release-only-overlay');
+    modal.style.display = 'block';
+    overlay.style.display = 'block';
+
+    // Reset state
+    document.getElementById('add-release-only-member-search').value = '';
+    document.getElementById('add-release-only-callings-container').innerHTML = '';
+    document.getElementById('add-release-only-actions').style.display = 'none';
+    document.getElementById('add-release-only-response').innerHTML = '';
+    hideAddReleaseOnlyMemberDropdown();
+
+    // Set up search input listener (once)
+    const searchInput = document.getElementById('add-release-only-member-search');
+    if (!searchInput.hasAttribute('data-listener-added')) {
+        searchInput.addEventListener('input', filterAddReleaseOnlyMembers);
+        searchInput.addEventListener('blur', function () {
+            setTimeout(hideAddReleaseOnlyMemberDropdown, 150);
+        });
+        searchInput.setAttribute('data-listener-added', 'true');
+    }
+
+    // Fetch member list
+    fetch('get_members.php')
+        .then(r => r.json())
+        .then(data => { allAddReleaseOnlyMembers = data; })
+        .catch(() => { allAddReleaseOnlyMembers = []; });
+}
+
+function closeAddReleaseOnlyModal() {
+    document.getElementById('add-release-only-modal').style.display = 'none';
+    document.getElementById('add-release-only-overlay').style.display = 'none';
+    document.getElementById('add-release-only-member-search').value = '';
+    document.getElementById('add-release-only-callings-container').innerHTML = '';
+    document.getElementById('add-release-only-actions').style.display = 'none';
+    document.getElementById('add-release-only-response').innerHTML = '';
+    hideAddReleaseOnlyMemberDropdown();
+}
+
+function filterAddReleaseOnlyMembers() {
+    const searchTerm = document.getElementById('add-release-only-member-search').value.toLowerCase().trim();
+    if (!searchTerm) { hideAddReleaseOnlyMemberDropdown(); return; }
+
+    const filtered = allAddReleaseOnlyMembers.filter(m => {
+        const first = m.first_name.toLowerCase();
+        const last  = m.last_name.toLowerCase();
+        return first.includes(searchTerm) || last.includes(searchTerm) || `${first} ${last}`.includes(searchTerm);
+    });
+
+    showAddReleaseOnlyMemberDropdown(filtered);
+}
+
+function showAddReleaseOnlyMemberDropdown(members) {
+    const dropdown = document.getElementById('add-release-only-member-dropdown');
+    if (!dropdown) return;
+    dropdown.innerHTML = '';
+
+    if (members.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'member-autocomplete-item no-results';
+        noResults.textContent = 'No members found';
+        dropdown.appendChild(noResults);
+        dropdown.style.display = 'block';
+        return;
+    }
+
+    members.forEach(member => {
+        const item = document.createElement('div');
+        item.className = 'member-autocomplete-item';
+        item.textContent = `${member.first_name} ${member.last_name}`;
+        item.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            selectAddReleaseOnlyMember(member.member_id, `${member.first_name} ${member.last_name}`);
+        });
+        dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = 'block';
+}
+
+function hideAddReleaseOnlyMemberDropdown() {
+    const dropdown = document.getElementById('add-release-only-member-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function selectAddReleaseOnlyMember(memberId, memberName) {
+    document.getElementById('add-release-only-member-search').value = memberName;
+    hideAddReleaseOnlyMemberDropdown();
+    loadAddReleaseOnlyCallings(memberId);
+}
+
+function loadAddReleaseOnlyCallings(memberId) {
+    const container = document.getElementById('add-release-only-callings-container');
+    container.innerHTML = '<p>Loading callings...</p>';
+    document.getElementById('add-release-only-actions').style.display = 'none';
+
+    fetch(`get_member_callings.php?member_id=${encodeURIComponent(memberId)}`)
+        .then(r => r.json())
+        .then(callings => {
+            if (!callings.length) {
+                container.innerHTML = '<p style="color:#666;">This member has no callings on record.</p>';
+                return;
+            }
+
+            const rows = callings.map(c => {
+                const isActive = !c.date_released;
+                const checked  = isActive ? 'checked' : '';
+                const status   = isActive ? '<span style="color:#2e7d32; font-weight:600;">Active</span>'
+                                          : '<span style="color:#999;">Released</span>';
+                return `
+                    <tr>
+                        <td>${c.calling_name}</td>
+                        <td>${status}</td>
+                        <td style="text-align:center;">
+                            <input type="checkbox" class="add-release-only-checkbox"
+                                   value="${c.id}" ${checked}>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="section-header"><h3>Member's Callings</h3></div>
+                <table class="detail-table" style="margin-top:8px;">
+                    <thead>
+                        <tr>
+                            <th>Calling</th>
+                            <th>Status</th>
+                            <th style="text-align:center;">Release?</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+
+            document.getElementById('add-release-only-actions').style.display = 'flex';
+        })
+        .catch(() => {
+            container.innerHTML = '<p style="color:red;">Error loading callings. Please try again.</p>';
+        });
+}
+
+function saveAddReleaseOnly() {
+    const checked = document.querySelectorAll('.add-release-only-checkbox:checked');
+    const recordIds = Array.from(checked).map(cb => parseInt(cb.value));
+
+    if (recordIds.length === 0) {
+        closeAddReleaseOnlyModal();
+        return;
+    }
+
+    fetch('add_release_process.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ record_ids: recordIds })
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            closeAddReleaseOnlyModal();
+            fetchAndDisplayReleases();
+        } else {
+            document.getElementById('add-release-only-response').innerHTML =
+                `<p style="color:red;">${result.message || 'Error saving releases.'}</p>`;
+        }
+    })
+    .catch(() => {
+        document.getElementById('add-release-only-response').innerHTML =
+            '<p style="color:red;">Network error. Please try again.</p>';
+    });
 }
 

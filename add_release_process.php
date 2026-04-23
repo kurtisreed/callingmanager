@@ -8,17 +8,18 @@ require_once 'db_connect.php';
 try {
     $input = json_decode(file_get_contents('php://input'), true);
 
-    if (!isset($input['member_id'], $input['calling_id'], $input['record_ids']) || !is_array($input['record_ids'])) {
+    if (!isset($input['record_ids']) || !is_array($input['record_ids'])) {
         echo json_encode(['success' => false, 'message' => 'Missing required fields.']);
         exit;
     }
 
-    $member_id  = (int) $input['member_id'];
-    $calling_id = (int) $input['calling_id'];
+    // member_id and calling_id are optional context (null for release-only entries)
+    $member_id  = isset($input['member_id'])  && $input['member_id']  ? (int) $input['member_id']  : null;
+    $calling_id = isset($input['calling_id']) && $input['calling_id'] ? (int) $input['calling_id'] : null;
     $record_ids = array_map('intval', $input['record_ids']);
 
-    if ($member_id <= 0 || $calling_id <= 0 || empty($record_ids)) {
-        echo json_encode(['success' => false, 'message' => 'Invalid input values.']);
+    if (empty($record_ids)) {
+        echo json_encode(['success' => false, 'message' => 'No records to add.']);
         exit;
     }
 
@@ -46,7 +47,7 @@ try {
     $inserted = 0;
     foreach ($record_ids as $record_id) {
         if (in_array($record_id, $existing)) {
-            continue; // skip duplicate
+            continue;
         }
         $insert_stmt->bind_param('iiis', $record_id, $member_id, $calling_id, $today);
         if ($insert_stmt->execute()) {

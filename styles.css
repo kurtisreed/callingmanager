@@ -1024,6 +1024,30 @@ table td input[type="checkbox"] {
     overflow-y: auto;
 }
 
+#add-release-only-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    z-index: 1000;
+    width: 640px;
+    display: none;
+    /* No overflow-y here — dropdown must not be clipped */
+}
+
+#add-release-only-callings-scroll {
+    max-height: 45vh;
+    overflow-y: auto;
+}
+
+#add-release-only-modal h2 {
+    padding-right: 80px;
+}
+
 #add-process-modal .modal-content {
     background-color: #fff;
     padding: 20px;
@@ -1623,7 +1647,7 @@ textarea:focus {
     border-radius: 0 0 4px 4px;
     max-height: 260px;
     overflow-y: auto;
-    z-index: 1000;
+    z-index: 1100;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
@@ -2457,7 +2481,8 @@ textarea:focus {
     #review-changes-modal,
     #finalize-calling-modal,
     #add-process-modal,
-    #pending-releases-modal {
+    #pending-releases-modal,
+    #add-release-only-modal {
         width: 95vw !important;
         max-width: 500px;
         max-height: 90vh;

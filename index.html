@@ -20,6 +20,7 @@
     <div class="overlay" id="finalize-calling-overlay" onclick="closeFinalizeCallingModal()"></div>
     <div class="overlay" id="add-process-overlay" onclick="closeAddProcessModal()"></div>
     <div class="overlay" id="pending-releases-overlay" onclick="closePendingReleasesModal()"></div>
+    <div class="overlay" id="add-release-only-overlay" onclick="closeAddReleaseOnlyModal()"></div>
 
 
     <div id="auth-container">
@@ -614,6 +615,30 @@
     </div>
 </div>
 
+
+<!-- Add Release Only Modal -->
+<div id="add-release-only-modal">
+    <div class="modal-content" style="position: relative;">
+        <button class="close-btn" onclick="closeAddReleaseOnlyModal()">✕ Close</button>
+        <h2>Add Release Only</h2>
+
+        <label for="add-release-only-member-search">Search Members:</label>
+        <div style="position: relative;">
+            <input type="text" id="add-release-only-member-search" placeholder="Type name to search..." autocomplete="off" />
+            <div id="add-release-only-member-dropdown" class="member-autocomplete-dropdown" style="display: none;"></div>
+        </div>
+
+        <div id="add-release-only-callings-scroll" style="margin-top: 16px;">
+            <div id="add-release-only-callings-container"></div>
+        </div>
+
+        <div class="action-buttons" style="margin-top: 24px; display: none;" id="add-release-only-actions">
+            <button class="action-btn save-btn" onclick="saveAddReleaseOnly()">Save Releases</button>
+            <button class="action-btn cancel-btn" onclick="closeAddReleaseOnlyModal()">Cancel</button>
+        </div>
+        <div id="add-release-only-response"></div>
+    </div>
+</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="client-validation.js"></script>
