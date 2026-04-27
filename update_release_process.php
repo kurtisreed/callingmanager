@@ -68,6 +68,27 @@ try {
         $release_stmt->close();
     }
 
+    // If all 5 steps are now complete, mark the record as released
+    $check_stmt = $conn->prepare(
+        "SELECT id FROM release_process
+         WHERE id = ?
+           AND approved_date IS NOT NULL
+           AND leader_notified_date IS NOT NULL
+           AND interviewed_date IS NOT NULL
+           AND announced_date IS NOT NULL
+           AND lcr_date IS NOT NULL"
+    );
+    $check_stmt->bind_param('i', $id);
+    $check_stmt->execute();
+    $check_result = $check_stmt->get_result();
+    if ($check_result->num_rows > 0) {
+        $done_stmt = $conn->prepare("UPDATE release_process SET status = 'released' WHERE id = ?");
+        $done_stmt->bind_param('i', $id);
+        $done_stmt->execute();
+        $done_stmt->close();
+    }
+    $check_stmt->close();
+
     $conn->commit();
     echo json_encode(['success' => true]);
 
