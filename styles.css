@@ -2329,12 +2329,14 @@ textarea:focus {
     line-height: 1.2;
 }
 
-.editable-date {
+.editable-date,
+.editable-release-date {
     cursor: pointer;
     transition: color 0.2s ease;
 }
 
-.editable-date:hover {
+.editable-date:hover,
+.editable-release-date:hover {
     color: #0c2238;
     text-decoration: underline;
 }
