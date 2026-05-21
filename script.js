@@ -2792,8 +2792,8 @@ function addProcessActionListeners() {
 
 let _editStepDateContext = null;
 
-function openEditStepDateModal(processId, dateField, currentDate, stepStatus, currentProcessStatus, stepLabel) {
-    _editStepDateContext = { processId, dateField, stepStatus, currentProcessStatus };
+function openEditStepDateModal(processId, dateField, currentDate, stepStatus, currentProcessStatus, stepLabel, type = 'calling', releaseId = null) {
+    _editStepDateContext = { type, processId, releaseId, dateField, stepStatus, currentProcessStatus };
 
     document.getElementById('edit-step-date-title').textContent = `Edit Step: ${stepLabel}`;
     document.getElementById('edit-step-date-input').value = currentDate;
@@ -2811,7 +2811,7 @@ function closeEditStepDateModal() {
 
 function saveEditStepDate() {
     if (!_editStepDateContext) return;
-    const { processId, stepStatus, currentProcessStatus } = _editStepDateContext;
+    const { type, processId, releaseId, stepStatus, currentProcessStatus } = _editStepDateContext;
     const newDate = document.getElementById('edit-step-date-input').value;
 
     if (!newDate) {
@@ -2820,23 +2820,23 @@ function saveEditStepDate() {
         return;
     }
 
-    fetch('update_calling_process.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            id: processId,
-            status: stepStatus,
-            date: newDate,
-            preserve_status: true,
-            actual_status: currentProcessStatus
-        })
-    })
+    const isRelease = type === 'release';
+    const url  = isRelease ? 'update_release_process.php' : 'update_calling_process.php';
+    const body = isRelease
+        ? { id: releaseId, step: stepStatus, date: newDate }
+        : { id: processId, status: stepStatus, date: newDate, preserve_status: true, actual_status: currentProcessStatus };
+
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     .then(r => r.json())
     .then(data => {
         if (data.success) {
             closeEditStepDateModal();
-            fetchProcessStats();
-            fetchCallingProcesses();
+            if (isRelease) {
+                fetchAndDisplayReleases();
+            } else {
+                fetchProcessStats();
+                fetchCallingProcesses();
+            }
         } else {
             document.getElementById('edit-step-date-response').innerHTML =
                 `<p style="color:red;">${data.message || 'Error saving date.'}</p>`;
@@ -2850,25 +2850,28 @@ function saveEditStepDate() {
 
 function revertProcessStep() {
     if (!_editStepDateContext) return;
-    const { processId, stepStatus } = _editStepDateContext;
+    const { type, processId, releaseId, stepStatus } = _editStepDateContext;
+    const stepName = document.getElementById('edit-step-date-title').textContent.replace('Edit Step: ', '');
 
-    if (!confirm(`Are you sure you want to revert the "${document.getElementById('edit-step-date-title').textContent.replace('Edit Step: ', '')}" step? The date will be cleared.`)) return;
+    if (!confirm(`Are you sure you want to revert the "${stepName}" step? The date will be cleared.`)) return;
 
-    fetch('update_calling_process.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            id: processId,
-            status: stepStatus,
-            revert: true
-        })
-    })
+    const isRelease = type === 'release';
+    const url  = isRelease ? 'update_release_process.php' : 'update_calling_process.php';
+    const body = isRelease
+        ? { id: releaseId, step: stepStatus, revert: true }
+        : { id: processId, status: stepStatus, revert: true };
+
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     .then(r => r.json())
     .then(data => {
         if (data.success) {
             closeEditStepDateModal();
-            fetchProcessStats();
-            fetchCallingProcesses();
+            if (isRelease) {
+                fetchAndDisplayReleases();
+            } else {
+                fetchProcessStats();
+                fetchCallingProcesses();
+            }
         } else {
             document.getElementById('edit-step-date-response').innerHTML =
                 `<p style="color:red;">${data.message || 'Error reverting step.'}</p>`;
@@ -3760,7 +3763,12 @@ function createReleaseProgressIndicator(release) {
                     <div class="progress-step ${stepClass}" ${clickAttrs}>
                         <div class="step-icon">${isCompleted ? '✓' : '○'}</div>
                         <div class="step-label">${stepLabels[index]}</div>
-                        ${formatted ? `<div class="step-date">${formatted}</div>` : ''}
+                        ${formatted ? `<div class="step-date editable-release-date"
+                                           data-release-id="${release.id}"
+                                           data-step="${step}"
+                                           data-current-date="${stepDate}"
+                                           data-step-label="${stepLabels[index]}"
+                                           title="Click to edit date">${formatted}</div>` : ''}
                     </div>
                 `;
             }).join('<div class="step-connector"></div>')}
@@ -3813,6 +3821,23 @@ function fetchAndDisplayReleases() {
                         }
                     })
                     .catch(() => alert('Network error updating step.'));
+                });
+            });
+
+            // Wire up click-to-edit on completed release step dates
+            tbody.querySelectorAll('.editable-release-date').forEach(dateEl => {
+                dateEl.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    openEditStepDateModal(
+                        null,
+                        null,
+                        this.dataset.currentDate,
+                        this.dataset.step,
+                        null,
+                        this.dataset.stepLabel,
+                        'release',
+                        parseInt(this.dataset.releaseId)
+                    );
                 });
             });
         })
