@@ -17,14 +17,20 @@ if (!$data) {
     exit;
 }
 
-$id = $data['id'] ?? null;
-$status = $data['status'] ?? null;
-$date = $data['date'] ?? null;
+$id             = $data['id']             ?? null;
+$status         = $data['status']         ?? null;
+$date           = $data['date']           ?? null;
 $preserve_status = $data['preserve_status'] ?? false;
-$actual_status = $data['actual_status'] ?? null;
+$actual_status  = $data['actual_status']  ?? null;
+$revert         = $data['revert']         ?? false;
 
-if (!$id || !$status || !$date) {
+if (!$id || !$status) {
     echo json_encode(['success' => false, 'message' => 'Missing required fields']);
+    exit;
+}
+
+if (!$revert && !$date) {
+    echo json_encode(['success' => false, 'message' => 'Missing date']);
     exit;
 }
 
@@ -41,8 +47,8 @@ if ($preserve_status && $actual_status && !in_array($actual_status, $validStatus
     exit;
 }
 
-// Validate date format
-if (!DateTime::createFromFormat('Y-m-d', $date)) {
+// Validate date format (only when not reverting)
+if (!$revert && !DateTime::createFromFormat('Y-m-d', $date)) {
     echo json_encode(['success' => false, 'message' => 'Invalid date format']);
     exit;
 }
@@ -78,19 +84,59 @@ try {
             throw new Exception("Invalid status provided");
     }
     
-    // Determine which status to use for the update
-    $statusToUpdate = $preserve_status && $actual_status ? $actual_status : $status;
+    if ($revert) {
+        // Clear the date field for this step
+        $revertSql = "UPDATE calling_process SET $dateField = NULL WHERE id = ?";
+        $stmt = $conn->prepare($revertSql);
+        $stmt->bind_param("i", $id);
+        if (!$stmt->execute()) {
+            throw new Exception("Failed to revert step: " . $stmt->error);
+        }
+        $stmt->close();
 
-    $updateSql = "UPDATE calling_process SET status = ?, $dateField = ? WHERE id = ?";
-    $stmt = $conn->prepare($updateSql);
-    $stmt->bind_param("ssi", $statusToUpdate, $date, $id);
+        // Recalculate status — find the last step that still has a date
+        $row = $conn->query("SELECT approved_date, leader_notified_date, interviewed_date,
+                                     sustained_date, set_apart_date, lcr_date
+                              FROM calling_process WHERE id = $id")->fetch_assoc();
 
-    if (!$stmt->execute()) {
-        throw new Exception("Failed to update calling process: " . $stmt->error);
-    }
-    
-    if ($stmt->affected_rows === 0) {
-        throw new Exception("No calling process found with that ID");
+        $stepOrder = ['lcr', 'set_apart', 'sustained', 'interviewed', 'leader_notified', 'approved'];
+        $fieldMap  = [
+            'lcr'            => 'lcr_date',
+            'set_apart'      => 'set_apart_date',
+            'sustained'      => 'sustained_date',
+            'interviewed'    => 'interviewed_date',
+            'leader_notified'=> 'leader_notified_date',
+            'approved'       => 'approved_date',
+        ];
+        $newStatus = 'approved'; // fallback
+        foreach ($stepOrder as $s) {
+            if (!empty($row[$fieldMap[$s]])) {
+                $newStatus = $s;
+                break;
+            }
+        }
+
+        $statusStmt = $conn->prepare("UPDATE calling_process SET status = ? WHERE id = ?");
+        $statusStmt->bind_param("si", $newStatus, $id);
+        $statusStmt->execute();
+        $statusStmt->close();
+
+    } else {
+        // Determine which status to use for the update
+        $statusToUpdate = $preserve_status && $actual_status ? $actual_status : $status;
+
+        $updateSql = "UPDATE calling_process SET status = ?, $dateField = ? WHERE id = ?";
+        $stmt = $conn->prepare($updateSql);
+        $stmt->bind_param("ssi", $statusToUpdate, $date, $id);
+
+        if (!$stmt->execute()) {
+            throw new Exception("Failed to update calling process: " . $stmt->error);
+        }
+
+        if ($stmt->affected_rows === 0) {
+            throw new Exception("No calling process found with that ID");
+        }
+        $stmt->close();
     }
     
     $conn->commit();

@@ -2788,53 +2788,101 @@ function addProcessActionListeners() {
     });
 }
 
-// Function to edit a process date
-function editProcessDate(processId, dateField, currentDate, stepStatus, currentProcessStatus, stepLabel) {
-    // Prompt user for new date
-    const newDate = prompt(`Edit date for ${stepLabel}:\n(Format: YYYY-MM-DD)`, currentDate);
+// ─── Edit Step Date Modal ─────────────────────────────────────────────────────
 
-    if (newDate === null) {
-        // User cancelled
+let _editStepDateContext = null;
+
+function openEditStepDateModal(processId, dateField, currentDate, stepStatus, currentProcessStatus, stepLabel) {
+    _editStepDateContext = { processId, dateField, stepStatus, currentProcessStatus };
+
+    document.getElementById('edit-step-date-title').textContent = `Edit Step: ${stepLabel}`;
+    document.getElementById('edit-step-date-input').value = currentDate;
+    document.getElementById('edit-step-date-response').innerHTML = '';
+    document.getElementById('edit-step-date-modal').style.display = 'block';
+    document.getElementById('edit-step-date-overlay').style.display = 'block';
+}
+
+function closeEditStepDateModal() {
+    document.getElementById('edit-step-date-modal').style.display = 'none';
+    document.getElementById('edit-step-date-overlay').style.display = 'none';
+    document.getElementById('edit-step-date-response').innerHTML = '';
+    _editStepDateContext = null;
+}
+
+function saveEditStepDate() {
+    if (!_editStepDateContext) return;
+    const { processId, stepStatus, currentProcessStatus } = _editStepDateContext;
+    const newDate = document.getElementById('edit-step-date-input').value;
+
+    if (!newDate) {
+        document.getElementById('edit-step-date-response').innerHTML =
+            '<p style="color:red;">Please select a date.</p>';
         return;
     }
 
-    // Validate date format
-    if (!newDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        alert('Invalid date format. Please use YYYY-MM-DD format.');
-        return;
-    }
-
-    // Update the date - use stepStatus for which date field to update,
-    // but currentProcessStatus to preserve the actual process status
     fetch('update_calling_process.php', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             id: processId,
             status: stepStatus,
             date: newDate,
-            preserve_status: true, // Flag to tell PHP not to change the actual status
-            actual_status: currentProcessStatus // Pass the actual current status
+            preserve_status: true,
+            actual_status: currentProcessStatus
         })
     })
-    .then(response => response.json())
+    .then(r => r.json())
     .then(data => {
         if (data.success) {
-            // Refresh the dashboard
+            closeEditStepDateModal();
             fetchProcessStats();
-
-            // If we're currently showing a process detail view, refresh the table
             fetchCallingProcesses();
         } else {
-            alert('Error updating date: ' + data.message);
+            document.getElementById('edit-step-date-response').innerHTML =
+                `<p style="color:red;">${data.message || 'Error saving date.'}</p>`;
         }
     })
-    .catch(error => {
-        console.error('Error updating date:', error);
-        alert('An error occurred while updating the date.');
+    .catch(() => {
+        document.getElementById('edit-step-date-response').innerHTML =
+            '<p style="color:red;">Network error. Please try again.</p>';
     });
+}
+
+function revertProcessStep() {
+    if (!_editStepDateContext) return;
+    const { processId, stepStatus } = _editStepDateContext;
+
+    if (!confirm(`Are you sure you want to revert the "${document.getElementById('edit-step-date-title').textContent.replace('Edit Step: ', '')}" step? The date will be cleared.`)) return;
+
+    fetch('update_calling_process.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            id: processId,
+            status: stepStatus,
+            revert: true
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            closeEditStepDateModal();
+            fetchProcessStats();
+            fetchCallingProcesses();
+        } else {
+            document.getElementById('edit-step-date-response').innerHTML =
+                `<p style="color:red;">${data.message || 'Error reverting step.'}</p>`;
+        }
+    })
+    .catch(() => {
+        document.getElementById('edit-step-date-response').innerHTML =
+            '<p style="color:red;">Network error. Please try again.</p>';
+    });
+}
+
+// Legacy alias — replaced by modal
+function editProcessDate(processId, dateField, currentDate, stepStatus, currentProcessStatus, stepLabel) {
+    openEditStepDateModal(processId, dateField, currentDate, stepStatus, currentProcessStatus, stepLabel);
 }
 
 // Returns true if all 6 steps have a date set

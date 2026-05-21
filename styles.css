@@ -1039,6 +1039,25 @@ table td input[type="checkbox"] {
     /* No overflow-y here — dropdown must not be clipped */
 }
 
+#edit-step-date-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    padding: 24px;
+    z-index: 1000;
+    width: 380px;
+    display: none;
+}
+
+#edit-step-date-modal h2 {
+    padding-right: 60px;
+    margin-bottom: 16px;
+}
+
 #add-release-only-callings-scroll {
     max-height: 45vh;
     overflow-y: auto;
@@ -2482,7 +2501,8 @@ textarea:focus {
     #finalize-calling-modal,
     #add-process-modal,
     #pending-releases-modal,
-    #add-release-only-modal {
+    #add-release-only-modal,
+    #edit-step-date-modal {
         width: 95vw !important;
         max-width: 500px;
         max-height: 90vh;

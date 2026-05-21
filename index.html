@@ -21,6 +21,7 @@
     <div class="overlay" id="add-process-overlay" onclick="closeAddProcessModal()"></div>
     <div class="overlay" id="pending-releases-overlay" onclick="closePendingReleasesModal()"></div>
     <div class="overlay" id="add-release-only-overlay" onclick="closeAddReleaseOnlyModal()"></div>
+    <div class="overlay" id="edit-step-date-overlay" onclick="closeEditStepDateModal()"></div>
 
 
     <div id="auth-container">
@@ -618,6 +619,22 @@
     </div>
 </div>
 
+
+<!-- Edit Step Date Modal -->
+<div id="edit-step-date-modal">
+    <button class="close-btn" onclick="closeEditStepDateModal()">✕ Close</button>
+    <h2 id="edit-step-date-title">Edit Step Date</h2>
+
+    <label for="edit-step-date-input">Date:</label>
+    <input type="date" id="edit-step-date-input" style="display: block; width: 100%; margin-top: 6px; margin-bottom: 20px; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px;" />
+
+    <div class="action-buttons">
+        <button class="action-btn save-btn" onclick="saveEditStepDate()">Save Date</button>
+        <button class="action-btn remove-btn" onclick="revertProcessStep()">Revert Step</button>
+        <button class="action-btn cancel-btn" onclick="closeEditStepDateModal()">Cancel</button>
+    </div>
+    <div id="edit-step-date-response" style="margin-top: 12px;"></div>
+</div>
 
 <!-- Add Release Only Modal -->
 <div id="add-release-only-modal">
