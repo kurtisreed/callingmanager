@@ -1,16 +1,10 @@
 <?php
+// Require authentication (also hardens the session and enforces CSRF)
+require_once __DIR__ . '/auth_required.php';
+logUserActivity('create_calling', ['risk_level' => 'high', 'file' => 'create_calling.php']);
+
 header('Content-Type: application/json');
-
-// Start session and check authentication
-session_start();
 require_once 'db_connect.php';
-
-// Simple authentication check
-if (!isset($_SESSION['authenticated']) || $_SESSION['authenticated'] !== true) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Authentication required']);
-    exit;
-}
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

@@ -1,5 +1,11 @@
 <?php
-// Script to create the calling_history table
+// Script to create the calling_history table.
+// CLI-ONLY: performs DDL (CREATE TABLE) and must not be reachable over the web.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('This setup script can only be run from the command line.');
+}
+
 require_once 'db_connect.php';
 
 $sql = "CREATE TABLE IF NOT EXISTS calling_history (

@@ -42,9 +42,9 @@ Options -Indexes
     </IfModule>
 </FilesMatch>
 
-# Migration scripts are CLI-only maintenance tools; block them from the web
-# as defense-in-depth (they also self-guard against non-CLI execution).
-<FilesMatch "^migrate_.*\.php$">
+# Migration/setup scripts are CLI-only maintenance tools; block them from the
+# web as defense-in-depth (they also self-guard against non-CLI execution).
+<FilesMatch "^(migrate_.*|create_calling_history_table)\.php$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>

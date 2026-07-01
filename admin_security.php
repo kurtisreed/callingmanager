@@ -10,19 +10,11 @@ logUserActivity('admin_admin_security', ['risk_level' => 'admin', 'file' => 'adm
  * Monitor authentication attempts and rate limiting
  */
 
-// Start session and check authentication
-session_start();
-
-// Load dependencies
+// Session is already started and authentication enforced by auth_required.php
+// above. Load remaining dependencies.
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db_connect.php';
 require_once __DIR__ . '/RateLimiter.php';
-
-// Simple authentication check (in production, implement proper admin authentication)
-if (!isset($_SESSION['authenticated']) || $_SESSION['authenticated'] !== true) {
-    http_response_code(401);
-    die('Unauthorized access. Please log in first.');
-}
 
 // Initialize rate limiter
 try {

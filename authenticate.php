@@ -1,5 +1,6 @@
 <?php
-session_start();
+// Harden and start the session, and load CSRF helpers
+require_once __DIR__ . '/session_bootstrap.php';
 
 // Load configuration and dependencies
 require_once __DIR__ . '/config.php';
@@ -69,13 +70,20 @@ if (empty($entered_pin) || !is_string($entered_pin)) {
 if ($entered_pin === $correct_pin) {
     // SUCCESS: Reset rate limiting and set session
     $rateLimiter->resetAttempts($client_ip);
-    
+
+    // Prevent session fixation: issue a fresh session ID on privilege change
+    session_regenerate_id(true);
+
     $_SESSION['authenticated'] = true;
     $_SESSION['login_time'] = time();
     $_SESSION['user_ip'] = $client_ip;
-    
+
+    // Issue a fresh CSRF token for this authenticated session and hand it to
+    // the client so it can attach it to subsequent state-changing requests.
+    $csrf_token = csrf_rotate();
+
     error_log("Successful authentication from IP: $client_ip");
-    echo json_encode(['success' => true]);
+    echo json_encode(['success' => true, 'csrf_token' => $csrf_token]);
     
 } else {
     // FAILURE: Record failed attempt

@@ -27,11 +27,16 @@ $columnsToUpdate = [
     'priority' => 'priority'
 ];
 
-// Construct the update query with sanitized values
+// Build a parameterized update. Column names come from the whitelist above
+// (never from user input); all values are bound as prepared-statement params.
 $updates = [];
+$params  = [];
+$types   = '';
 foreach ($columnsToUpdate as $inputKey => $dbColumn) {
     if (isset($data[$inputKey])) {
-        $updates[] = "$dbColumn = '" . $conn->real_escape_string($data[$inputKey]) . "'";
+        $updates[] = "$dbColumn = ?";
+        $params[]  = $data[$inputKey];
+        $types    .= 's';
     }
 }
 
@@ -40,15 +45,25 @@ if (empty($updates)) {
     exit;
 }
 
-$updateQuery = implode(', ', $updates);
-$sql = "UPDATE callings SET $updateQuery WHERE calling_id = '" . $conn->real_escape_string($callingId) . "'";
+$sql = "UPDATE callings SET " . implode(', ', $updates) . " WHERE calling_id = ?";
+$params[] = $callingId;
+$types   .= 'i';
 
-// Execute the update query
-if ($conn->query($sql) === TRUE) {
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    error_log('update_calling prepare failed: ' . $conn->error);
+    echo json_encode(['success' => false, 'message' => 'Database error']);
+    exit;
+}
+$stmt->bind_param($types, ...$params);
+
+if ($stmt->execute()) {
     echo json_encode(['success' => true]);
 } else {
-    echo json_encode(['success' => false, 'message' => $conn->error]);
+    error_log('update_calling execute failed: ' . $stmt->error);
+    echo json_encode(['success' => false, 'message' => 'Update failed']);
 }
 
+$stmt->close();
 $conn->close();
 ?>

@@ -1,8 +1,8 @@
 <?php
 header('Content-Type: application/json');
 
-// Start session
-session_start();
+// Harden and start the session (matches cookie params used at login)
+require_once __DIR__ . '/session_bootstrap.php';
 
 try {
     // Destroy the session

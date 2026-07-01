@@ -6,10 +6,8 @@
  * Usage: require_once __DIR__ . '/auth_required.php';
  */
 
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// Harden and start the session, and load CSRF helpers
+require_once __DIR__ . '/session_bootstrap.php';
 
 // Load configuration
 require_once __DIR__ . '/config.php';
@@ -188,6 +186,10 @@ if (!isset($skip_auto_auth) || !$skip_auto_auth) {
     }
     
     requireAuth($error_type);
+
+    // Enforce CSRF protection on all state-changing requests to protected
+    // endpoints (safe methods like GET are exempt).
+    csrf_require();
 }
 
 ?>

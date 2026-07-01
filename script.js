@@ -2,6 +2,8 @@
 function handleAuthenticationError(response) {
     if (response.status === 401) {
         alert('Your session has expired. Please log in again.');
+        // Invalidate the stored CSRF token
+        csrfToken = null;
         // Hide the main app content
         document.getElementById('app-content').style.display = 'none';
         // Show the authentication container
@@ -33,6 +35,8 @@ function logout() {
         method: 'POST'
     })
     .then(() => {
+        // Clear the stored CSRF token
+        csrfToken = null;
         // Always redirect to login regardless of response
         // Hide the main app content
         document.getElementById('app-content').style.display = 'none';
@@ -58,6 +62,10 @@ function logout() {
 // Store the original fetch function
 const originalFetch = window.fetch;
 
+// CSRF token for this authenticated session (set on successful login).
+let csrfToken = null;
+const CSRF_SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
 // Enhanced fetch wrapper that handles authentication
 function authenticatedFetch(url, options = {}) {
     return originalFetch(url, options)
@@ -70,9 +78,19 @@ function authenticatedFetch(url, options = {}) {
 }
 
 // Override the global fetch function to automatically handle authentication
+// and attach the CSRF token to state-changing requests.
 window.fetch = function(url, options = {}) {
-    // Only apply authentication handling to PHP endpoints (not external URLs)
+    // Only apply special handling to PHP endpoints (not external URLs)
     if (typeof url === 'string' && url.endsWith('.php')) {
+        const method = (options.method || 'GET').toUpperCase();
+
+        // Attach CSRF token to state-changing requests once we have one.
+        if (csrfToken && !CSRF_SAFE_METHODS.includes(method)) {
+            const headers = new Headers(options.headers || {});
+            headers.set('X-CSRF-Token', csrfToken);
+            options = Object.assign({}, options, { headers });
+        }
+
         return authenticatedFetch(url, options);
     }
     // For non-PHP URLs, use original fetch
@@ -5512,10 +5530,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                // Store the CSRF token for subsequent state-changing requests
+                csrfToken = data.csrf_token || null;
+
                 // Show the application content and hide the auth form
                 appContent.style.display = 'block';
                 document.getElementById('auth-container').style.display = 'none';
-                
+
                 // Initialize the application with data loading
                 initializeApplication();
             } else {
