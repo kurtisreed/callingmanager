@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# Calling Manager - web server hardening
+# ---------------------------------------------------------------------------
+
+# Never list directory contents
+Options -Indexes
+
+# Do not advertise the .env / config as a downloadable file, and hide dotfiles
+# (.env, .git, .htaccess, etc.) from the web entirely.
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Block environment files, database dumps, logs, backups, and other
+# sensitive/non-servable file types by extension or name.
+<FilesMatch "(^env$|\.env($|\..*)|\.(sql|log|bak|backup|old|tmp|ini|sh|md|example|dist)$)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Block direct HTTP access to PHP files that are includes/utilities only and
+# should never be requested on their own. (Endpoints like get_*.php,
+# update_*.php, index.html, and admin_security.php remain accessible.)
+<FilesMatch "^(config|db_connect|auth_required|RateLimiter|InputValidator|OutputSanitizer|pdf_parser_fallback)\.php$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Migration scripts are CLI-only maintenance tools; block them from the web
+# as defense-in-depth (they also self-guard against non-CLI execution).
+<FilesMatch "^migrate_.*\.php$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>

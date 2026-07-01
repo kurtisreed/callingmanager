@@ -2,7 +2,16 @@
 /**
  * Database Migration: Add Member Status System
  * Run this script once to add status functionality to members table
+ *
+ * CLI-ONLY: run with `php migrate_member_status.php`. This script performs
+ * schema changes (ALTER TABLE) and must never be reachable over the web.
  */
+
+// Refuse to run outside the command line to prevent web-triggered migrations.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('This migration script can only be run from the command line.');
+}
 
 // Load configuration and database
 require_once __DIR__ . '/config.php';
