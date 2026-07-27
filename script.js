@@ -3462,6 +3462,10 @@ function loadDashboard() {
                             <span class="stat-label">Missionaries:</span>
                             <span class="stat-value" id="stat-missionaries">Loading...</span>
                         </div>
+                        <div class="stat-item clickable-stat" data-stat="callings-over-3-years">
+                            <span class="stat-label">Members with Callings &gt;3 years:</span>
+                            <span class="stat-value" id="stat-callings-over-3-years">Loading...</span>
+                        </div>
                         <div class="stat-item clickable-stat" data-stat="recent-calling-changes">
                             <span class="stat-label">Recent Calling Changes:</span>
                             <span class="stat-value" id="stat-recent-calling-changes">-</span>
@@ -3558,6 +3562,7 @@ function fetchDashboardStats() {
             document.getElementById('stat-members-multiple-callings').textContent = 'Error';
             document.getElementById('stat-vacant-callings').textContent = 'Error';
             document.getElementById('stat-missionaries').textContent = 'Error';
+            document.getElementById('stat-callings-over-3-years').textContent = 'Error';
         });
 }
 
@@ -3571,6 +3576,7 @@ function updateDashboardStats(data) {
     document.getElementById('stat-members-multiple-callings').textContent = data.members_with_multiple_callings || 0;
     document.getElementById('stat-vacant-callings').textContent = data.vacant_callings || 0;
     document.getElementById('stat-missionaries').textContent = data.missionaries || 0;
+    document.getElementById('stat-callings-over-3-years').textContent = data.callings_over_3_years || 0;
 }
 
 // Function to add click handlers to dashboard stats
@@ -4037,6 +4043,8 @@ function getDetailTableHeaders(statType) {
             return ['Calling', 'Organization', 'Grouping'];
         case 'missionaries':
             return ['Member', 'Mission Assignment', 'Date Started'];
+        case 'callings-over-3-years':
+            return ['Member', 'Calling', 'Date Set Apart', 'Years in Calling'];
         default:
             return ['Name', 'Details'];
     }
@@ -4059,6 +4067,8 @@ function getDetailTableValues(item, statType) {
             return [item.calling_name, item.organization, item.grouping];
         case 'missionaries':
             return [item.member_name, item.calling_name, formatDate(item.date_set_apart)];
+        case 'callings-over-3-years':
+            return [item.member_name, item.calling_name, formatDate(item.date_set_apart), `${item.years_in_calling} years`];
         default:
             return [item.name || 'Unknown', item.details || 'No details'];
     }

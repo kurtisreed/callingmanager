@@ -71,14 +71,23 @@ try {
     $stats['vacant_callings'] = $result ? $result->fetch_assoc()['count'] : 0;
     
     // 7. Missionaries (members with callings in Full-Time Missionaries organization)
-    $sql = "SELECT COUNT(DISTINCT cc.member_id) as count 
-            FROM current_callings cc 
-            JOIN callings c ON cc.calling_id = c.calling_id 
-            WHERE cc.date_released IS NULL 
+    $sql = "SELECT COUNT(DISTINCT cc.member_id) as count
+            FROM current_callings cc
+            JOIN callings c ON cc.calling_id = c.calling_id
+            WHERE cc.date_released IS NULL
             AND c.organization = 'Full-Time Missionaries'";
     $result = $conn->query($sql);
     $stats['missionaries'] = $result ? $result->fetch_assoc()['count'] : 0;
-    
+
+    // 8. Members with Callings > 3 years (current calling assignments held 3+ years)
+    $sql = "SELECT COUNT(*) as count
+            FROM current_callings cc
+            WHERE cc.date_released IS NULL
+            AND cc.date_set_apart IS NOT NULL
+            AND cc.date_set_apart <= DATE_SUB(CURDATE(), INTERVAL 3 YEAR)";
+    $result = $conn->query($sql);
+    $stats['callings_over_3_years'] = $result ? $result->fetch_assoc()['count'] : 0;
+
     echo json_encode($stats);
     
 } catch (Exception $e) {
