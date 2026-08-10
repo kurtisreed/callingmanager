@@ -17,9 +17,9 @@ $groups = [
     'deacons'              => ['gender' => 'M',  'min_age' => 12, 'max_age' => 13],
     'teachers'             => ['gender' => 'M',  'min_age' => 14, 'max_age' => 15],
     'priests'              => ['gender' => 'M',  'min_age' => 16, 'max_age' => 18],
-    'gatherers-of-light'   => ['gender' => 'F',  'min_age' => 12, 'max_age' => 13],
+    'gatherers-of-light'   => ['gender' => 'F',  'min_age' => 16, 'max_age' => 18],
     'messengers-of-hope'   => ['gender' => 'F',  'min_age' => 14, 'max_age' => 15],
-    'builders-of-faith'    => ['gender' => 'F',  'min_age' => 16, 'max_age' => 18],
+    'builders-of-faith'    => ['gender' => 'F',  'min_age' => 12, 'max_age' => 13],
 ];
 
 $group = $_GET['group'] ?? '';
@@ -43,9 +43,9 @@ try {
                     WHEN m.gender = 'M' AND $cohortAgeExpr BETWEEN 12 AND 13 THEN 'Deacons'
                     WHEN m.gender = 'M' AND $cohortAgeExpr BETWEEN 14 AND 15 THEN 'Teachers'
                     WHEN m.gender = 'M' AND $cohortAgeExpr BETWEEN 16 AND 18 THEN 'Priests'
-                    WHEN m.gender = 'F' AND $cohortAgeExpr BETWEEN 12 AND 13 THEN 'Gatherers of Light'
+                    WHEN m.gender = 'F' AND $cohortAgeExpr BETWEEN 16 AND 18 THEN 'Gatherers of Light'
                     WHEN m.gender = 'F' AND $cohortAgeExpr BETWEEN 14 AND 15 THEN 'Messengers of Hope'
-                    WHEN m.gender = 'F' AND $cohortAgeExpr BETWEEN 16 AND 18 THEN 'Builders of Faith'
+                    WHEN m.gender = 'F' AND $cohortAgeExpr BETWEEN 12 AND 13 THEN 'Builders of Faith'
                     ELSE ''
                 END as class_label
             FROM members m
