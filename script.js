@@ -3574,7 +3574,18 @@ function loadYouthTab() {
                     <h3>Interviews</h3>
                 </div>
                 <div class="details-section">
-                    <p style="color: #666; font-style: italic;">Coming soon.</p>
+                    <div id="interview-windows">
+                        <div class="stat-item clickable-interview-window" data-interview-window="last_month">
+                            <span class="stat-label">Due Last Month</span>
+                        </div>
+                        <div class="stat-item clickable-interview-window" data-interview-window="this_month">
+                            <span class="stat-label">Due This Month</span>
+                        </div>
+                        <div class="stat-item clickable-interview-window" data-interview-window="next_month">
+                            <span class="stat-label">Due Next Month</span>
+                        </div>
+                    </div>
+                    <button type="button" class="action-btn save-btn" onclick="openLogInterviewModal()" style="margin-top: 12px;">+ Log Interview</button>
                 </div>
             </div>
 
@@ -3593,6 +3604,7 @@ function loadYouthTab() {
     `;
 
     addYouthGroupClickHandlers();
+    addInterviewWindowClickHandlers();
 }
 
 // Function to add click handlers to youth group items
@@ -3616,7 +3628,7 @@ function showYouthGroupDetails(group) {
     document.getElementById('youth-detail-header').textContent = label;
 
     // Highlight the active group
-    document.querySelectorAll('.clickable-youth-stat').forEach(s => s.classList.remove('active-stat'));
+    clearYouthTabActiveStates();
     const activeEl = document.querySelector(`[data-youth-group="${group}"]`);
     if (activeEl) activeEl.classList.add('active-stat');
 
@@ -3703,6 +3715,353 @@ function displayYouthGroupTable(youth, group) {
             const value = col.key === 'birthdate' ? formatDate(member.birthdate) : member[col.key];
             tableHTML += `<td>${value}</td>`;
         });
+        tableHTML += '</tr>';
+    });
+
+    tableHTML += '</tbody></table>';
+    container.innerHTML = tableHTML;
+}
+
+// ─── Youth Interviews ──────────────────────────────────────────────────────
+
+const INTERVIEW_TYPE_LABELS = {
+    annual: 'Annual',
+    semiannual: 'Semiannual',
+    calling: 'Calling',
+    temple_recommend: 'Temple Recommend',
+    other: 'Other'
+};
+
+const CONDUCTED_BY_LABELS = {
+    bishop: 'Bishop',
+    first_counselor: '1st Counselor',
+    second_counselor: '2nd Counselor',
+    other: 'Other'
+};
+
+let _interviewScheduleData = null; // cached response from get_youth_interview_schedule.php
+let _currentInterviewWindow = null; // 'last_month' | 'this_month' | 'next_month'
+let allInterviewYouthMembers = []; // cached youth list for the "+ Log Interview" member search
+
+// Clears active-highlight state across both Youth roster items and
+// Interview window items, so only one item in the left column is active
+// at a time regardless of which section it's in.
+function clearYouthTabActiveStates() {
+    document.querySelectorAll('.clickable-youth-stat').forEach(s => s.classList.remove('active-stat'));
+    document.querySelectorAll('.clickable-interview-window').forEach(s => s.classList.remove('active-stat'));
+}
+
+function addInterviewWindowClickHandlers() {
+    document.querySelectorAll('.clickable-interview-window').forEach(stat => {
+        stat.addEventListener('click', function () {
+            const windowKey = this.dataset.interviewWindow;
+            showInterviewWindow(windowKey);
+        });
+    });
+}
+
+// Function to fetch (or reuse cached) interview schedule and display a window
+function showInterviewWindow(windowKey, forceRefresh = false) {
+    _currentInterviewWindow = windowKey;
+
+    clearYouthTabActiveStates();
+    const activeEl = document.querySelector(`[data-interview-window="${windowKey}"]`);
+    if (activeEl) activeEl.classList.add('active-stat');
+
+    document.getElementById('youth-detail-content').innerHTML = '<p>Loading...</p>';
+
+    const renderFromCache = () => {
+        const win = _interviewScheduleData.windows[windowKey];
+        document.getElementById('youth-detail-header').textContent = `Interviews Due — ${win.label}`;
+        displayInterviewWindowTable(_interviewScheduleData.due[windowKey]);
+    };
+
+    if (_interviewScheduleData && !forceRefresh) {
+        renderFromCache();
+        return;
+    }
+
+    fetch('get_youth_interview_schedule.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.message);
+            }
+            _interviewScheduleData = data;
+            renderFromCache();
+        })
+        .catch(error => {
+            console.error('Error fetching interview schedule:', error);
+            document.getElementById('youth-detail-content').innerHTML =
+                '<p class="error">Error loading interview schedule. Please try again.</p>';
+        });
+}
+
+// Function to render the due-list table for an interview window
+function displayInterviewWindowTable(entries) {
+    const container = document.getElementById('youth-detail-content');
+
+    if (!entries || entries.length === 0) {
+        container.innerHTML = '<p class="no-data">No interviews due.</p>';
+        return;
+    }
+
+    let tableHTML = '<table class="detail-table"><thead><tr>';
+    tableHTML += '<th>Youth</th><th>Type</th><th>Assigned To</th><th>Status</th></tr></thead><tbody>';
+
+    entries.forEach(entry => {
+        const typeLabel = INTERVIEW_TYPE_LABELS[entry.interview_type] || entry.interview_type;
+
+        let statusHTML;
+        if (entry.completed) {
+            const conductedByLabel = CONDUCTED_BY_LABELS[entry.completed_by] || entry.completed_by;
+            statusHTML = `<span class="interview-status-done">✅ Done ${formatDate(entry.completed_date)} by ${conductedByLabel}</span>`;
+            if (entry.notes) {
+                statusHTML += `<div style="font-size: 12px; color: #666; margin-top: 2px;">${entry.notes}</div>`;
+            }
+        } else {
+            statusHTML = `<span class="interview-status-needed">⚠ Needed</span> ` +
+                `<button type="button" class="action-btn save-btn interview-mark-done-btn" ` +
+                `style="padding: 3px 8px; font-size: 11px; margin-left: 6px;" ` +
+                `data-member-id="${entry.member_id}" data-interview-type="${entry.interview_type}">Mark Done</button>`;
+        }
+
+        tableHTML += '<tr>';
+        tableHTML += `<td><span class="interview-history-link" style="cursor: pointer; color: #0c2238; text-decoration: underline;" data-member-id="${entry.member_id}">${entry.member_name}</span></td>`;
+        tableHTML += `<td>${typeLabel}</td>`;
+        tableHTML += `<td>${entry.assigned_to}</td>`;
+        tableHTML += `<td>${statusHTML}</td>`;
+        tableHTML += '</tr>';
+    });
+
+    tableHTML += '</tbody></table>';
+    container.innerHTML = tableHTML;
+
+    // Wire up history links and Mark Done buttons via data attributes
+    // (not inline onclick) so names containing apostrophes don't break
+    // an inline JS string literal.
+    container.querySelectorAll('.interview-history-link').forEach(el => {
+        el.addEventListener('click', function () {
+            const memberId = parseInt(this.dataset.memberId);
+            openInterviewHistoryModal(memberId, this.textContent);
+        });
+    });
+
+    container.querySelectorAll('.interview-mark-done-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const memberId = parseInt(this.dataset.memberId);
+            const interviewType = this.dataset.interviewType;
+            const row = this.closest('tr');
+            const memberName = row ? row.querySelector('.interview-history-link').textContent : '';
+            openLogInterviewModal(memberId, memberName, interviewType);
+        });
+    });
+}
+
+// ─── Log Interview Modal ───────────────────────────────────────────────────
+
+// Function to open the Log Interview modal. When called with a memberId
+// (e.g. from a "Mark Done" button), the member is locked in and the type
+// pre-selected. When called with no arguments (the general "+ Log Interview"
+// button), a member search is shown so any youth/type can be logged.
+function openLogInterviewModal(memberId = null, memberName = null, interviewType = null) {
+    const modal = document.getElementById('log-interview-modal');
+    const overlay = document.getElementById('log-interview-overlay');
+    modal.style.display = 'block';
+    overlay.style.display = 'block';
+
+    document.getElementById('log-interview-response').innerHTML = '';
+    document.getElementById('log-interview-notes').value = '';
+    document.getElementById('log-interview-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('log-interview-conducted-by').value = 'bishop';
+
+    const lockedWrap = document.getElementById('log-interview-member-locked');
+    const searchWrap = document.getElementById('log-interview-member-search-wrap');
+    const memberIdInput = document.getElementById('log-interview-member-id');
+
+    if (memberId) {
+        lockedWrap.style.display = 'block';
+        searchWrap.style.display = 'none';
+        document.getElementById('log-interview-member-name-display').textContent = memberName || '';
+        memberIdInput.value = memberId;
+        document.getElementById('log-interview-type').value = interviewType || 'annual';
+    } else {
+        lockedWrap.style.display = 'none';
+        searchWrap.style.display = 'block';
+        memberIdInput.value = '';
+        document.getElementById('log-interview-member-search').value = '';
+        document.getElementById('log-interview-type').value = 'annual';
+        hideLogInterviewMemberDropdown();
+        loadInterviewYouthMembers();
+    }
+
+    const searchInput = document.getElementById('log-interview-member-search');
+    if (!searchInput.hasAttribute('data-listener-added')) {
+        searchInput.addEventListener('input', filterLogInterviewMembers);
+        searchInput.addEventListener('blur', () => setTimeout(hideLogInterviewMemberDropdown, 150));
+        searchInput.setAttribute('data-listener-added', 'true');
+    }
+}
+
+function closeLogInterviewModal() {
+    document.getElementById('log-interview-modal').style.display = 'none';
+    document.getElementById('log-interview-overlay').style.display = 'none';
+}
+
+function loadInterviewYouthMembers() {
+    fetch('get_youth_details.php?group=all')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) throw new Error(data.message);
+            allInterviewYouthMembers = data;
+        })
+        .catch(error => console.error('Error loading youth for interview search:', error));
+}
+
+function filterLogInterviewMembers() {
+    const searchTerm = document.getElementById('log-interview-member-search').value.toLowerCase().trim();
+    if (!searchTerm) { hideLogInterviewMemberDropdown(); return; }
+
+    const filtered = allInterviewYouthMembers.filter(m =>
+        m.member_name.toLowerCase().includes(searchTerm)
+    );
+    showLogInterviewMemberDropdown(filtered);
+}
+
+function showLogInterviewMemberDropdown(members) {
+    const dropdown = document.getElementById('log-interview-member-dropdown');
+    if (!dropdown) return;
+    dropdown.innerHTML = '';
+
+    if (members.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'member-autocomplete-item no-results';
+        noResults.textContent = 'No youth found';
+        dropdown.appendChild(noResults);
+        dropdown.style.display = 'block';
+        return;
+    }
+
+    members.forEach(member => {
+        const item = document.createElement('div');
+        item.className = 'member-autocomplete-item';
+        item.textContent = member.member_name;
+        item.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            selectLogInterviewMember(member.member_id, member.member_name);
+        });
+        dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = 'block';
+}
+
+function hideLogInterviewMemberDropdown() {
+    const dropdown = document.getElementById('log-interview-member-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function selectLogInterviewMember(memberId, memberName) {
+    document.getElementById('log-interview-member-id').value = memberId;
+    document.getElementById('log-interview-member-search').value = memberName;
+    hideLogInterviewMemberDropdown();
+}
+
+function saveInterviewLog() {
+    const memberId = document.getElementById('log-interview-member-id').value;
+    const interviewType = document.getElementById('log-interview-type').value;
+    const interviewDate = document.getElementById('log-interview-date').value;
+    const conductedBy = document.getElementById('log-interview-conducted-by').value;
+    const notes = document.getElementById('log-interview-notes').value;
+    const responseEl = document.getElementById('log-interview-response');
+
+    if (!memberId) {
+        responseEl.innerHTML = '<p style="color:red;">Please select a youth.</p>';
+        return;
+    }
+    if (!interviewDate) {
+        responseEl.innerHTML = '<p style="color:red;">Please enter a date.</p>';
+        return;
+    }
+
+    responseEl.innerHTML = '<p>Saving...</p>';
+
+    fetch('add_youth_interview.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            member_id: parseInt(memberId),
+            interview_type: interviewType,
+            interview_date: interviewDate,
+            conducted_by: conductedBy,
+            notes: notes
+        })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            closeLogInterviewModal();
+            // Refresh the schedule cache and re-render the current window
+            if (_currentInterviewWindow) {
+                showInterviewWindow(_currentInterviewWindow, true);
+            }
+        } else {
+            responseEl.innerHTML = `<p style="color:red;">${result.message || 'Error saving interview.'}</p>`;
+        }
+    })
+    .catch(() => {
+        responseEl.innerHTML = '<p style="color:red;">Network error. Please try again.</p>';
+    });
+}
+
+// ─── Interview History Modal ───────────────────────────────────────────────
+
+function openInterviewHistoryModal(memberId, memberName) {
+    const modal = document.getElementById('interview-history-modal');
+    const overlay = document.getElementById('interview-history-overlay');
+    modal.style.display = 'block';
+    overlay.style.display = 'block';
+
+    document.getElementById('interview-history-title').textContent = `Interview History — ${memberName}`;
+    document.getElementById('interview-history-content').innerHTML = '<p>Loading...</p>';
+
+    fetch(`get_youth_interview_history.php?member_id=${encodeURIComponent(memberId)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) throw new Error(data.message);
+            displayInterviewHistory(data);
+        })
+        .catch(error => {
+            console.error('Error fetching interview history:', error);
+            document.getElementById('interview-history-content').innerHTML =
+                '<p class="error">Error loading history. Please try again.</p>';
+        });
+}
+
+function closeInterviewHistoryModal() {
+    document.getElementById('interview-history-modal').style.display = 'none';
+    document.getElementById('interview-history-overlay').style.display = 'none';
+}
+
+function displayInterviewHistory(history) {
+    const container = document.getElementById('interview-history-content');
+
+    if (!history || history.length === 0) {
+        container.innerHTML = '<p class="no-data">No interviews logged for this youth yet.</p>';
+        return;
+    }
+
+    let tableHTML = '<table class="detail-table"><thead><tr>';
+    tableHTML += '<th>Type</th><th>Date</th><th>Conducted By</th><th>Notes</th></tr></thead><tbody>';
+
+    history.forEach(entry => {
+        const typeLabel = INTERVIEW_TYPE_LABELS[entry.interview_type] || entry.interview_type;
+        const byLabel = CONDUCTED_BY_LABELS[entry.conducted_by] || entry.conducted_by;
+        tableHTML += '<tr>';
+        tableHTML += `<td>${typeLabel}</td>`;
+        tableHTML += `<td>${formatDate(entry.interview_date)}</td>`;
+        tableHTML += `<td>${byLabel}</td>`;
+        tableHTML += `<td>${entry.notes || ''}</td>`;
         tableHTML += '</tr>';
     });
 

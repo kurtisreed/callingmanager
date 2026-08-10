@@ -22,6 +22,8 @@
     <div class="overlay" id="pending-releases-overlay" onclick="closePendingReleasesModal()"></div>
     <div class="overlay" id="add-release-only-overlay" onclick="closeAddReleaseOnlyModal()"></div>
     <div class="overlay" id="edit-step-date-overlay" onclick="closeEditStepDateModal()"></div>
+    <div class="overlay" id="log-interview-overlay" onclick="closeLogInterviewModal()"></div>
+    <div class="overlay" id="interview-history-overlay" onclick="closeInterviewHistoryModal()"></div>
 
 
     <div id="auth-container">
@@ -669,6 +671,69 @@
             <button class="action-btn cancel-btn" onclick="closeAddReleaseOnlyModal()">Cancel</button>
         </div>
         <div id="add-release-only-response"></div>
+    </div>
+</div>
+
+<!-- Log Interview Modal -->
+<div id="log-interview-modal">
+    <div class="modal-content" style="position: relative;">
+        <button class="close-btn" onclick="closeLogInterviewModal()">✕ Close</button>
+        <h2>Log Interview</h2>
+
+        <div id="log-interview-member-locked" style="display: none; margin-bottom: 16px;">
+            <label>Youth:</label>
+            <div id="log-interview-member-name-display" style="font-weight: bold; padding: 8px 0;"></div>
+        </div>
+
+        <div id="log-interview-member-search-wrap" style="display: none;">
+            <label for="log-interview-member-search">Search Youth:</label>
+            <div style="position: relative;">
+                <input type="text" id="log-interview-member-search" placeholder="Type name to search..." autocomplete="off" />
+                <div id="log-interview-member-dropdown" class="member-autocomplete-dropdown" style="display: none;"></div>
+            </div>
+        </div>
+
+        <input type="hidden" id="log-interview-member-id" />
+
+        <label for="log-interview-type" style="margin-top: 16px; display: block;">Interview Type:</label>
+        <select id="log-interview-type" style="display: block; width: 100%; margin-top: 6px; margin-bottom: 16px; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px;">
+            <option value="annual">Annual</option>
+            <option value="semiannual">Semiannual</option>
+            <option value="calling">Calling</option>
+            <option value="temple_recommend">Temple Recommend</option>
+            <option value="other">Other</option>
+        </select>
+
+        <label for="log-interview-date">Date:</label>
+        <input type="date" id="log-interview-date" style="display: block; width: 100%; margin-top: 6px; margin-bottom: 16px; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px;" />
+
+        <label for="log-interview-conducted-by">Conducted By:</label>
+        <select id="log-interview-conducted-by" style="display: block; width: 100%; margin-top: 6px; margin-bottom: 16px; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px;">
+            <option value="bishop">Bishop</option>
+            <option value="first_counselor">1st Counselor</option>
+            <option value="second_counselor">2nd Counselor</option>
+            <option value="other">Other</option>
+        </select>
+
+        <label for="log-interview-notes">Notes:</label>
+        <textarea id="log-interview-notes" rows="3" style="display: block; width: 100%; margin-top: 6px; margin-bottom: 16px; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px; resize: vertical;"></textarea>
+
+        <div class="action-buttons">
+            <button class="action-btn save-btn" onclick="saveInterviewLog()">Save</button>
+            <button class="action-btn cancel-btn" onclick="closeLogInterviewModal()">Cancel</button>
+        </div>
+        <div id="log-interview-response" style="margin-top: 12px;"></div>
+    </div>
+</div>
+
+<!-- Interview History Modal -->
+<div id="interview-history-modal">
+    <div class="modal-content" style="position: relative;">
+        <button class="close-btn" onclick="closeInterviewHistoryModal()">✕ Close</button>
+        <h2 id="interview-history-title">Interview History</h2>
+        <div id="interview-history-content">
+            <p>Loading...</p>
+        </div>
     </div>
 </div>
 

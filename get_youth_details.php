@@ -35,6 +35,7 @@ try {
     $cohortAgeExpr = "(YEAR(CURDATE()) - YEAR(m.birthdate))";
 
     $sql = "SELECT
+                m.member_id,
                 CONCAT(m.first_name, ' ', m.last_name) as member_name,
                 m.gender,
                 m.birthdate,
@@ -76,6 +77,7 @@ try {
     $youth = [];
     while ($row = $result->fetch_assoc()) {
         $youth[] = [
+            'member_id' => (int) $row['member_id'],
             'member_name' => $row['member_name'],
             'age' => (int) $row['age'],
             'birthdate' => $row['birthdate'],

@@ -1058,6 +1058,56 @@ table td input[type="checkbox"] {
     margin-bottom: 16px;
 }
 
+#log-interview-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    z-index: 1000;
+    width: 420px;
+    display: none;
+}
+
+#log-interview-modal h2 {
+    padding-right: 60px;
+    margin-bottom: 16px;
+}
+
+#interview-history-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    z-index: 1000;
+    width: 560px;
+    max-height: 80vh;
+    overflow-y: auto;
+    display: none;
+}
+
+#interview-history-modal h2 {
+    padding-right: 60px;
+    margin-bottom: 16px;
+}
+
+.interview-status-needed {
+    color: #b8860b;
+    font-weight: 600;
+}
+
+.interview-status-done {
+    color: #1e7e34;
+    font-weight: 600;
+}
+
 #add-release-only-callings-scroll {
     max-height: 45vh;
     overflow-y: auto;
@@ -2169,7 +2219,8 @@ textarea:focus {
 }
 
 /* Youth tab clickable group items */
-.clickable-youth-stat {
+.clickable-youth-stat,
+.clickable-interview-window {
     cursor: pointer;
     transition: background-color 0.2s ease;
     border-radius: 0px;
@@ -2177,11 +2228,13 @@ textarea:focus {
     margin: 2px 0;
 }
 
-.clickable-youth-stat:hover {
+.clickable-youth-stat:hover,
+.clickable-interview-window:hover {
     background-color: #CDE2F4;
 }
 
-.clickable-youth-stat.active-stat {
+.clickable-youth-stat.active-stat,
+.clickable-interview-window.active-stat {
     background-color: #CDE2F4;
     border-left: 3px solid #0c2238;
 }
@@ -2537,7 +2590,9 @@ textarea:focus {
     #add-process-modal,
     #pending-releases-modal,
     #add-release-only-modal,
-    #edit-step-date-modal {
+    #edit-step-date-modal,
+    #log-interview-modal,
+    #interview-history-modal {
         width: 95vw !important;
         max-width: 500px;
         max-height: 90vh;
