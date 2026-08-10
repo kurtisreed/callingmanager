@@ -3712,14 +3712,20 @@ function displayYouthGroupTable(youth, group) {
     youth.forEach(member => {
         tableHTML += '<tr>';
         columns.forEach(col => {
-            const value = col.key === 'birthdate' ? formatDate(member.birthdate) : member[col.key];
-            tableHTML += `<td>${value}</td>`;
+            if (col.key === 'member_name') {
+                tableHTML += `<td><span class="interview-history-link" style="cursor: pointer; color: #0c2238; text-decoration: underline;" data-member-id="${member.member_id}">${member.member_name}</span></td>`;
+            } else {
+                const value = col.key === 'birthdate' ? formatDate(member.birthdate) : member[col.key];
+                tableHTML += `<td>${value}</td>`;
+            }
         });
         tableHTML += '</tr>';
     });
 
     tableHTML += '</tbody></table>';
     container.innerHTML = tableHTML;
+
+    wireInterviewHistoryLinks(container);
 }
 
 // ─── Youth Interviews ──────────────────────────────────────────────────────
@@ -3749,6 +3755,21 @@ let allInterviewYouthMembers = []; // cached youth list for the "+ Log Interview
 function clearYouthTabActiveStates() {
     document.querySelectorAll('.clickable-youth-stat').forEach(s => s.classList.remove('active-stat'));
     document.querySelectorAll('.clickable-interview-window').forEach(s => s.classList.remove('active-stat'));
+}
+
+// Wires click-to-open-history-modal on any .interview-history-link elements
+// within a container. Used by both the Youth roster tables and the
+// Interviews due-list table so a youth's name is clickable everywhere.
+// Wired via data attributes + addEventListener (not inline onclick) since a
+// name containing an apostrophe (e.g. O'Brien) would break an inline JS
+// string literal.
+function wireInterviewHistoryLinks(container) {
+    container.querySelectorAll('.interview-history-link').forEach(el => {
+        el.addEventListener('click', function () {
+            const memberId = parseInt(this.dataset.memberId);
+            openInterviewHistoryModal(memberId, this.textContent);
+        });
+    });
 }
 
 function addInterviewWindowClickHandlers() {
@@ -3837,15 +3858,7 @@ function displayInterviewWindowTable(entries) {
     tableHTML += '</tbody></table>';
     container.innerHTML = tableHTML;
 
-    // Wire up history links and Mark Done buttons via data attributes
-    // (not inline onclick) so names containing apostrophes don't break
-    // an inline JS string literal.
-    container.querySelectorAll('.interview-history-link').forEach(el => {
-        el.addEventListener('click', function () {
-            const memberId = parseInt(this.dataset.memberId);
-            openInterviewHistoryModal(memberId, this.textContent);
-        });
-    });
+    wireInterviewHistoryLinks(container);
 
     container.querySelectorAll('.interview-mark-done-btn').forEach(btn => {
         btn.addEventListener('click', function () {
@@ -3853,18 +3866,27 @@ function displayInterviewWindowTable(entries) {
             const interviewType = this.dataset.interviewType;
             const row = this.closest('tr');
             const memberName = row ? row.querySelector('.interview-history-link').textContent : '';
-            openLogInterviewModal(memberId, memberName, interviewType);
+            openLogInterviewModal(memberId, memberName, interviewType, { type: 'window' });
         });
     });
 }
 
 // ─── Log Interview Modal ───────────────────────────────────────────────────
 
+// Tracks where to return focus after a successful save:
+//   { type: 'window' }                              -> re-render the current due-list window
+//   { type: 'history', memberId, memberName }        -> reopen that youth's history modal
+//   null                                              -> just close (general "+ Log Interview")
+let _logInterviewReturnTo = null;
+
 // Function to open the Log Interview modal. When called with a memberId
-// (e.g. from a "Mark Done" button), the member is locked in and the type
-// pre-selected. When called with no arguments (the general "+ Log Interview"
-// button), a member search is shown so any youth/type can be logged.
-function openLogInterviewModal(memberId = null, memberName = null, interviewType = null) {
+// (e.g. from a "Mark Done" button, or from within a youth's history modal),
+// the member is locked in and the type pre-selected. When called with no
+// arguments (the general "+ Log Interview" button), a member search is
+// shown so any youth/type can be logged.
+function openLogInterviewModal(memberId = null, memberName = null, interviewType = null, returnTo = null) {
+    _logInterviewReturnTo = returnTo;
+
     const modal = document.getElementById('log-interview-modal');
     const overlay = document.getElementById('log-interview-overlay');
     modal.style.display = 'block';
@@ -4001,9 +4023,12 @@ function saveInterviewLog() {
     .then(result => {
         if (result.success) {
             closeLogInterviewModal();
-            // Refresh the schedule cache and re-render the current window
-            if (_currentInterviewWindow) {
+            if (_logInterviewReturnTo && _logInterviewReturnTo.type === 'window' && _currentInterviewWindow) {
+                // Refresh the schedule cache and re-render the current due-list window
                 showInterviewWindow(_currentInterviewWindow, true);
+            } else if (_logInterviewReturnTo && _logInterviewReturnTo.type === 'history') {
+                // Reopen the youth's history so the new entry is visible
+                openInterviewHistoryModal(_logInterviewReturnTo.memberId, _logInterviewReturnTo.memberName);
             }
         } else {
             responseEl.innerHTML = `<p style="color:red;">${result.message || 'Error saving interview.'}</p>`;
@@ -4016,7 +4041,13 @@ function saveInterviewLog() {
 
 // ─── Interview History Modal ───────────────────────────────────────────────
 
+let _historyModalMemberId = null;
+let _historyModalMemberName = null;
+
 function openInterviewHistoryModal(memberId, memberName) {
+    _historyModalMemberId = memberId;
+    _historyModalMemberName = memberName;
+
     const modal = document.getElementById('interview-history-modal');
     const overlay = document.getElementById('interview-history-overlay');
     modal.style.display = 'block';
@@ -4041,6 +4072,19 @@ function openInterviewHistoryModal(memberId, memberName) {
 function closeInterviewHistoryModal() {
     document.getElementById('interview-history-modal').style.display = 'none';
     document.getElementById('interview-history-overlay').style.display = 'none';
+}
+
+// Opens the Log Interview modal for the youth currently shown in the
+// History modal, so a new interview can be logged without leaving the
+// history view. Type is left at the default (annual) since this isn't
+// tied to a specific due entry.
+function openLogInterviewFromHistory() {
+    closeInterviewHistoryModal();
+    openLogInterviewModal(_historyModalMemberId, _historyModalMemberName, null, {
+        type: 'history',
+        memberId: _historyModalMemberId,
+        memberName: _historyModalMemberName
+    });
 }
 
 function displayInterviewHistory(history) {
