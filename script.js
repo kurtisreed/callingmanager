@@ -3828,7 +3828,7 @@ function displayInterviewWindowTable(entries) {
     }
 
     let tableHTML = '<table class="detail-table"><thead><tr>';
-    tableHTML += '<th>Youth</th><th>Type</th><th>Assigned To</th><th>Status</th></tr></thead><tbody>';
+    tableHTML += '<th>Youth</th><th>Birthdate</th><th>Type</th><th>Assigned To</th><th>Status</th></tr></thead><tbody>';
 
     entries.forEach(entry => {
         const typeLabel = INTERVIEW_TYPE_LABELS[entry.interview_type] || entry.interview_type;
@@ -3849,6 +3849,7 @@ function displayInterviewWindowTable(entries) {
 
         tableHTML += '<tr>';
         tableHTML += `<td><span class="interview-history-link" style="cursor: pointer; color: #0c2238; text-decoration: underline;" data-member-id="${entry.member_id}">${entry.member_name}</span></td>`;
+        tableHTML += `<td>${formatDate(entry.birthdate)}</td>`;
         tableHTML += `<td>${typeLabel}</td>`;
         tableHTML += `<td>${entry.assigned_to}</td>`;
         tableHTML += `<td>${statusHTML}</td>`;

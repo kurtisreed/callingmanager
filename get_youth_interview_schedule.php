@@ -64,6 +64,7 @@ try {
         $youth[] = [
             'member_id'            => (int) $row['member_id'],
             'member_name'          => $row['member_name'],
+            'birthdate'            => $row['birthdate'],
             'annual_due_month'     => $birthMonth,
             // Youth turning 15 or younger this year meet a counselor for
             // the semiannual interview; 16+ meet the Bishop for both.
@@ -83,6 +84,7 @@ try {
                 $dueEntries[$winKey][] = [
                     'member_id'      => $y['member_id'],
                     'member_name'    => $y['member_name'],
+                    'birthdate'      => $y['birthdate'],
                     'interview_type' => 'annual',
                     'assigned_to'    => 'Bishop',
                 ];
@@ -92,6 +94,7 @@ try {
                 $dueEntries[$winKey][] = [
                     'member_id'      => $y['member_id'],
                     'member_name'    => $y['member_name'],
+                    'birthdate'      => $y['birthdate'],
                     'interview_type' => 'semiannual',
                     'assigned_to'    => $y['semiannual_assigned'],
                 ];
