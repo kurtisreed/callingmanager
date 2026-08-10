@@ -2168,6 +2168,24 @@ textarea:focus {
     border-left: 3px solid #0c2238;
 }
 
+/* Youth tab clickable group items */
+.clickable-youth-stat {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-radius: 0px;
+    padding: 5px;
+    margin: 2px 0;
+}
+
+.clickable-youth-stat:hover {
+    background-color: #CDE2F4;
+}
+
+.clickable-youth-stat.active-stat {
+    background-color: #CDE2F4;
+    border-left: 3px solid #0c2238;
+}
+
 /* Dashboard detail table */
 .detail-table {
     width: 100%;

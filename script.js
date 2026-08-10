@@ -171,8 +171,12 @@ function openTab(evt, tabName, data = null) {
     if (tabName === 'Tab4') {
         loadCallingsForm();
     }
-    
-    
+
+    if (tabName === 'Tab5') {
+        loadYouthTab();
+    }
+
+
     // Update mobile menu current tab text
     updateMobileTabText(tabName);    
 }
@@ -192,7 +196,8 @@ function updateMobileTabText(tabName) {
             'Tab1': 'Callings Overview',
             'Tab2': 'Assign/Release Callings', 
             'Tab3': 'Member Information',
-            'Tab4': 'Calling Information'
+            'Tab4': 'Calling Information',
+            'Tab5': 'Youth'
         };
         currentTabText.textContent = tabTexts[tabName] || 'Menu';
     }
@@ -3513,6 +3518,148 @@ function loadDashboard() {
     setTimeout(() => {
         showProcessDetails('all', 'All');
     }, 100);
+}
+
+// ─── Youth Tab ─────────────────────────────────────────────────────────────
+
+const YOUTH_GROUP_LABELS = {
+    'all': 'All Youth',
+    'priests': 'Priests',
+    'teachers': 'Teachers',
+    'deacons': 'Deacons',
+    'gatherers-of-light': 'Gatherers of Light',
+    'messengers-of-hope': 'Messengers of Hope',
+    'builders-of-faith': 'Builders of Faith'
+};
+
+// Function to load the Youth tab
+function loadYouthTab() {
+    const container = document.getElementById('youth-container');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="two-column-layout">
+            <!-- Left Column: Youth & Interviews Navigation -->
+            <div class="left-column">
+                <div class="section-header">
+                    <h3>Youth</h3>
+                </div>
+                <div class="details-section">
+                    <div id="youth-groups">
+                        <div class="stat-item clickable-youth-stat" data-youth-group="all">
+                            <span class="stat-label">All</span>
+                        </div>
+                        <div class="stat-item clickable-youth-stat" data-youth-group="priests">
+                            <span class="stat-label">Priests</span>
+                        </div>
+                        <div class="stat-item clickable-youth-stat" data-youth-group="teachers">
+                            <span class="stat-label">Teachers</span>
+                        </div>
+                        <div class="stat-item clickable-youth-stat" data-youth-group="deacons">
+                            <span class="stat-label">Deacons</span>
+                        </div>
+                        <div class="stat-item clickable-youth-stat" data-youth-group="gatherers-of-light">
+                            <span class="stat-label">Gatherers of Light</span>
+                        </div>
+                        <div class="stat-item clickable-youth-stat" data-youth-group="messengers-of-hope">
+                            <span class="stat-label">Messengers of Hope</span>
+                        </div>
+                        <div class="stat-item clickable-youth-stat" data-youth-group="builders-of-faith">
+                            <span class="stat-label">Builders of Faith</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-header">
+                    <h3>Interviews</h3>
+                </div>
+                <div class="details-section">
+                    <p style="color: #666; font-style: italic;">Coming soon.</p>
+                </div>
+            </div>
+
+            <!-- Right Column: Detail Display -->
+            <div class="right-column">
+                <div class="section-header">
+                    <h3 id="youth-detail-header">Overview</h3>
+                </div>
+                <div class="details-section">
+                    <div id="youth-detail-content">
+                        <p>Click a group on the left to see the list of youth.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    addYouthGroupClickHandlers();
+}
+
+// Function to add click handlers to youth group items
+function addYouthGroupClickHandlers() {
+    document.querySelectorAll('.clickable-youth-stat').forEach(stat => {
+        stat.addEventListener('click', function() {
+            const group = this.dataset.youthGroup;
+            showYouthGroupDetails(group);
+        });
+    });
+}
+
+// Function to fetch and display the youth in a selected group
+function showYouthGroupDetails(group) {
+    const label = YOUTH_GROUP_LABELS[group] || group;
+
+    document.getElementById('youth-detail-header').textContent = label;
+
+    // Highlight the active group
+    document.querySelectorAll('.clickable-youth-stat').forEach(s => s.classList.remove('active-stat'));
+    const activeEl = document.querySelector(`[data-youth-group="${group}"]`);
+    if (activeEl) activeEl.classList.add('active-stat');
+
+    document.getElementById('youth-detail-content').innerHTML = '<p>Loading...</p>';
+
+    fetch(`get_youth_details.php?group=${encodeURIComponent(group)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.message);
+            }
+            displayYouthGroupTable(data, group);
+        })
+        .catch(error => {
+            console.error('Error fetching youth details:', error);
+            document.getElementById('youth-detail-content').innerHTML =
+                '<p class="error">Error loading youth. Please try again.</p>';
+        });
+}
+
+// Function to render the youth table
+function displayYouthGroupTable(youth, group) {
+    const container = document.getElementById('youth-detail-content');
+
+    if (!youth || youth.length === 0) {
+        container.innerHTML = '<p class="no-data">No youth found in this group.</p>';
+        return;
+    }
+
+    const showClassColumn = group === 'all';
+
+    let tableHTML = '<table class="detail-table"><thead><tr>';
+    tableHTML += '<th>Name</th>';
+    if (showClassColumn) tableHTML += '<th>Class</th>';
+    tableHTML += '<th>Age</th><th>Birthdate</th></tr></thead><tbody>';
+
+    youth.forEach(member => {
+        tableHTML += '<tr>';
+        tableHTML += `<td>${member.member_name}</td>`;
+        if (showClassColumn) tableHTML += `<td>${member.class_label}</td>`;
+        tableHTML += `<td>${member.age}</td>`;
+        tableHTML += `<td>${formatDate(member.birthdate)}</td>`;
+        tableHTML += '</tr>';
+    });
+
+    tableHTML += '</tbody></table>';
+    container.innerHTML = tableHTML;
 }
 
 // Fetch and display last member update info on the dashboard
