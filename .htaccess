@@ -32,7 +32,7 @@ Options -Indexes
 # Block direct HTTP access to PHP files that are includes/utilities only and
 # should never be requested on their own. (Endpoints like get_*.php,
 # update_*.php, index.html, and admin_security.php remain accessible.)
-<FilesMatch "^(config|db_connect|auth_required|RateLimiter|InputValidator|OutputSanitizer|pdf_parser_fallback)\.php$">
+<FilesMatch "^(config|db_connect|auth_required|RateLimiter|InputValidator|OutputSanitizer)\.php$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>

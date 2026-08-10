@@ -2221,6 +2221,21 @@ textarea:focus {
     background-color: #e3f2fd !important;
 }
 
+/* Sortable table column headers */
+.detail-table th.sortable-column {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s ease;
+}
+
+.detail-table th.sortable-column:hover {
+    background-color: #e3e3e3;
+}
+
+.detail-table th.sortable-column.active-sort {
+    background-color: #CDE2F4;
+}
+
 /* Mobile adjustments for detail table */
 @media (max-width: 768px) {
     .detail-table {

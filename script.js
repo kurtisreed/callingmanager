@@ -3606,6 +3606,10 @@ function addYouthGroupClickHandlers() {
 }
 
 // Function to fetch and display the youth in a selected group
+// Tracks the currently-displayed youth table so column headers can re-sort
+// without re-fetching.
+let _youthTableState = { data: [], group: null, sortKey: null, sortDir: 'asc' };
+
 function showYouthGroupDetails(group) {
     const label = YOUTH_GROUP_LABELS[group] || group;
 
@@ -3624,6 +3628,7 @@ function showYouthGroupDetails(group) {
             if (data.error) {
                 throw new Error(data.message);
             }
+            _youthTableState = { data: data, group: group, sortKey: null, sortDir: 'asc' };
             displayYouthGroupTable(data, group);
         })
         .catch(error => {
@@ -3631,6 +3636,45 @@ function showYouthGroupDetails(group) {
             document.getElementById('youth-detail-content').innerHTML =
                 '<p class="error">Error loading youth. Please try again.</p>';
         });
+}
+
+// Column definitions for the youth table: label + how to read a sort value
+// out of a member row. "class" is only shown/sortable on the "All" view.
+const YOUTH_TABLE_COLUMNS = [
+    { key: 'member_name', label: 'Name' },
+    { key: 'class_label', label: 'Class', allOnly: true },
+    { key: 'age', label: 'Age', numeric: true },
+    { key: 'birthdate', label: 'Birthdate' }
+];
+
+// Function to sort the currently-displayed youth table by a column and re-render
+function sortYouthTable(key) {
+    if (_youthTableState.sortKey === key) {
+        _youthTableState.sortDir = _youthTableState.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        _youthTableState.sortKey = key;
+        _youthTableState.sortDir = 'asc';
+    }
+
+    const column = YOUTH_TABLE_COLUMNS.find(c => c.key === key);
+    const dir = _youthTableState.sortDir === 'asc' ? 1 : -1;
+
+    const sorted = [..._youthTableState.data].sort((a, b) => {
+        let valA = a[key];
+        let valB = b[key];
+
+        if (column && column.numeric) {
+            return (Number(valA) - Number(valB)) * dir;
+        }
+
+        valA = (valA || '').toString().toLowerCase();
+        valB = (valB || '').toString().toLowerCase();
+        if (valA < valB) return -1 * dir;
+        if (valA > valB) return 1 * dir;
+        return 0;
+    });
+
+    displayYouthGroupTable(sorted, _youthTableState.group);
 }
 
 // Function to render the youth table
@@ -3643,18 +3687,22 @@ function displayYouthGroupTable(youth, group) {
     }
 
     const showClassColumn = group === 'all';
+    const columns = YOUTH_TABLE_COLUMNS.filter(c => !c.allOnly || showClassColumn);
 
-    let tableHTML = '<table class="detail-table"><thead><tr>';
-    tableHTML += '<th>Name</th>';
-    if (showClassColumn) tableHTML += '<th>Class</th>';
-    tableHTML += '<th>Age</th><th>Birthdate</th></tr></thead><tbody>';
+    let tableHTML = '<table class="detail-table sortable-table"><thead><tr>';
+    columns.forEach(col => {
+        const isActive = _youthTableState.sortKey === col.key;
+        const arrow = isActive ? (_youthTableState.sortDir === 'asc' ? ' ▲' : ' ▼') : '';
+        tableHTML += `<th class="sortable-column${isActive ? ' active-sort' : ''}" onclick="sortYouthTable('${col.key}')">${col.label}${arrow}</th>`;
+    });
+    tableHTML += '</tr></thead><tbody>';
 
     youth.forEach(member => {
         tableHTML += '<tr>';
-        tableHTML += `<td>${member.member_name}</td>`;
-        if (showClassColumn) tableHTML += `<td>${member.class_label}</td>`;
-        tableHTML += `<td>${member.age}</td>`;
-        tableHTML += `<td>${formatDate(member.birthdate)}</td>`;
+        columns.forEach(col => {
+            const value = col.key === 'birthdate' ? formatDate(member.birthdate) : member[col.key];
+            tableHTML += `<td>${value}</td>`;
+        });
         tableHTML += '</tr>';
     });
 
