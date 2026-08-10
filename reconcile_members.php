@@ -54,8 +54,8 @@ try {
 }
 
 function getCurrentMembers($conn) {
-    $sql = "SELECT member_id, first_name, last_name, birthdate, status, status_notes 
-            FROM members 
+    $sql = "SELECT member_id, first_name, last_name, gender, birthdate, status, status_notes
+            FROM members
             ORDER BY last_name, first_name";
     
     $result = $conn->query($sql);
@@ -124,7 +124,14 @@ function reconcileMembers($pdfMembers, $currentMembers, &$debug) {
                     'new' => $pdfMember['birthdate']
                 ];
             }
-            
+
+            if (isset($pdfMember['gender']) && $match['gender'] !== $pdfMember['gender']) {
+                $changes['gender'] = [
+                    'old' => $match['gender'],
+                    'new' => $pdfMember['gender']
+                ];
+            }
+
             // Status logic: if member is in PDF, they should be active
             if ($match['status'] !== 'active') {
                 $changes['status'] = [

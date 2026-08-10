@@ -4926,97 +4926,37 @@ function parseTextContentClientSide(text) {
         text_sample: text.substring(0, 500)
     };
     
+    // LCR "Member List" report row format (confirmed against a real export):
+    //   Name                    Gender  Age  Birth Date
+    //   Adams, Annabelle Jewell F       13   21 Nov 2012
+    // i.e. "Last, First Middle    (M|F)    Age    DD MMM YYYY"
+    const pattern = /^([A-Za-z\s\-\'\.]+),\s*([A-Za-z\s\-\'\.]+?)\s+([MF])\s+\d+\s+(\d{1,2}\s+[A-Za-z]{3}\s+\d{4})/;
+
     for (const line of lines) {
         const cleanLine = line.trim();
         if (cleanLine.length < 20 || cleanLine.includes('Name   Gender   Age')) continue; // Skip header and short lines
-        
-        // Pattern 1: "Last, First Middle   Gender   Age   DD MMM YYYY"
-        // Example: "Adams, Annabelle Jewell   F   12   21 Nov 2012"
-        let match = cleanLine.match(/^([A-Za-z\s\-\'\.]+),\s*([A-Za-z\s\-\'\.]+)\s+[MF]\s+\d+\s+(\d{1,2}\s+[A-Za-z]{3}\s+\d{4})/);
+
+        const match = cleanLine.match(pattern);
         if (match) {
-            const member = extractMemberFromDateMatch(match[1].trim(), match[2].trim(), match[3]);
+            const member = extractMemberFromDateMatch(match[1].trim(), match[2].trim(), match[3], match[4]);
             if (member) {
                 members.push(member);
-                continue;
-            }
-        }
-        
-        // Pattern 2: Look for any line with "DD MMM YYYY" date format
-        match = cleanLine.match(/(\d{1,2}\s+[A-Za-z]{3}\s+\d{4})/);
-        if (match) {
-            const beforeDate = cleanLine.split(match[0])[0].trim();
-            
-            // Try to extract name from the beginning
-            const nameMatch = beforeDate.match(/^([A-Za-z\s\-\'\.]+),\s*([A-Za-z\s\-\'\.]+)/);
-            if (nameMatch) {
-                const member = extractMemberFromDateMatch(nameMatch[1].trim(), nameMatch[2].trim(), match[1]);
-                if (member) {
-                    members.push(member);
-                    continue;
-                }
-            }
-        }
-        
-        // Pattern 3: Fall back to MM/DD/YYYY format (original patterns)
-        match = cleanLine.match(/^([A-Za-z\s\-\'\.]+),\s*([A-Za-z\s\-\'\.]+)\s+(\d{1,2}\/\d{1,2}\/\d{4})/);
-        if (match) {
-            const member = extractMemberFromMatch(match);
-            if (member) members.push(member);
-            continue;
-        }
-        
-        // Pattern 4: Any line with MM/DD/YYYY date
-        match = cleanLine.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
-        if (match) {
-            const beforeDate = cleanLine.replace(match[0], '').trim();
-            const nameMatch = beforeDate.match(/([A-Za-z\-\'\.]+)[\s,]+([A-Za-z\s\-\'\.]+)/);
-            
-            if (nameMatch) {
-                const birthdate = convertDateToMysqlClientSide(match[1]);
-                if (birthdate && isAtLeast12ThisYear(birthdate)) {
-                    const member = {
-                        first_name: nameMatch[1].trim(),
-                        last_name: nameMatch[2].trim(),
-                        birthdate: birthdate,
-                        status: 'active'
-                    };
-                    members.push(member);
-                }
             }
         }
     }
-    
+
     return members;
 }
 
-function extractMemberFromMatch(match) {
-    const lastName = match[1].trim();
-    const firstMiddle = match[2].trim();
-    const birthdate = match[3];
-    
-    // Take first name only
-    const firstName = firstMiddle.split(' ')[0];
-    
-    const mysqlDate = convertDateToMysqlClientSide(birthdate);
-    if (mysqlDate) {
-        // Check if member will be 12 or older during current calendar year
-        if (isAtLeast12ThisYear(mysqlDate)) {
-            return {
-                first_name: firstName,
-                last_name: lastName,
-                birthdate: mysqlDate,
-                status: 'active'
-            };
-        }
-    }
-    
-    return null;
-}
-
-function extractMemberFromDateMatch(lastName, firstMiddle, dateString) {
+function extractMemberFromDateMatch(lastName, firstMiddle, gender, dateString) {
     // Take first name only (ignore middle names)
     const firstName = firstMiddle.split(' ')[0];
-    
+
+    // Require both a valid date AND a valid gender before accepting this row.
+    // A row that fails to parse cleanly is skipped rather than silently
+    // added with a guessed/defaulted value.
+    if (gender !== 'M' && gender !== 'F') return null;
+
     const mysqlDate = convertTextDateToMysql(dateString);
     if (mysqlDate) {
         // Check if member will be 12 or older during current calendar year
@@ -5024,12 +4964,13 @@ function extractMemberFromDateMatch(lastName, firstMiddle, dateString) {
             return {
                 first_name: firstName,
                 last_name: lastName,
+                gender: gender,
                 birthdate: mysqlDate,
                 status: 'active'
             };
         }
     }
-    
+
     return null;
 }
 
