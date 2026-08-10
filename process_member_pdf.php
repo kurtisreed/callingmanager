@@ -140,95 +140,62 @@ function parseTextContent($text) {
     global $debug;
     $members = [];
     $lines = explode("\n", $text);
-    
+
     $debug['total_lines'] = count($lines);
     $debug['sample_lines'] = array_slice($lines, 0, 10);
-    
+
+    // LCR "Member List" report row format (confirmed against a real export):
+    //   Name                    Gender  Age  Birth Date
+    //   Adams, Annabelle Jewell F       13   21 Nov 2012
+    // i.e. "Last, First Middle    (M|F)    Age    D Mon YYYY"
+    $pattern = '/^([A-Za-z\s\-\'\.]+),\s*([A-Za-z\s\-\'\.]+?)\s+([MF])\s+\d{1,3}\s+(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/';
+
     foreach ($lines as $lineNum => $line) {
         $line = trim($line);
         if (empty($line) || strlen($line) < 10) continue;
-        
-        // Pattern 1: "Last, First Middle    MM/DD/YYYY"
-        if (preg_match('/^([A-Za-z\s\-\'\.]+),\s*([A-Za-z\s\-\'\.]+)\s+(\d{1,2}\/\d{1,2}\/\d{4})/', $line, $matches)) {
+
+        if (preg_match($pattern, $line, $matches)) {
             $member = extractMemberFromMatches($matches);
             if ($member) $members[] = $member;
-            continue;
-        }
-        
-        // Pattern 2: "Last, First    MM/DD/YYYY" (no middle name)
-        if (preg_match('/^([A-Za-z\s\-\'\.]+),\s*([A-Za-z\-\'\.]+)\s+(\d{1,2}\/\d{1,2}\/\d{4})/', $line, $matches)) {
-            $member = extractMemberFromMatches($matches);
-            if ($member) $members[] = $member;
-            continue;
-        }
-        
-        // Pattern 3: "First Last    MM/DD/YYYY" (no comma)
-        if (preg_match('/^([A-Za-z\-\'\.]+)\s+([A-Za-z\s\-\'\.]+)\s+(\d{1,2}\/\d{1,2}\/\d{4})/', $line, $matches)) {
-            $firstName = trim($matches[1]);
-            $lastPart = trim($matches[2]);
-            $birthdate = $matches[3];
-            
-            // Split last part to get last name (take last word as last name)
-            $nameParts = explode(' ', $lastPart);
-            $lastName = array_pop($nameParts);
-            
-            $member = [
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'birthdate' => convertDateToMysql($birthdate),
-                'status' => 'active'
-            ];
-            
-            if ($member['birthdate']) $members[] = $member;
-            continue;
-        }
-        
-        // Pattern 4: Look for any line with a date pattern
-        if (preg_match('/(\d{1,2}\/\d{1,2}\/\d{4})/', $line, $dateMatches)) {
-            // Try to extract names before the date
-            $beforeDate = trim(str_replace($dateMatches[0], '', $line));
-            if (!empty($beforeDate) && preg_match('/([A-Za-z\-\'\.]+)[\s,]+([A-Za-z\s\-\'\.]+)/', $beforeDate, $nameMatches)) {
-                $member = [
-                    'first_name' => trim($nameMatches[1]),
-                    'last_name' => trim($nameMatches[2]),
-                    'birthdate' => convertDateToMysql($dateMatches[1]),
-                    'status' => 'active'
-                ];
-                
-                if ($member['birthdate']) $members[] = $member;
-            }
         }
     }
-    
+
     return $members;
 }
 
 function extractMemberFromMatches($matches) {
     $lastName = trim($matches[1]);
     $firstMiddle = trim($matches[2]);
-    $birthdate = $matches[3];
-    
+    $gender = $matches[3];
+    $birthdate = $matches[4];
+
     // Just take the first name (ignore middle names)
     $nameParts = explode(' ', $firstMiddle);
     $firstName = $nameParts[0];
-    
+
     $mysqlDate = convertDateToMysql($birthdate);
-    if ($mysqlDate) {
+
+    // Require both a valid date AND a valid gender before accepting this row.
+    // A row that fails to parse cleanly is skipped rather than silently
+    // added with a guessed/defaulted value.
+    if ($mysqlDate && in_array($gender, ['M', 'F'], true)) {
         return [
             'first_name' => $firstName,
             'last_name' => $lastName,
+            'gender' => $gender,
             'birthdate' => $mysqlDate,
             'status' => 'active'
         ];
     }
-    
+
     return null;
 }
 
 function convertDateToMysql($dateString) {
-    // Try different date formats
-    $formats = ['m/d/Y', 'n/j/Y', 'm/d/y', 'n/j/y'];
-    
+    // Try different date formats. 'j M Y' / 'd M Y' cover the actual LCR
+    // "Member List" export format, e.g. "14 Apr 2025" / "1 Apr 2025".
+    $formats = ['m/d/Y', 'n/j/Y', 'm/d/y', 'n/j/y', 'j M Y', 'd M Y'];
+
     foreach ($formats as $format) {
         $date = DateTime::createFromFormat($format, $dateString);
         if ($date) {
@@ -240,8 +207,8 @@ function convertDateToMysql($dateString) {
 }
 
 function getCurrentMembers($conn) {
-    $sql = "SELECT member_id, first_name, last_name, birthdate, status, status_notes 
-            FROM members 
+    $sql = "SELECT member_id, first_name, last_name, gender, birthdate, status, status_notes
+            FROM members
             ORDER BY last_name, first_name";
     
     $result = $conn->query($sql);
@@ -312,7 +279,14 @@ function reconcileMembers($pdfMembers, $currentMembers) {
                     'new' => $pdfMember['birthdate']
                 ];
             }
-            
+
+            if (isset($pdfMember['gender']) && $match['gender'] !== $pdfMember['gender']) {
+                $changes['gender'] = [
+                    'old' => $match['gender'],
+                    'new' => $pdfMember['gender']
+                ];
+            }
+
             // Status logic: if member is in PDF, they should be active
             if ($match['status'] !== 'active') {
                 $changes['status'] = [

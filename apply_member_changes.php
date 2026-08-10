@@ -102,22 +102,33 @@ try {
 
 function addNewMember($conn, $member) {
     try {
-        $sql = "INSERT INTO members (first_name, last_name, birthdate, status, status_notes) 
-                VALUES (?, ?, ?, 'active', 'Added via PDF reconciliation')";
-        
+        // Gender is required. If it's missing or invalid, reject the row
+        // rather than letting the database silently default it (this was
+        // the root cause of every prior member being auto-marked 'M').
+        if (empty($member['gender']) || !in_array($member['gender'], ['M', 'F'], true)) {
+            return [
+                'success' => false,
+                'error' => 'Missing or invalid Gender from the source PDF — cannot add this member without it.'
+            ];
+        }
+
+        $sql = "INSERT INTO members (first_name, last_name, gender, birthdate, status, status_notes)
+                VALUES (?, ?, ?, ?, 'active', 'Added via PDF reconciliation')";
+
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("sss", 
-            $member['first_name'], 
-            $member['last_name'], 
+        $stmt->bind_param("ssss",
+            $member['first_name'],
+            $member['last_name'],
+            $member['gender'],
             $member['birthdate']
         );
-        
+
         if ($stmt->execute()) {
             return ['success' => true, 'member_id' => $conn->insert_id];
         } else {
             return ['success' => false, 'error' => $stmt->error];
         }
-        
+
     } catch (Exception $e) {
         return ['success' => false, 'error' => $e->getMessage()];
     }
@@ -127,15 +138,27 @@ function updateMember($conn, $update) {
     try {
         $memberId = $update['member_id'];
         $changes = $update['changes'];
-        
+
+        // Columns this reconciliation flow is ever allowed to write. $changes
+        // comes from client-submitted JSON, so field names must be
+        // whitelisted before being interpolated into the UPDATE statement.
+        $allowedFields = ['first_name', 'last_name', 'gender', 'birthdate', 'status'];
+
         $setParts = [];
         $params = [];
         $types = '';
-        
+
         foreach ($changes as $field => $change) {
+            if (!in_array($field, $allowedFields, true)) {
+                continue;
+            }
             $setParts[] = "$field = ?";
             $params[] = $change['new'];
             $types .= 's'; // Assuming all are strings for simplicity
+        }
+
+        if (empty($setParts)) {
+            return ['success' => false, 'error' => 'No valid fields to update'];
         }
         
         // Add update timestamp and note
