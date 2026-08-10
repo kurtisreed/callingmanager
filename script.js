@@ -3584,6 +3584,9 @@ function loadYouthTab() {
                         <div class="stat-item clickable-interview-window" data-interview-window="next_month">
                             <span class="stat-label">Due Next Month</span>
                         </div>
+                        <div class="stat-item clickable-interview-window" data-interview-window="history">
+                            <span class="stat-label">History</span>
+                        </div>
                     </div>
                     <button type="button" class="action-btn save-btn" onclick="openLogInterviewModal()" style="margin-top: 12px;">+ Log Interview</button>
                 </div>
@@ -3783,6 +3786,11 @@ function addInterviewWindowClickHandlers() {
 
 // Function to fetch (or reuse cached) interview schedule and display a window
 function showInterviewWindow(windowKey, forceRefresh = false) {
+    if (windowKey === 'history') {
+        showRecentInterviewsList();
+        return;
+    }
+
     _currentInterviewWindow = windowKey;
 
     clearYouthTabActiveStates();
@@ -3870,6 +3878,62 @@ function displayInterviewWindowTable(entries) {
             openLogInterviewModal(memberId, memberName, interviewType, { type: 'window' });
         });
     });
+}
+
+// Function to fetch and display all interviews logged in the last 3 months,
+// across all youth, most recent first.
+function showRecentInterviewsList() {
+    clearYouthTabActiveStates();
+    const activeEl = document.querySelector('[data-interview-window="history"]');
+    if (activeEl) activeEl.classList.add('active-stat');
+
+    document.getElementById('youth-detail-header').textContent = 'Interview History (Last 3 Months)';
+    document.getElementById('youth-detail-content').innerHTML = '<p>Loading...</p>';
+
+    fetch('get_recent_youth_interviews.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.message);
+            }
+            displayRecentInterviewsTable(data);
+        })
+        .catch(error => {
+            console.error('Error fetching recent interviews:', error);
+            document.getElementById('youth-detail-content').innerHTML =
+                '<p class="error">Error loading interview history. Please try again.</p>';
+        });
+}
+
+// Function to render the recent-interviews table
+function displayRecentInterviewsTable(history) {
+    const container = document.getElementById('youth-detail-content');
+
+    if (!history || history.length === 0) {
+        container.innerHTML = '<p class="no-data">No interviews logged in the last 3 months.</p>';
+        return;
+    }
+
+    let tableHTML = '<table class="detail-table"><thead><tr>';
+    tableHTML += '<th>Youth</th><th>Type</th><th>Date</th><th>Conducted By</th><th>Notes</th></tr></thead><tbody>';
+
+    history.forEach(entry => {
+        const typeLabel = INTERVIEW_TYPE_LABELS[entry.interview_type] || entry.interview_type;
+        const byLabel = CONDUCTED_BY_LABELS[entry.conducted_by] || entry.conducted_by;
+
+        tableHTML += '<tr>';
+        tableHTML += `<td><span class="interview-history-link" style="cursor: pointer; color: #0c2238; text-decoration: underline;" data-member-id="${entry.member_id}">${entry.member_name}</span></td>`;
+        tableHTML += `<td>${typeLabel}</td>`;
+        tableHTML += `<td>${formatDate(entry.interview_date)}</td>`;
+        tableHTML += `<td>${byLabel}</td>`;
+        tableHTML += `<td>${entry.notes || ''}</td>`;
+        tableHTML += '</tr>';
+    });
+
+    tableHTML += '</tbody></table>';
+    container.innerHTML = tableHTML;
+
+    wireInterviewHistoryLinks(container);
 }
 
 // ─── Log Interview Modal ───────────────────────────────────────────────────
