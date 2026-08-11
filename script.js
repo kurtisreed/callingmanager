@@ -4005,8 +4005,7 @@ function displayRecentInterviewsTable(history) {
 
     history.forEach(entry => {
         const typeLabel = INTERVIEW_TYPE_LABELS[entry.interview_type] || entry.interview_type;
-        // conducted_by may be null if this user's role can't see who
-        // conducted it (notes are hidden the same way).
+        // notes may be null if this user's role can't see them for this entry
         const byLabel = entry.conducted_by
             ? (CONDUCTED_BY_LABELS[entry.conducted_by] || entry.conducted_by)
             : '—';
@@ -4255,8 +4254,7 @@ function displayInterviewHistory(history) {
 
     history.forEach(entry => {
         const typeLabel = INTERVIEW_TYPE_LABELS[entry.interview_type] || entry.interview_type;
-        // conducted_by may be null if this user's role can't see who
-        // conducted it (notes are hidden the same way).
+        // notes may be null if this user's role can't see them for this entry
         const byLabel = entry.conducted_by
             ? (CONDUCTED_BY_LABELS[entry.conducted_by] || entry.conducted_by)
             : '—';

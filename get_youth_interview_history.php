@@ -41,23 +41,18 @@ try {
     $stmt->execute();
     $result = $stmt->get_result();
 
-    // Role-based visibility: Bishop sees everything. Counselor sees the
-    // type/date of every interview but only sees who conducted it and the
-    // notes for interviews a counselor conducted. Leader sees nothing here
-    // (interview content is bishopric-only); they only see the due-date
-    // schedule, not history/notes.
+    // Role-based visibility: everyone sees the type/date/conductor of every
+    // interview. Notes are more restricted: Bishop sees all notes (including
+    // counselors'). Counselors see notes only for interviews conducted by a
+    // counselor (not the Bishop's). Leaders never see notes.
     $currentRole = $_SESSION['role'] ?? null;
 
     $history = [];
     while ($row = $result->fetch_assoc()) {
-        if ($currentRole === 'leader') {
-            continue;
-        }
         if ($currentRole !== 'bishop') {
-            $counselorMayView = $currentRole === 'counselor'
+            $counselorMayViewNotes = $currentRole === 'counselor'
                 && in_array($row['conducted_by'], ['first_counselor', 'second_counselor'], true);
-            if (!$counselorMayView) {
-                $row['conducted_by'] = null;
+            if (!$counselorMayViewNotes) {
                 $row['notes'] = null;
             }
         }

@@ -39,25 +39,21 @@ try {
     }
 
     // Role-based visibility: same rule as the per-person history endpoint.
-    // Leader gets nothing (interview content is bishopric-only); Counselor
-    // sees type/date for everyone but who-conducted-it/notes only for
-    // interviews a counselor conducted; Bishop sees everything.
+    // Everyone sees who conducted each interview. Notes are more
+    // restricted: Bishop sees all notes (including counselors'); Counselor
+    // sees notes only for interviews a counselor conducted; Leader never
+    // sees notes.
     $currentRole = $_SESSION['role'] ?? null;
 
     $history = [];
     while ($row = $result->fetch_assoc()) {
-        if ($currentRole === 'leader') {
-            continue;
-        }
-
         $conductedBy = $row['conducted_by'];
         $notes = $row['notes'];
 
         if ($currentRole !== 'bishop') {
-            $counselorMayView = $currentRole === 'counselor'
+            $counselorMayViewNotes = $currentRole === 'counselor'
                 && in_array($conductedBy, ['first_counselor', 'second_counselor'], true);
-            if (!$counselorMayView) {
-                $conductedBy = null;
+            if (!$counselorMayViewNotes) {
                 $notes = null;
             }
         }
