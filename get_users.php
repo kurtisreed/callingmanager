@@ -11,7 +11,7 @@ header('Content-Type: application/json');
 require_once 'db_connect.php';
 
 try {
-    $sql = "SELECT user_id, username, display_name, role, status, created_at, last_login
+    $sql = "SELECT user_id, member_id, username, display_name, role, status, created_at, last_login
             FROM users
             ORDER BY display_name ASC";
     $result = $conn->query($sql);
@@ -23,6 +23,7 @@ try {
     while ($row = $result->fetch_assoc()) {
         $users[] = [
             'user_id'      => (int) $row['user_id'],
+            'member_id'    => $row['member_id'] !== null ? (int) $row['member_id'] : null,
             'username'     => $row['username'],
             'display_name' => $row['display_name'],
             'role'         => $row['role'],

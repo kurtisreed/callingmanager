@@ -16,6 +16,7 @@ $user_id      = isset($data['user_id']) ? (int) $data['user_id'] : 0;
 $role         = $data['role'] ?? null;
 $status       = $data['status'] ?? null;
 $new_password = $data['new_password'] ?? null;
+$member_id    = array_key_exists('member_id', $data) ? (int) $data['member_id'] : null;
 
 $validRoles = ['bishop', 'counselor', 'leader'];
 $validStatuses = ['active', 'disabled'];
@@ -74,12 +75,53 @@ if ($new_password !== null) {
     $types .= 's';
 }
 
-if (empty($setParts)) {
-    echo json_encode(['success' => false, 'message' => 'No changes provided']);
-    exit;
-}
-
 try {
+    if ($member_id !== null) {
+        if ($member_id <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid member']);
+            exit;
+        }
+
+        // Must exist, not be moved/deceased, and not already be linked to
+        // a DIFFERENT account (self-relink is fine, e.g. re-saving unchanged).
+        $memberCheck = $conn->prepare(
+            "SELECT m.first_name, m.last_name, u.user_id AS linked_user_id
+             FROM members m
+             LEFT JOIN users u ON u.member_id = m.member_id
+             WHERE m.member_id = ? AND m.status NOT IN ('moved', 'deceased')"
+        );
+        $memberCheck->bind_param('i', $member_id);
+        $memberCheck->execute();
+        $memberResult = $memberCheck->get_result();
+
+        if ($memberResult->num_rows === 0) {
+            $memberCheck->close();
+            echo json_encode(['success' => false, 'message' => 'Selected member not found']);
+            exit;
+        }
+
+        $memberRow = $memberResult->fetch_assoc();
+        $memberCheck->close();
+
+        if ($memberRow['linked_user_id'] !== null && (int) $memberRow['linked_user_id'] !== $user_id) {
+            echo json_encode(['success' => false, 'message' => 'That member already has an account']);
+            exit;
+        }
+
+        $setParts[] = 'member_id = ?';
+        $params[] = $member_id;
+        $types .= 'i';
+
+        $setParts[] = 'display_name = ?';
+        $params[] = $memberRow['first_name'] . ' ' . $memberRow['last_name'];
+        $types .= 's';
+    }
+
+    if (empty($setParts)) {
+        echo json_encode(['success' => false, 'message' => 'No changes provided']);
+        exit;
+    }
+
     $sql = "UPDATE users SET " . implode(', ', $setParts) . " WHERE user_id = ?";
     $params[] = $user_id;
     $types .= 'i';

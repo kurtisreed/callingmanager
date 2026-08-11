@@ -12,15 +12,15 @@ require_once 'db_connect.php';
 
 $data = json_decode(file_get_contents('php://input'), true);
 
-$username     = trim($data['username'] ?? '');
-$display_name = trim($data['display_name'] ?? '');
-$password     = $data['password'] ?? '';
-$role         = $data['role'] ?? '';
+$username  = trim($data['username'] ?? '');
+$member_id = isset($data['member_id']) ? (int) $data['member_id'] : 0;
+$password  = $data['password'] ?? '';
+$role      = $data['role'] ?? '';
 
 $validRoles = ['bishop', 'counselor', 'leader'];
 
-if ($username === '' || $display_name === '') {
-    echo json_encode(['success' => false, 'message' => 'Username and display name are required']);
+if ($username === '') {
+    echo json_encode(['success' => false, 'message' => 'Username is required']);
     exit;
 }
 
@@ -31,6 +31,11 @@ if (strlen($username) > 50) {
 
 if (!preg_match('/^[A-Za-z0-9_.\-]+$/', $username)) {
     echo json_encode(['success' => false, 'message' => 'Username may only contain letters, numbers, and . _ -']);
+    exit;
+}
+
+if ($member_id <= 0) {
+    echo json_encode(['success' => false, 'message' => 'A member must be selected for this account']);
     exit;
 }
 
@@ -57,13 +62,40 @@ try {
     }
     $check->close();
 
+    // Validate the member: must exist, not be moved/deceased, and not
+    // already be linked to a different account.
+    $memberCheck = $conn->prepare(
+        "SELECT m.first_name, m.last_name, u.user_id AS linked_user_id
+         FROM members m
+         LEFT JOIN users u ON u.member_id = m.member_id
+         WHERE m.member_id = ? AND m.status NOT IN ('moved', 'deceased')"
+    );
+    $memberCheck->bind_param('i', $member_id);
+    $memberCheck->execute();
+    $memberResult = $memberCheck->get_result();
+
+    if ($memberResult->num_rows === 0) {
+        $memberCheck->close();
+        echo json_encode(['success' => false, 'message' => 'Selected member not found']);
+        exit;
+    }
+
+    $memberRow = $memberResult->fetch_assoc();
+    $memberCheck->close();
+
+    if ($memberRow['linked_user_id'] !== null) {
+        echo json_encode(['success' => false, 'message' => 'That member already has an account']);
+        exit;
+    }
+
+    $displayName = $memberRow['first_name'] . ' ' . $memberRow['last_name'];
     $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
     $stmt = $conn->prepare(
-        "INSERT INTO users (username, display_name, password_hash, role, status)
-         VALUES (?, ?, ?, ?, 'active')"
+        "INSERT INTO users (username, member_id, display_name, password_hash, role, status)
+         VALUES (?, ?, ?, ?, ?, 'active')"
     );
-    $stmt->bind_param('ssss', $username, $display_name, $passwordHash, $role);
+    $stmt->bind_param('sisss', $username, $member_id, $displayName, $passwordHash, $role);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'user_id' => $conn->insert_id]);

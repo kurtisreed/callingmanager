@@ -760,9 +760,13 @@
         <h2 id="user-modal-title">Add User</h2>
 
         <input type="hidden" id="user-id-input" />
+        <input type="hidden" id="user-member-id-input" />
 
-        <label for="user-display-name-input">Display Name:</label>
-        <input type="text" id="user-display-name-input" placeholder="e.g. Bishop Reed" style="display: block; width: 100%; margin-top: 6px; margin-bottom: 16px; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px;" />
+        <label for="user-member-search">Member:</label>
+        <div style="position: relative;">
+            <input type="text" id="user-member-search" placeholder="Search for the member this account belongs to..." autocomplete="off" style="display: block; width: 100%; margin-top: 6px; margin-bottom: 16px; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;" />
+            <div id="user-member-dropdown" class="member-autocomplete-dropdown" style="display: none;"></div>
+        </div>
 
         <label for="user-username-input">Username:</label>
         <input type="text" id="user-username-input" autocomplete="off" style="display: block; width: 100%; margin-top: 6px; margin-bottom: 16px; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px;" />

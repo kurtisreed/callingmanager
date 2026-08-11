@@ -4332,6 +4332,8 @@ function toggleUserStatus(userId, currentStatus) {
 
 // ─── Add/Edit User Modal ───────────────────────────────────────────────────
 
+let allAvailableMembersForUser = [];
+
 function openUserModal(userId = null) {
     const modal = document.getElementById('user-modal');
     const overlay = document.getElementById('user-overlay');
@@ -4340,14 +4342,20 @@ function openUserModal(userId = null) {
 
     document.getElementById('user-modal-response').innerHTML = '';
     document.getElementById('user-id-input').value = userId || '';
+    document.getElementById('user-member-id-input').value = '';
     document.getElementById('user-password-input').value = '';
+    hideUserMemberDropdown();
 
     const usernameInput = document.getElementById('user-username-input');
+    const memberSearch = document.getElementById('user-member-search');
 
     if (userId) {
         const user = allUsersData.find(u => u.user_id === userId);
         document.getElementById('user-modal-title').textContent = 'Edit User';
-        document.getElementById('user-display-name-input').value = user ? user.display_name : '';
+        // display_name is always derived from the linked member, so it
+        // doubles as the search box's pre-filled text.
+        memberSearch.value = user ? user.display_name : '';
+        document.getElementById('user-member-id-input').value = user ? user.member_id : '';
         usernameInput.value = user ? user.username : '';
         usernameInput.disabled = true;
         document.getElementById('user-role-input').value = user ? user.role : 'leader';
@@ -4355,12 +4363,20 @@ function openUserModal(userId = null) {
         document.getElementById('user-password-label').textContent = 'New Password (optional):';
     } else {
         document.getElementById('user-modal-title').textContent = 'Add User';
-        document.getElementById('user-display-name-input').value = '';
+        memberSearch.value = '';
         usernameInput.value = '';
         usernameInput.disabled = false;
         document.getElementById('user-role-input').value = 'leader';
         document.getElementById('user-password-input').placeholder = 'Minimum 8 characters';
         document.getElementById('user-password-label').textContent = 'Password:';
+    }
+
+    loadAvailableMembersForUser(userId);
+
+    if (!memberSearch.hasAttribute('data-listener-added')) {
+        memberSearch.addEventListener('input', filterUserMemberSearch);
+        memberSearch.addEventListener('blur', () => setTimeout(hideUserMemberDropdown, 150));
+        memberSearch.setAttribute('data-listener-added', 'true');
     }
 }
 
@@ -4369,24 +4385,93 @@ function closeUserModal() {
     document.getElementById('user-overlay').style.display = 'none';
 }
 
+// Loads members eligible to be linked to this account (excludes members
+// already linked to a DIFFERENT account; includes the current one being
+// edited so re-saving without changing the member still works).
+function loadAvailableMembersForUser(currentUserId) {
+    const url = currentUserId
+        ? `get_available_members_for_user.php?current_user_id=${encodeURIComponent(currentUserId)}`
+        : 'get_available_members_for_user.php';
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) throw new Error(data.message);
+            allAvailableMembersForUser = data;
+        })
+        .catch(error => console.error('Error loading available members:', error));
+}
+
+function filterUserMemberSearch() {
+    const searchTerm = document.getElementById('user-member-search').value.toLowerCase().trim();
+    // Typing invalidates any previously-selected member until a fresh pick is made.
+    document.getElementById('user-member-id-input').value = '';
+
+    if (!searchTerm) { hideUserMemberDropdown(); return; }
+
+    const filtered = allAvailableMembersForUser.filter(m =>
+        m.member_name.toLowerCase().includes(searchTerm)
+    );
+    showUserMemberDropdown(filtered);
+}
+
+function showUserMemberDropdown(members) {
+    const dropdown = document.getElementById('user-member-dropdown');
+    if (!dropdown) return;
+    dropdown.innerHTML = '';
+
+    if (members.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'member-autocomplete-item no-results';
+        noResults.textContent = 'No matching members found';
+        dropdown.appendChild(noResults);
+        dropdown.style.display = 'block';
+        return;
+    }
+
+    members.forEach(member => {
+        const item = document.createElement('div');
+        item.className = 'member-autocomplete-item';
+        item.textContent = member.member_name;
+        item.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            selectUserMember(member.member_id, member.member_name);
+        });
+        dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = 'block';
+}
+
+function hideUserMemberDropdown() {
+    const dropdown = document.getElementById('user-member-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function selectUserMember(memberId, memberName) {
+    document.getElementById('user-member-id-input').value = memberId;
+    document.getElementById('user-member-search').value = memberName;
+    hideUserMemberDropdown();
+}
+
 function saveUser() {
     const userId = document.getElementById('user-id-input').value;
-    const displayName = document.getElementById('user-display-name-input').value.trim();
+    const memberId = document.getElementById('user-member-id-input').value;
     const username = document.getElementById('user-username-input').value.trim();
     const password = document.getElementById('user-password-input').value;
     const role = document.getElementById('user-role-input').value;
     const responseEl = document.getElementById('user-modal-response');
 
-    if (!displayName) {
-        responseEl.innerHTML = '<p style="color:red;">Display name is required.</p>';
+    if (!memberId) {
+        responseEl.innerHTML = '<p style="color:red;">Please search for and select the member this account belongs to.</p>';
         return;
     }
 
     responseEl.innerHTML = '<p>Saving...</p>';
 
     if (userId) {
-        // Editing an existing user: role + optional password reset
-        const payload = { user_id: parseInt(userId), role: role };
+        // Editing an existing user: member, role, + optional password reset
+        const payload = { user_id: parseInt(userId), member_id: parseInt(memberId), role: role };
         if (password) {
             payload.new_password = password;
         }
@@ -4418,7 +4503,7 @@ function saveUser() {
         fetch('add_user.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: username, display_name: displayName, password: password, role: role })
+            body: JSON.stringify({ username: username, member_id: parseInt(memberId), password: password, role: role })
         })
         .then(response => response.json())
         .then(result => {
