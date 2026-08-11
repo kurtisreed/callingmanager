@@ -1561,6 +1561,7 @@ table td input[type="checkbox"] {
     color: #555;
 }
 
+#auth-form input[type="text"],
 #auth-form input[type="password"] {
     width: 100%;
     padding: 10px;

@@ -53,7 +53,7 @@ if (isset($_GET['action'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Security Administration - Calling Manager</title>
+    <title>Security Administration - Ward Manager</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 

@@ -170,7 +170,7 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calling Manager - First-Time Setup</title>
+    <title>Ward Manager - First-Time Setup</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
@@ -253,7 +253,7 @@ $conn->close();
 </head>
 <body>
     <div class="card">
-        <h1>Calling Manager Setup</h1>
+        <h1>Ward Manager Setup</h1>
         <p class="subtitle">Create the first account (your Bishop login) to activate the app.</p>
 
         <?php if ($success): ?>

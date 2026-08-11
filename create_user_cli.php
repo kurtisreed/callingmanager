@@ -1,6 +1,6 @@
 <?php
 /**
- * Calling Manager - User Account Setup
+ * Ward Manager - User Account Setup
  *
  * Creates the `users` table (if needed) and creates or updates one user
  * account, linked to a real member record. Run this once to create the
@@ -18,7 +18,7 @@ if (PHP_SAPI !== 'cli') {
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db_connect.php';
 
-echo "Calling Manager - User Account Setup\n";
+echo "Ward Manager - User Account Setup\n";
 echo "=====================================\n\n";
 
 $conn->query("CREATE TABLE IF NOT EXISTS users (
