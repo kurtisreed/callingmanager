@@ -65,6 +65,64 @@ function logout() {
     });
 }
 
+// ─── Change Own Password ────────────────────────────────────────────────────
+// Available to any logged-in user (Bishop, Counselor, or Leader) to change
+// their own password. Unlike the Manage Users screen, this isn't role-gated.
+
+function openChangePasswordModal() {
+    document.getElementById('current-password-input').value = '';
+    document.getElementById('new-password-input').value = '';
+    document.getElementById('confirm-password-input').value = '';
+    document.getElementById('change-password-response').innerHTML = '';
+    document.getElementById('change-password-modal').style.display = 'block';
+    document.getElementById('change-password-overlay').style.display = 'block';
+}
+
+function closeChangePasswordModal() {
+    document.getElementById('change-password-modal').style.display = 'none';
+    document.getElementById('change-password-overlay').style.display = 'none';
+}
+
+function saveChangePassword() {
+    const currentPassword = document.getElementById('current-password-input').value;
+    const newPassword = document.getElementById('new-password-input').value;
+    const confirmPassword = document.getElementById('confirm-password-input').value;
+    const responseEl = document.getElementById('change-password-response');
+
+    if (!currentPassword) {
+        responseEl.innerHTML = '<p style="color:red;">Please enter your current password.</p>';
+        return;
+    }
+    if (newPassword.length < 8) {
+        responseEl.innerHTML = '<p style="color:red;">New password must be at least 8 characters.</p>';
+        return;
+    }
+    if (newPassword !== confirmPassword) {
+        responseEl.innerHTML = '<p style="color:red;">New password and confirmation do not match.</p>';
+        return;
+    }
+
+    responseEl.innerHTML = '<p>Saving...</p>';
+
+    fetch('change_own_password.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            responseEl.innerHTML = '<p style="color:green;">Password changed successfully.</p>';
+            setTimeout(closeChangePasswordModal, 1200);
+        } else {
+            responseEl.innerHTML = `<p style="color:red;">${result.message || 'Error changing password.'}</p>`;
+        }
+    })
+    .catch(() => {
+        responseEl.innerHTML = '<p style="color:red;">Network error. Please try again.</p>';
+    });
+}
+
 // Store the original fetch function
 const originalFetch = window.fetch;
 

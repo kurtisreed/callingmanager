@@ -25,6 +25,7 @@
     <div class="overlay" id="log-interview-overlay" onclick="closeLogInterviewModal()"></div>
     <div class="overlay" id="interview-history-overlay" onclick="closeInterviewHistoryModal()"></div>
     <div class="overlay" id="user-overlay" onclick="closeUserModal()"></div>
+    <div class="overlay" id="change-password-overlay" onclick="closeChangePasswordModal()"></div>
 
 
     <div id="auth-container">
@@ -53,6 +54,10 @@
             <button class="tablinks" id="tab4-title" onclick="openTab(event, 'Tab4')">Calling Information</button>
             <button class="tablinks" id="tab5-title" onclick="openTab(event, 'Tab5')">Youth</button>
             <button class="tablinks bishop-only-tab" id="tab6-title" onclick="openTab(event, 'Tab6')" style="display: none;">Users</button>
+            <button class="tablinks" onclick="openChangePasswordModal()" title="Change Password">
+                <span class="logout-icon">🔑</span>
+                <span class="logout-text">Password</span>
+            </button>
             <button class="tablinks logout-tab" onclick="logout()" title="Logout">
                 <span class="logout-icon">⏻</span>
                 <span class="logout-text">Logout</span>
@@ -73,6 +78,10 @@
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab4')">Calling Information</button>
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab5')">Youth</button>
                 <button class="mobile-tablink bishop-only-tab" id="mobile-tab6-title" onclick="openTab(event, 'Tab6')" style="display: none;">Users</button>
+                <button class="mobile-tablink" onclick="openChangePasswordModal(); toggleMobileMenu();">
+                    <span class="logout-icon">🔑</span>
+                    <span class="logout-text">Change Password</span>
+                </button>
                 <button class="mobile-tablink mobile-logout" onclick="logout(); toggleMobileMenu();">
                     <span class="logout-icon">⏻</span>
                     <span class="logout-text">Logout</span>
@@ -786,6 +795,29 @@
             <button class="action-btn cancel-btn" onclick="closeUserModal()">Cancel</button>
         </div>
         <div id="user-modal-response" style="margin-top: 12px;"></div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="change-password-modal">
+    <div class="modal-content" style="position: relative;">
+        <button class="close-btn" onclick="closeChangePasswordModal()">✕ Close</button>
+        <h2>Change Password</h2>
+
+        <label for="current-password-input">Current Password:</label>
+        <input type="password" id="current-password-input" autocomplete="current-password" style="display: block; width: 100%; margin-top: 6px; margin-bottom: 16px; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px;" />
+
+        <label for="new-password-input">New Password (min 8 characters):</label>
+        <input type="password" id="new-password-input" autocomplete="new-password" style="display: block; width: 100%; margin-top: 6px; margin-bottom: 16px; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px;" />
+
+        <label for="confirm-password-input">Confirm New Password:</label>
+        <input type="password" id="confirm-password-input" autocomplete="new-password" style="display: block; width: 100%; margin-top: 6px; margin-bottom: 16px; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px;" />
+
+        <div class="action-buttons">
+            <button class="action-btn save-btn" onclick="saveChangePassword()">Save</button>
+            <button class="action-btn cancel-btn" onclick="closeChangePasswordModal()">Cancel</button>
+        </div>
+        <div id="change-password-response" style="margin-top: 12px;"></div>
     </div>
 </div>
 

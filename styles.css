@@ -1096,6 +1096,25 @@ table td input[type="checkbox"] {
     margin-bottom: 16px;
 }
 
+#change-password-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    z-index: 1000;
+    width: 380px;
+    display: none;
+}
+
+#change-password-modal h2 {
+    padding-right: 60px;
+    margin-bottom: 16px;
+}
+
 #interview-history-modal {
     position: fixed;
     top: 50%;
@@ -2612,7 +2631,8 @@ textarea:focus {
     #edit-step-date-modal,
     #log-interview-modal,
     #interview-history-modal,
-    #user-modal {
+    #user-modal,
+    #change-password-modal {
         width: 95vw !important;
         max-width: 500px;
         max-height: 90vh;
