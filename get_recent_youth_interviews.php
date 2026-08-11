@@ -38,15 +38,37 @@ try {
         throw new Exception('Database query failed: ' . $conn->error);
     }
 
+    // Role-based visibility: same rule as the per-person history endpoint.
+    // Leader gets nothing (interview content is bishopric-only); Counselor
+    // sees type/date for everyone but who-conducted-it/notes only for
+    // interviews a counselor conducted; Bishop sees everything.
+    $currentRole = $_SESSION['role'] ?? null;
+
     $history = [];
     while ($row = $result->fetch_assoc()) {
+        if ($currentRole === 'leader') {
+            continue;
+        }
+
+        $conductedBy = $row['conducted_by'];
+        $notes = $row['notes'];
+
+        if ($currentRole !== 'bishop') {
+            $counselorMayView = $currentRole === 'counselor'
+                && in_array($conductedBy, ['first_counselor', 'second_counselor'], true);
+            if (!$counselorMayView) {
+                $conductedBy = null;
+                $notes = null;
+            }
+        }
+
         $history[] = [
             'member_id'      => (int) $row['member_id'],
             'member_name'    => $row['member_name'],
             'interview_type' => $row['interview_type'],
             'interview_date' => $row['interview_date'],
-            'conducted_by'   => $row['conducted_by'],
-            'notes'          => $row['notes'],
+            'conducted_by'   => $conductedBy,
+            'notes'          => $notes,
         ];
     }
 

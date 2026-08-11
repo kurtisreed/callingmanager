@@ -115,22 +115,53 @@ function requireAuth($error_type = 'json', $redirect_url = 'index.html') {
 
 /**
  * Get current user information
- * 
+ *
  * @return array User session information
  */
 function getCurrentUser() {
     if (!isAuthenticated()) {
         return null;
     }
-    
+
     return [
         'authenticated' => true,
         'login_time' => $_SESSION['login_time'] ?? null,
         'last_activity' => $_SESSION['last_activity'] ?? null,
         'ip_address' => $_SESSION['user_ip'] ?? null,
         'session_id' => session_id(),
-        'time_remaining' => getSessionTimeRemaining()
+        'time_remaining' => getSessionTimeRemaining(),
+        'user_id' => $_SESSION['user_id'] ?? null,
+        'username' => $_SESSION['username'] ?? null,
+        'display_name' => $_SESSION['display_name'] ?? null,
+        'role' => $_SESSION['role'] ?? null,
     ];
+}
+
+/**
+ * Require the current user to hold one of the given roles, terminating
+ * with a 403 JSON response otherwise. Call requireAuth() (or rely on the
+ * auto-executed check below) before this — it assumes the user is already
+ * authenticated.
+ *
+ * @param array $allowedRoles e.g. ['bishop'] or ['bishop', 'counselor']
+ */
+function requireRole(array $allowedRoles) {
+    $role = $_SESSION['role'] ?? null;
+
+    if (!in_array($role, $allowedRoles, true)) {
+        $requested_file = basename($_SERVER['PHP_SELF']);
+        $username = $_SESSION['username'] ?? 'unknown';
+        error_log("Forbidden: user '$username' (role: " . ($role ?? 'none') . ") attempted $requested_file, requires one of: " . implode(', ', $allowedRoles));
+
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode([
+            'error' => 'Forbidden',
+            'message' => 'You do not have permission to access this resource.',
+            'code' => 403
+        ]);
+        exit;
+    }
 }
 
 /**
@@ -165,6 +196,8 @@ function logUserActivity($action, $details = []) {
         'timestamp' => date('Y-m-d H:i:s'),
         'ip_address' => $_SESSION['user_ip'] ?? 'unknown',
         'session_id' => session_id(),
+        'username' => $_SESSION['username'] ?? 'unknown',
+        'role' => $_SESSION['role'] ?? 'unknown',
         'action' => $action,
         'file' => basename($_SERVER['PHP_SELF']),
         'details' => $details

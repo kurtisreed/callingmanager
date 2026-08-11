@@ -44,7 +44,7 @@ Options -Indexes
 
 # Migration/setup scripts are CLI-only maintenance tools; block them from the
 # web as defense-in-depth (they also self-guard against non-CLI execution).
-<FilesMatch "^(migrate_.*|create_calling_history_table)\.php$">
+<FilesMatch "^(migrate_.*|create_calling_history_table|create_user_cli)\.php$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>

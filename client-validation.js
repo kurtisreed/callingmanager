@@ -367,11 +367,13 @@ const ValidationRules = {
         ]
     },
     
-    pin: {
-        pin: [
+    login: {
+        username: [
             'required',
-            { rule: 'minLength', value: 4 },
-            { rule: 'maxLength', value: 20 }
+            { rule: 'maxLength', value: 50 }
+        ],
+        password: [
+            'required'
         ]
     }
 };

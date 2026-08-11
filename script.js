@@ -1,9 +1,18 @@
+// Clears the username/password fields and refocuses the login form
+function resetLoginForm() {
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+    document.getElementById('username').focus();
+}
+
 // Global authentication handler
 function handleAuthenticationError(response) {
     if (response.status === 401) {
         alert('Your session has expired. Please log in again.');
-        // Invalidate the stored CSRF token
+        // Invalidate the stored CSRF token and identity
         csrfToken = null;
+        currentUserRole = null;
+        currentUserDisplayName = null;
         // Hide the main app content
         document.getElementById('app-content').style.display = 'none';
         // Show the authentication container
@@ -11,9 +20,7 @@ function handleAuthenticationError(response) {
         // Clear any stored session data
         sessionStorage.clear();
         localStorage.clear();
-        // Reset the PIN input
-        document.getElementById('pin').value = '';
-        document.getElementById('pin').focus();
+        resetLoginForm();
         return true; // Indicates auth error was handled
     }
     return false; // No auth error
@@ -35,8 +42,10 @@ function logout() {
         method: 'POST'
     })
     .then(() => {
-        // Clear the stored CSRF token
+        // Clear the stored CSRF token and identity
         csrfToken = null;
+        currentUserRole = null;
+        currentUserDisplayName = null;
         // Always redirect to login regardless of response
         // Hide the main app content
         document.getElementById('app-content').style.display = 'none';
@@ -45,17 +54,14 @@ function logout() {
         // Clear any stored session data
         sessionStorage.clear();
         localStorage.clear();
-        // Reset the PIN input
-        document.getElementById('pin').value = '';
-        document.getElementById('pin').focus();
+        resetLoginForm();
     })
     .catch(error => {
         console.error('Logout error:', error);
         // Even if logout fails, still redirect to login for security
         document.getElementById('app-content').style.display = 'none';
         document.getElementById('auth-container').style.display = 'block';
-        document.getElementById('pin').value = '';
-        document.getElementById('pin').focus();
+        resetLoginForm();
     });
 }
 
@@ -65,6 +71,11 @@ const originalFetch = window.fetch;
 // CSRF token for this authenticated session (set on successful login).
 let csrfToken = null;
 const CSRF_SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
+// Current user's identity/role (set on successful login), used to gate
+// role-restricted UI such as the Users management screen.
+let currentUserRole = null;
+let currentUserDisplayName = null;
 
 // Enhanced fetch wrapper that handles authentication
 function authenticatedFetch(url, options = {}) {
@@ -176,6 +187,10 @@ function openTab(evt, tabName, data = null) {
         loadYouthTab();
     }
 
+    if (tabName === 'Tab6') {
+        loadUsersTab();
+    }
+
 
     // Update mobile menu current tab text
     updateMobileTabText(tabName);    
@@ -197,7 +212,8 @@ function updateMobileTabText(tabName) {
             'Tab2': 'Assign/Release Callings', 
             'Tab3': 'Member Information',
             'Tab4': 'Calling Information',
-            'Tab5': 'Youth'
+            'Tab5': 'Youth',
+            'Tab6': 'Users'
         };
         currentTabText.textContent = tabTexts[tabName] || 'Menu';
     }
@@ -457,10 +473,18 @@ function selectTab2Calling(callingId, calling) {
 // Global flag to track authentication status
 // Load default tab only after authentication
 function initializeApplication() {
-    
+
+    // Show role-restricted nav items (e.g. Users tab) only for roles that
+    // should see them. Purely a UI convenience — the actual endpoints also
+    // enforce this server-side via requireRole().
+    const showBishopOnly = currentUserRole === 'bishop';
+    document.querySelectorAll('.bishop-only-tab').forEach(el => {
+        el.style.display = showBishopOnly ? '' : 'none';
+    });
+
     // Now it's safe to load the default tab and data
     document.querySelector('.tablinks').click(); // Simulate click on first tab to load content
-    
+
     // Initialize dropdowns for Tab2
     populateMembers();
     populateCallings();
@@ -3843,8 +3867,12 @@ function displayInterviewWindowTable(entries) {
 
         let statusHTML;
         if (entry.completed) {
-            const conductedByLabel = CONDUCTED_BY_LABELS[entry.completed_by] || entry.completed_by;
-            statusHTML = `<span class="interview-status-done">✅ Done ${formatDate(entry.completed_date)} by ${conductedByLabel}</span>`;
+            // completed_by/notes may be null if this user's role isn't
+            // permitted to see who conducted it or the notes.
+            const byText = entry.completed_by
+                ? ` by ${CONDUCTED_BY_LABELS[entry.completed_by] || entry.completed_by}`
+                : '';
+            statusHTML = `<span class="interview-status-done">✅ Done ${formatDate(entry.completed_date)}${byText}</span>`;
             if (entry.notes) {
                 statusHTML += `<div style="font-size: 12px; color: #666; margin-top: 2px;">${entry.notes}</div>`;
             }
@@ -3919,7 +3947,11 @@ function displayRecentInterviewsTable(history) {
 
     history.forEach(entry => {
         const typeLabel = INTERVIEW_TYPE_LABELS[entry.interview_type] || entry.interview_type;
-        const byLabel = CONDUCTED_BY_LABELS[entry.conducted_by] || entry.conducted_by;
+        // conducted_by may be null if this user's role can't see who
+        // conducted it (notes are hidden the same way).
+        const byLabel = entry.conducted_by
+            ? (CONDUCTED_BY_LABELS[entry.conducted_by] || entry.conducted_by)
+            : '—';
 
         tableHTML += '<tr>';
         tableHTML += `<td><span class="interview-history-link" style="cursor: pointer; color: #0c2238; text-decoration: underline;" data-member-id="${entry.member_id}">${entry.member_name}</span></td>`;
@@ -4165,7 +4197,11 @@ function displayInterviewHistory(history) {
 
     history.forEach(entry => {
         const typeLabel = INTERVIEW_TYPE_LABELS[entry.interview_type] || entry.interview_type;
-        const byLabel = CONDUCTED_BY_LABELS[entry.conducted_by] || entry.conducted_by;
+        // conducted_by may be null if this user's role can't see who
+        // conducted it (notes are hidden the same way).
+        const byLabel = entry.conducted_by
+            ? (CONDUCTED_BY_LABELS[entry.conducted_by] || entry.conducted_by)
+            : '—';
         tableHTML += '<tr>';
         tableHTML += `<td>${typeLabel}</td>`;
         tableHTML += `<td>${formatDate(entry.interview_date)}</td>`;
@@ -4176,6 +4212,227 @@ function displayInterviewHistory(history) {
 
     tableHTML += '</tbody></table>';
     container.innerHTML = tableHTML;
+}
+
+// ─── Users Tab (Bishop-only) ────────────────────────────────────────────────
+
+const USER_ROLE_LABELS = {
+    bishop: 'Bishop',
+    counselor: 'Counselor',
+    leader: 'Leader'
+};
+
+let allUsersData = [];
+
+// Function to load the Users tab
+function loadUsersTab() {
+    const container = document.getElementById('users-container');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div style="margin-bottom: 8px;">
+            <button class="action-btn save-btn" onclick="openUserModal()">+ Add User</button>
+        </div>
+        <div class="section-header">
+            <h3>Users</h3>
+        </div>
+        <table class="detail-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Last Login</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="users-tbody">
+                <tr><td colspan="6" class="no-data">Loading...</td></tr>
+            </tbody>
+        </table>
+    `;
+
+    fetchAndDisplayUsers();
+}
+
+function fetchAndDisplayUsers() {
+    const tbody = document.getElementById('users-tbody');
+    if (!tbody) return;
+
+    fetch('get_users.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) throw new Error(data.message);
+            allUsersData = data;
+            displayUsersTable(data);
+        })
+        .catch(error => {
+            console.error('Error fetching users:', error);
+            tbody.innerHTML = '<tr><td colspan="6" class="no-data">Error loading users.</td></tr>';
+        });
+}
+
+function displayUsersTable(users) {
+    const tbody = document.getElementById('users-tbody');
+    if (!tbody) return;
+
+    if (!users || users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="no-data">No users found.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = users.map(user => {
+        const roleLabel = USER_ROLE_LABELS[user.role] || user.role;
+        const statusLabel = user.status === 'active'
+            ? '<span class="interview-status-done">Active</span>'
+            : '<span class="interview-status-needed">Disabled</span>';
+        const lastLogin = user.last_login ? formatDate(user.last_login) : 'Never';
+        const toggleLabel = user.status === 'active' ? 'Disable' : 'Enable';
+
+        return `
+            <tr>
+                <td>${user.display_name}</td>
+                <td>${user.username}</td>
+                <td>${roleLabel}</td>
+                <td>${statusLabel}</td>
+                <td>${lastLogin}</td>
+                <td>
+                    <div class="process-actions">
+                        <button class="action-btn edit-btn" onclick="openUserModal(${user.user_id})">Edit</button>
+                        <button class="action-btn remove-btn" onclick="toggleUserStatus(${user.user_id}, '${user.status}')">${toggleLabel}</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function toggleUserStatus(userId, currentStatus) {
+    const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
+    if (!confirm(`Are you sure you want to ${newStatus === 'disabled' ? 'disable' : 're-enable'} this user?`)) {
+        return;
+    }
+
+    fetch('update_user.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, status: newStatus })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            fetchAndDisplayUsers();
+        } else {
+            alert('Error: ' + (result.message || 'Unable to update user.'));
+        }
+    })
+    .catch(() => alert('Network error updating user.'));
+}
+
+// ─── Add/Edit User Modal ───────────────────────────────────────────────────
+
+function openUserModal(userId = null) {
+    const modal = document.getElementById('user-modal');
+    const overlay = document.getElementById('user-overlay');
+    modal.style.display = 'block';
+    overlay.style.display = 'block';
+
+    document.getElementById('user-modal-response').innerHTML = '';
+    document.getElementById('user-id-input').value = userId || '';
+    document.getElementById('user-password-input').value = '';
+
+    const usernameInput = document.getElementById('user-username-input');
+
+    if (userId) {
+        const user = allUsersData.find(u => u.user_id === userId);
+        document.getElementById('user-modal-title').textContent = 'Edit User';
+        document.getElementById('user-display-name-input').value = user ? user.display_name : '';
+        usernameInput.value = user ? user.username : '';
+        usernameInput.disabled = true;
+        document.getElementById('user-role-input').value = user ? user.role : 'leader';
+        document.getElementById('user-password-input').placeholder = 'Leave blank to keep current password';
+        document.getElementById('user-password-label').textContent = 'New Password (optional):';
+    } else {
+        document.getElementById('user-modal-title').textContent = 'Add User';
+        document.getElementById('user-display-name-input').value = '';
+        usernameInput.value = '';
+        usernameInput.disabled = false;
+        document.getElementById('user-role-input').value = 'leader';
+        document.getElementById('user-password-input').placeholder = 'Minimum 8 characters';
+        document.getElementById('user-password-label').textContent = 'Password:';
+    }
+}
+
+function closeUserModal() {
+    document.getElementById('user-modal').style.display = 'none';
+    document.getElementById('user-overlay').style.display = 'none';
+}
+
+function saveUser() {
+    const userId = document.getElementById('user-id-input').value;
+    const displayName = document.getElementById('user-display-name-input').value.trim();
+    const username = document.getElementById('user-username-input').value.trim();
+    const password = document.getElementById('user-password-input').value;
+    const role = document.getElementById('user-role-input').value;
+    const responseEl = document.getElementById('user-modal-response');
+
+    if (!displayName) {
+        responseEl.innerHTML = '<p style="color:red;">Display name is required.</p>';
+        return;
+    }
+
+    responseEl.innerHTML = '<p>Saving...</p>';
+
+    if (userId) {
+        // Editing an existing user: role + optional password reset
+        const payload = { user_id: parseInt(userId), role: role };
+        if (password) {
+            payload.new_password = password;
+        }
+
+        fetch('update_user.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                closeUserModal();
+                fetchAndDisplayUsers();
+            } else {
+                responseEl.innerHTML = `<p style="color:red;">${result.message || 'Error saving user.'}</p>`;
+            }
+        })
+        .catch(() => {
+            responseEl.innerHTML = '<p style="color:red;">Network error. Please try again.</p>';
+        });
+    } else {
+        // Creating a new user
+        if (!username) {
+            responseEl.innerHTML = '<p style="color:red;">Username is required.</p>';
+            return;
+        }
+
+        fetch('add_user.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username, display_name: displayName, password: password, role: role })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                closeUserModal();
+                fetchAndDisplayUsers();
+            } else {
+                responseEl.innerHTML = `<p style="color:red;">${result.message || 'Error creating user.'}</p>`;
+            }
+        })
+        .catch(() => {
+            responseEl.innerHTML = '<p style="color:red;">Network error. Please try again.</p>';
+        });
+    }
 }
 
 // Fetch and display last member update info on the dashboard
@@ -6120,7 +6377,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Setup client-side validation for auth form
     const authValidator = new FormValidator(authForm)
-        .setRules(ValidationRules.pin)
+        .setRules(ValidationRules.login)
         .enableRealTimeValidation();
 
     authForm.addEventListener('submit', function(event) {
@@ -6144,8 +6401,10 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Store the CSRF token for subsequent state-changing requests
+                // Store the CSRF token and identity for subsequent requests
                 csrfToken = data.csrf_token || null;
+                currentUserRole = data.role || null;
+                currentUserDisplayName = data.display_name || null;
 
                 // Show the application content and hide the auth form
                 appContent.style.display = 'block';
@@ -6158,7 +6417,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.error === 'Too many failed attempts') {
                     authMessage.textContent = data.message || 'Account temporarily locked due to too many failed attempts.';
                     authMessage.className = 'error-message locked';
-                    
+
                     // Optionally disable the form for a period
                     if (data.locked_until) {
                         submitButton.textContent = `Locked (${data.locked_until}m)`;
@@ -6168,19 +6427,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         }, data.locked_until * 60 * 1000); // Convert minutes to milliseconds
                     }
                 } else if (data.attempts_remaining !== undefined) {
-                    authMessage.textContent = data.message || `Invalid PIN. ${data.attempts_remaining} attempts remaining.`;
+                    authMessage.textContent = data.message || `Invalid username or password. ${data.attempts_remaining} attempts remaining.`;
                     authMessage.className = 'warning-message';
-                    
+
                     if (data.attempts_remaining <= 1) {
                         authMessage.className = 'error-message warning';
                     }
                 } else {
-                    authMessage.textContent = data.message || 'Invalid PIN. Please try again.';
+                    authMessage.textContent = data.message || 'Invalid username or password. Please try again.';
                     authMessage.className = 'error-message';
                 }
-                
-                // Clear the PIN field for security
-                document.getElementById('pin').value = '';
+
+                // Clear the password field for security (keep username so
+                // the user doesn't have to retype it after a typo)
+                document.getElementById('password').value = '';
             }
         })
         .catch(error => {

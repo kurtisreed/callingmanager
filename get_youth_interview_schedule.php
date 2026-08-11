@@ -156,6 +156,27 @@ try {
     }
     unset($entries);
 
+    // Role-based visibility: Bishop sees all notes/who-conducted. Counselor
+    // sees that a step is complete (and when) for everyone, but only sees
+    // WHO conducted it and the notes for interviews a counselor conducted.
+    // Leader never sees who conducted it or notes, only whether it's due
+    // and whether it's done.
+    $currentRole = $_SESSION['role'] ?? null;
+    if ($currentRole !== 'bishop') {
+        foreach ($dueEntries as &$entries) {
+            foreach ($entries as &$entry) {
+                $counselorMayView = $currentRole === 'counselor'
+                    && in_array($entry['completed_by'], ['first_counselor', 'second_counselor'], true);
+                if (!$counselorMayView) {
+                    $entry['completed_by'] = null;
+                    $entry['notes'] = null;
+                }
+            }
+            unset($entry);
+        }
+        unset($entries);
+    }
+
     // Needed interviews first, then alphabetical.
     foreach ($dueEntries as &$entries) {
         usort($entries, function ($a, $b) {
