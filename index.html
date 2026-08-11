@@ -49,16 +49,20 @@
         <div class="tabs desktop-tabs">
             <button class="tablinks" id="tab0-title" onclick="openTab(event, 'Tab0')">Dashboard</button>
             <button class="tablinks" id="tab1-title" onclick="openTab(event, 'Tab1')">Callings Overview</button>
-            <button class="tablinks" id="tab2-title" onclick="openTab(event, 'Tab2')">Assign/Release Callings</button>
-            <button class="tablinks" id="tab3-title" onclick="openTab(event, 'Tab3')">Member Information</button>
-            <button class="tablinks" id="tab4-title" onclick="openTab(event, 'Tab4')">Calling Information</button>
             <button class="tablinks" id="tab5-title" onclick="openTab(event, 'Tab5')">Youth</button>
-            <button class="tablinks bishop-only-tab" id="tab6-title" onclick="openTab(event, 'Tab6')" style="display: none;">Users</button>
-            <button class="tablinks bishop-only-tab" id="tab7-title" onclick="openTab(event, 'Tab7')" style="display: none;">Activity Log</button>
-            <button class="tablinks" onclick="openChangePasswordModal()" title="Change Password">
-                <span class="logout-icon">🔑</span>
-                <span class="logout-text">Password</span>
-            </button>
+            <div class="nav-dropdown" id="admin-nav-dropdown">
+                <button class="tablinks" id="admin-dropdown-btn" onclick="toggleAdminDropdown(event)">
+                    Administration <span class="dropdown-caret">▾</span>
+                </button>
+                <div class="nav-dropdown-menu" id="admin-dropdown-menu">
+                    <button class="nav-dropdown-item" id="tab2-title" onclick="selectAdminTab(event, 'Tab2')">Assign/Release Callings</button>
+                    <button class="nav-dropdown-item" id="tab3-title" onclick="selectAdminTab(event, 'Tab3')">Member Information</button>
+                    <button class="nav-dropdown-item" id="tab4-title" onclick="selectAdminTab(event, 'Tab4')">Calling Information</button>
+                    <button class="nav-dropdown-item bishop-only-tab" id="tab6-title" onclick="selectAdminTab(event, 'Tab6')" style="display: none;">Users</button>
+                    <button class="nav-dropdown-item bishop-only-tab" id="tab7-title" onclick="selectAdminTab(event, 'Tab7')" style="display: none;">Activity Log</button>
+                    <button class="nav-dropdown-item" onclick="closeAdminDropdown(); openChangePasswordModal();">Change Password</button>
+                </div>
+            </div>
             <button class="tablinks logout-tab" onclick="logout()" title="Logout">
                 <span class="logout-icon">⏻</span>
                 <span class="logout-text">Logout</span>
@@ -74,10 +78,11 @@
             <div class="mobile-dropdown" id="mobile-dropdown">
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab0')">Dashboard</button>
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab1')">Callings Overview</button>
+                <button class="mobile-tablink" onclick="openTab(event, 'Tab5')">Youth</button>
+                <div class="mobile-dropdown-section-label">Administration</div>
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab2')">Assign/Release Callings</button>
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab3')">Member Information</button>
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab4')">Calling Information</button>
-                <button class="mobile-tablink" onclick="openTab(event, 'Tab5')">Youth</button>
                 <button class="mobile-tablink bishop-only-tab" id="mobile-tab6-title" onclick="openTab(event, 'Tab6')" style="display: none;">Users</button>
                 <button class="mobile-tablink bishop-only-tab" id="mobile-tab7-title" onclick="openTab(event, 'Tab7')" style="display: none;">Activity Log</button>
                 <button class="mobile-tablink" onclick="openChangePasswordModal(); toggleMobileMenu();">

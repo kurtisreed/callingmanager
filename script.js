@@ -181,10 +181,10 @@ function openTab(evt, tabName, data = null) {
         subcontent[i].style.display = "none";
     }
 
-    // Remove active class from all tab buttons
-    tablinks = document.getElementsByClassName("tablinks");
+    // Remove active class from all top-level tab buttons and Administration dropdown items
+    tablinks = document.querySelectorAll('.tablinks, .nav-dropdown-item');
     for (i = 0; i < tablinks.length; i++) {
-        tablinks[i].className = tablinks[i].className.replace(" active", "");
+        tablinks[i].classList.remove('active');
     }
 
     // Show the clicked tab's content and corresponding sub-bar content
@@ -193,9 +193,16 @@ function openTab(evt, tabName, data = null) {
 
     // Add active class to the clicked tab button if evt is present
     if (evt && evt.currentTarget) {
-        evt.currentTarget.className += " active";
+        evt.currentTarget.classList.add('active');
     }
-    
+
+    // Highlight the Administration nav button whenever one of its tabs is open
+    const adminDropdownTabs = ['Tab2', 'Tab3', 'Tab4', 'Tab6', 'Tab7'];
+    const adminDropdownBtn = document.getElementById('admin-dropdown-btn');
+    if (adminDropdownBtn) {
+        adminDropdownBtn.classList.toggle('active', adminDropdownTabs.includes(tabName));
+    }
+
     if (data) {
         handleDataForTab(tabName, data);
     }
@@ -257,6 +264,31 @@ function openTab(evt, tabName, data = null) {
     // Update mobile menu current tab text
     updateMobileTabText(tabName);    
 }
+
+// Administration nav dropdown (desktop)
+function toggleAdminDropdown(event) {
+    event.stopPropagation();
+    const menu = document.getElementById('admin-dropdown-menu');
+    if (menu) menu.classList.toggle('show');
+}
+
+function closeAdminDropdown() {
+    const menu = document.getElementById('admin-dropdown-menu');
+    if (menu) menu.classList.remove('show');
+}
+
+function selectAdminTab(event, tabName) {
+    closeAdminDropdown();
+    openTab(event, tabName);
+}
+
+// Close the Administration dropdown when clicking outside of it
+document.addEventListener('click', function(event) {
+    const adminDropdown = document.getElementById('admin-nav-dropdown');
+    if (adminDropdown && !adminDropdown.contains(event.target)) {
+        closeAdminDropdown();
+    }
+});
 
 // Function to toggle mobile menu
 function toggleMobileMenu() {
