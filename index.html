@@ -54,6 +54,7 @@
             <button class="tablinks" id="tab4-title" onclick="openTab(event, 'Tab4')">Calling Information</button>
             <button class="tablinks" id="tab5-title" onclick="openTab(event, 'Tab5')">Youth</button>
             <button class="tablinks bishop-only-tab" id="tab6-title" onclick="openTab(event, 'Tab6')" style="display: none;">Users</button>
+            <button class="tablinks bishop-only-tab" id="tab7-title" onclick="openTab(event, 'Tab7')" style="display: none;">Activity Log</button>
             <button class="tablinks" onclick="openChangePasswordModal()" title="Change Password">
                 <span class="logout-icon">🔑</span>
                 <span class="logout-text">Password</span>
@@ -78,6 +79,7 @@
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab4')">Calling Information</button>
                 <button class="mobile-tablink" onclick="openTab(event, 'Tab5')">Youth</button>
                 <button class="mobile-tablink bishop-only-tab" id="mobile-tab6-title" onclick="openTab(event, 'Tab6')" style="display: none;">Users</button>
+                <button class="mobile-tablink bishop-only-tab" id="mobile-tab7-title" onclick="openTab(event, 'Tab7')" style="display: none;">Activity Log</button>
                 <button class="mobile-tablink" onclick="openChangePasswordModal(); toggleMobileMenu();">
                     <span class="logout-icon">🔑</span>
                     <span class="logout-text">Change Password</span>
@@ -137,6 +139,10 @@
 
         <div id="subbar-Tab6" class="subcontent">
             <!-- Options for Users -->
+        </div>
+
+        <div id="subbar-Tab7" class="subcontent">
+            <!-- Options for Activity Log -->
         </div>
     </div>
 
@@ -293,6 +299,12 @@
     <div id="Tab6" class="tabcontent">
         <div class="information-box" id="users-container">
             <!-- Users tab content will be dynamically generated here -->
+        </div>
+    </div>
+
+    <div id="Tab7" class="tabcontent">
+        <div class="information-box" id="activity-log-container">
+            <!-- Activity Log tab content will be dynamically generated here -->
         </div>
     </div>
 </div>

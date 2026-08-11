@@ -249,6 +249,10 @@ function openTab(evt, tabName, data = null) {
         loadUsersTab();
     }
 
+    if (tabName === 'Tab7') {
+        loadActivityLogTab();
+    }
+
 
     // Update mobile menu current tab text
     updateMobileTabText(tabName);    
@@ -271,7 +275,8 @@ function updateMobileTabText(tabName) {
             'Tab3': 'Member Information',
             'Tab4': 'Calling Information',
             'Tab5': 'Youth',
-            'Tab6': 'Users'
+            'Tab6': 'Users',
+            'Tab7': 'Activity Log'
         };
         currentTabText.textContent = tabTexts[tabName] || 'Menu';
     }
@@ -3495,6 +3500,23 @@ function formatDate(dateString) {
     return date.toLocaleDateString();
 }
 
+// Formats a MySQL "YYYY-MM-DD HH:MM:SS" timestamp as a local date + time string
+function formatDateTime(dateString) {
+    if (!dateString) return '';
+    const normalized = dateString.includes('T') ? dateString : dateString.replace(' ', 'T');
+    const date = new Date(normalized);
+    if (isNaN(date.getTime())) return dateString;
+    return date.toLocaleString();
+}
+
+// Escapes text for safe insertion into innerHTML
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+
 // Global variables to store data for filtering
 let allMembersData = [];
 let allTab2MembersData = [];
@@ -4384,6 +4406,183 @@ function toggleUserStatus(userId, currentStatus) {
         }
     })
     .catch(() => alert('Network error updating user.'));
+}
+
+// ─── Activity Log Tab (Bishop-only) ────────────────────────────────────────
+
+const ACTIVITY_LOG_PAGE_SIZE = 100;
+let activityLogOffset = 0;
+let activityLogEntries = [];
+
+function loadActivityLogTab() {
+    const container = document.getElementById('activity-log-container');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="section-header">
+            <h3>Activity Log</h3>
+        </div>
+        <div class="activity-log-filters" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-bottom: 12px;">
+            <div>
+                <label for="activity-log-username">User</label><br>
+                <select id="activity-log-username">
+                    <option value="">All Users</option>
+                </select>
+            </div>
+            <div>
+                <label for="activity-log-action">Action Contains</label><br>
+                <input type="text" id="activity-log-action" placeholder="e.g. add_member" autocomplete="off">
+            </div>
+            <div>
+                <label for="activity-log-start">From</label><br>
+                <input type="date" id="activity-log-start">
+            </div>
+            <div>
+                <label for="activity-log-end">To</label><br>
+                <input type="date" id="activity-log-end">
+            </div>
+            <button class="action-btn save-btn" onclick="applyActivityLogFilters()">Filter</button>
+            <button class="action-btn" onclick="resetActivityLogFilters()">Reset</button>
+        </div>
+        <table class="detail-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Action</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody id="activity-log-tbody">
+                <tr><td colspan="5" class="no-data">Loading...</td></tr>
+            </tbody>
+        </table>
+        <div style="margin-top: 8px;">
+            <button class="action-btn" id="activity-log-load-more" onclick="loadMoreActivityLog()" style="display: none;">Load More</button>
+        </div>
+    `;
+
+    populateActivityLogUserFilter();
+    activityLogOffset = 0;
+    activityLogEntries = [];
+    fetchActivityLog(true);
+}
+
+function populateActivityLogUserFilter() {
+    const select = document.getElementById('activity-log-username');
+    if (!select) return;
+
+    fetch('get_users.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) return;
+            data.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.username;
+                option.textContent = user.display_name + ' (' + user.username + ')';
+                select.appendChild(option);
+            });
+        })
+        .catch(() => {});
+}
+
+function activityLogFilterParams() {
+    const params = new URLSearchParams();
+    const username = document.getElementById('activity-log-username')?.value || '';
+    const action = document.getElementById('activity-log-action')?.value || '';
+    const startDate = document.getElementById('activity-log-start')?.value || '';
+    const endDate = document.getElementById('activity-log-end')?.value || '';
+
+    if (username) params.set('username', username);
+    if (action) params.set('action', action);
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
+
+    return params;
+}
+
+function applyActivityLogFilters() {
+    activityLogOffset = 0;
+    activityLogEntries = [];
+    fetchActivityLog(true);
+}
+
+function resetActivityLogFilters() {
+    document.getElementById('activity-log-username').value = '';
+    document.getElementById('activity-log-action').value = '';
+    document.getElementById('activity-log-start').value = '';
+    document.getElementById('activity-log-end').value = '';
+    applyActivityLogFilters();
+}
+
+function loadMoreActivityLog() {
+    fetchActivityLog(false);
+}
+
+function fetchActivityLog(replace) {
+    const tbody = document.getElementById('activity-log-tbody');
+    if (!tbody) return;
+
+    if (replace) {
+        tbody.innerHTML = '<tr><td colspan="5" class="no-data">Loading...</td></tr>';
+    }
+
+    const params = activityLogFilterParams();
+    params.set('limit', ACTIVITY_LOG_PAGE_SIZE);
+    params.set('offset', activityLogOffset);
+
+    fetch('get_activity_log.php?' + params.toString())
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) throw new Error(data.message);
+
+            activityLogEntries = replace ? data : activityLogEntries.concat(data);
+            activityLogOffset += data.length;
+            displayActivityLogTable(activityLogEntries);
+
+            const loadMoreBtn = document.getElementById('activity-log-load-more');
+            if (loadMoreBtn) {
+                loadMoreBtn.style.display = data.length === ACTIVITY_LOG_PAGE_SIZE ? '' : 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching activity log:', error);
+            tbody.innerHTML = '<tr><td colspan="5" class="no-data">Error loading activity log.</td></tr>';
+        });
+}
+
+function displayActivityLogTable(entries) {
+    const tbody = document.getElementById('activity-log-tbody');
+    if (!tbody) return;
+
+    if (!entries || entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="no-data">No activity found.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = entries.map(entry => {
+        const roleLabel = USER_ROLE_LABELS[entry.role] || entry.role;
+        let detailsText = '';
+        if (entry.details) {
+            try {
+                const parsed = JSON.parse(entry.details);
+                detailsText = Object.keys(parsed).length ? JSON.stringify(parsed) : '';
+            } catch (e) {
+                detailsText = entry.details;
+            }
+        }
+
+        return `
+            <tr>
+                <td>${escapeHtml(formatDateTime(entry.created_at))}</td>
+                <td>${escapeHtml(entry.username)}</td>
+                <td>${escapeHtml(roleLabel)}</td>
+                <td>${escapeHtml(entry.action)}</td>
+                <td style="font-family: monospace; font-size: 12px; word-break: break-all;">${escapeHtml(detailsText)}</td>
+            </tr>
+        `;
+    }).join('');
 }
 
 // ─── Add/Edit User Modal ───────────────────────────────────────────────────

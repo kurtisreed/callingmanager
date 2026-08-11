@@ -191,7 +191,7 @@ function logUserActivity($action, $details = []) {
     if (!isAuthenticated()) {
         return;
     }
-    
+
     $log_entry = [
         'timestamp' => date('Y-m-d H:i:s'),
         'ip_address' => $_SESSION['user_ip'] ?? 'unknown',
@@ -202,8 +202,73 @@ function logUserActivity($action, $details = []) {
         'file' => basename($_SERVER['PHP_SELF']),
         'details' => $details
     ];
-    
+
     error_log('User Activity: ' . json_encode($log_entry));
+
+    persistActivityLog($log_entry);
+}
+
+// Writes the activity entry to the activity_log table for the in-app
+// Activity Log viewer. Uses its own connection (kept alive for the rest of
+// the request via `static`) so it doesn't depend on the calling script's
+// require order — logUserActivity() is typically called before that
+// script's own db_connect.php include. Failures here are swallowed: a
+// logging problem must never break the actual request.
+function persistActivityLog($log_entry) {
+    static $conn = null;
+    static $connectionFailed = false;
+
+    if ($connectionFailed) {
+        return;
+    }
+
+    if ($conn === null) {
+        require_once __DIR__ . '/config.php';
+        $conn = @new mysqli(
+            Config::get('DB_HOST', 'localhost'),
+            Config::get('DB_USERNAME'),
+            Config::get('DB_PASSWORD'),
+            Config::get('DB_NAME')
+        );
+        if ($conn->connect_error) {
+            $conn = null;
+            $connectionFailed = true;
+            return;
+        }
+
+        $conn->query("CREATE TABLE IF NOT EXISTS activity_log (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            username VARCHAR(100) NOT NULL,
+            role VARCHAR(20) NOT NULL,
+            action VARCHAR(100) NOT NULL,
+            file VARCHAR(100) NOT NULL,
+            ip_address VARCHAR(45) NOT NULL,
+            details TEXT DEFAULT NULL,
+            INDEX idx_created_at (created_at),
+            INDEX idx_username (username),
+            INDEX idx_action (action)
+        )");
+    }
+
+    $detailsJson = json_encode($log_entry['details']);
+    $stmt = $conn->prepare(
+        "INSERT INTO activity_log (username, role, action, file, ip_address, details) VALUES (?, ?, ?, ?, ?, ?)"
+    );
+    if (!$stmt) {
+        return;
+    }
+    $stmt->bind_param(
+        'ssssss',
+        $log_entry['username'],
+        $log_entry['role'],
+        $log_entry['action'],
+        $log_entry['file'],
+        $log_entry['ip_address'],
+        $detailsJson
+    );
+    $stmt->execute();
+    $stmt->close();
 }
 
 // Auto-execute authentication check for most files
