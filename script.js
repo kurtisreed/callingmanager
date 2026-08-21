@@ -3744,6 +3744,9 @@ function loadYouthTab() {
 
     addYouthGroupClickHandlers();
     addInterviewWindowClickHandlers();
+
+    // Default to the All Youth table, sorted by birthdate descending
+    showYouthGroupDetails('all');
 }
 
 // Function to add click handlers to youth group items
@@ -3779,8 +3782,21 @@ function showYouthGroupDetails(group) {
             if (data.error) {
                 throw new Error(data.message);
             }
-            _youthTableState = { data: data, group: group, sortKey: null, sortDir: 'asc' };
-            displayYouthGroupTable(data, group);
+
+            // Default the "All" view to birthdate descending; other groups
+            // start unsorted (in the order the API returns them).
+            if (group === 'all') {
+                const sorted = [...data].sort((a, b) => {
+                    const valA = (a.birthdate || '').toString();
+                    const valB = (b.birthdate || '').toString();
+                    return valA < valB ? 1 : (valA > valB ? -1 : 0);
+                });
+                _youthTableState = { data: sorted, group: group, sortKey: 'birthdate', sortDir: 'desc' };
+                displayYouthGroupTable(sorted, group);
+            } else {
+                _youthTableState = { data: data, group: group, sortKey: null, sortDir: 'asc' };
+                displayYouthGroupTable(data, group);
+            }
         })
         .catch(error => {
             console.error('Error fetching youth details:', error);
