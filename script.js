@@ -4254,9 +4254,14 @@ function displayLogInterviewHistory(history) {
 
     list.innerHTML = history.map(entry => {
         const typeLabel = INTERVIEW_TYPE_LABELS[entry.interview_type] || entry.interview_type;
+        // notes/conducted_by may be null if this user's role can't see them for this entry
+        const byLabel = entry.conducted_by
+            ? (CONDUCTED_BY_LABELS[entry.conducted_by] || entry.conducted_by)
+            : '—';
         return `
             <div class="log-interview-history-entry">
                 <div class="log-interview-history-date">${escapeHtml(formatDate(entry.interview_date))} — ${escapeHtml(typeLabel)}</div>
+                <div class="log-interview-history-conducted-by">Conducted by: ${escapeHtml(byLabel)}</div>
                 <div class="log-interview-history-notes">${entry.notes ? escapeHtml(entry.notes) : '<em>No notes</em>'}</div>
             </div>
         `;
