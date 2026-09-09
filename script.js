@@ -4131,6 +4131,7 @@ function openLogInterviewModal(memberId = null, memberName = null, interviewType
         document.getElementById('log-interview-member-name-display').textContent = memberName || '';
         memberIdInput.value = memberId;
         document.getElementById('log-interview-type').value = interviewType || 'annual';
+        loadLogInterviewHistory(memberId);
     } else {
         lockedWrap.style.display = 'none';
         searchWrap.style.display = 'block';
@@ -4139,6 +4140,7 @@ function openLogInterviewModal(memberId = null, memberName = null, interviewType
         document.getElementById('log-interview-type').value = 'annual';
         hideLogInterviewMemberDropdown();
         loadInterviewYouthMembers();
+        hideLogInterviewHistory();
     }
 
     const searchInput = document.getElementById('log-interview-member-search');
@@ -4211,6 +4213,54 @@ function selectLogInterviewMember(memberId, memberName) {
     document.getElementById('log-interview-member-id').value = memberId;
     document.getElementById('log-interview-member-search').value = memberName;
     hideLogInterviewMemberDropdown();
+    loadLogInterviewHistory(memberId);
+}
+
+// Fetches and renders a compact interview history list inside the Log
+// Interview modal, so past notes are visible while logging a new one.
+function loadLogInterviewHistory(memberId) {
+    const section = document.getElementById('log-interview-history-section');
+    const list = document.getElementById('log-interview-history-list');
+    if (!section || !list) return;
+
+    section.style.display = 'block';
+    list.innerHTML = '<p class="no-data">Loading...</p>';
+
+    fetch(`get_youth_interview_history.php?member_id=${encodeURIComponent(memberId)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) throw new Error(data.message);
+            displayLogInterviewHistory(data);
+        })
+        .catch(error => {
+            console.error('Error fetching interview history:', error);
+            list.innerHTML = '<p class="error">Error loading history.</p>';
+        });
+}
+
+function hideLogInterviewHistory() {
+    const section = document.getElementById('log-interview-history-section');
+    if (section) section.style.display = 'none';
+}
+
+function displayLogInterviewHistory(history) {
+    const list = document.getElementById('log-interview-history-list');
+    if (!list) return;
+
+    if (!history || history.length === 0) {
+        list.innerHTML = '<p class="no-data">No interviews logged yet.</p>';
+        return;
+    }
+
+    list.innerHTML = history.map(entry => {
+        const typeLabel = INTERVIEW_TYPE_LABELS[entry.interview_type] || entry.interview_type;
+        return `
+            <div class="log-interview-history-entry">
+                <div class="log-interview-history-date">${escapeHtml(formatDate(entry.interview_date))} — ${escapeHtml(typeLabel)}</div>
+                <div class="log-interview-history-notes">${entry.notes ? escapeHtml(entry.notes) : '<em>No notes</em>'}</div>
+            </div>
+        `;
+    }).join('');
 }
 
 function saveInterviewLog() {

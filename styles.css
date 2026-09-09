@@ -1136,8 +1136,31 @@ table td input[type="checkbox"] {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     padding: 20px;
     z-index: 1000;
-    width: 420px;
+    width: 480px;
+    max-height: 85vh;
+    overflow-y: auto;
     display: none;
+}
+
+.log-interview-history-entry {
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 13px;
+}
+
+.log-interview-history-entry:last-child {
+    border-bottom: none;
+}
+
+.log-interview-history-date {
+    font-weight: 600;
+    color: #333;
+}
+
+.log-interview-history-notes {
+    color: #555;
+    margin-top: 2px;
+    white-space: pre-wrap;
 }
 
 #log-interview-modal h2 {
