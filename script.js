@@ -6812,7 +6812,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const authForm = document.getElementById('auth-form');
     const appContent = document.getElementById('app-content');
     const authMessage = document.getElementById('auth-message');
-    
+
+    // If the browser still holds a valid session cookie (e.g. the page was
+    // just refreshed), skip the login screen and go straight into the app.
+    fetch('get_session_status.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.authenticated) {
+                csrfToken = data.csrf_token || null;
+                currentUserRole = data.role || null;
+                currentUserDisplayName = data.display_name || null;
+
+                appContent.style.display = 'block';
+                document.getElementById('auth-container').style.display = 'none';
+
+                initializeApplication();
+            }
+        })
+        .catch(error => console.error('Session check error:', error));
+
     // Setup client-side validation for auth form
     const authValidator = new FormValidator(authForm)
         .setRules(ValidationRules.login)
