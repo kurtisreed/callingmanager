@@ -4369,25 +4369,20 @@ function displayInterviewHistory(history) {
         return;
     }
 
-    let tableHTML = '<table class="detail-table"><thead><tr>';
-    tableHTML += '<th>Type</th><th>Date</th><th>Conducted By</th><th>Notes</th></tr></thead><tbody>';
-
-    history.forEach(entry => {
+    container.innerHTML = history.map(entry => {
         const typeLabel = INTERVIEW_TYPE_LABELS[entry.interview_type] || entry.interview_type;
-        // notes may be null if this user's role can't see them for this entry
+        // notes/conducted_by may be null if this user's role can't see them for this entry
         const byLabel = entry.conducted_by
             ? (CONDUCTED_BY_LABELS[entry.conducted_by] || entry.conducted_by)
             : '—';
-        tableHTML += '<tr>';
-        tableHTML += `<td>${typeLabel}</td>`;
-        tableHTML += `<td>${formatDate(entry.interview_date)}</td>`;
-        tableHTML += `<td>${byLabel}</td>`;
-        tableHTML += `<td>${entry.notes || ''}</td>`;
-        tableHTML += '</tr>';
-    });
-
-    tableHTML += '</tbody></table>';
-    container.innerHTML = tableHTML;
+        return `
+            <div class="log-interview-history-entry">
+                <div class="log-interview-history-date">${escapeHtml(formatDate(entry.interview_date))} — ${escapeHtml(typeLabel)}</div>
+                <div class="log-interview-history-conducted-by">Conducted by: ${escapeHtml(byLabel)}</div>
+                <div class="log-interview-history-notes">${entry.notes ? escapeHtml(entry.notes) : '<em>No notes</em>'}</div>
+            </div>
+        `;
+    }).join('');
 }
 
 // ─── Users Tab (Bishop-only) ────────────────────────────────────────────────

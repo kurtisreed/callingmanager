@@ -1157,6 +1157,12 @@ table td input[type="checkbox"] {
     color: #333;
 }
 
+.log-interview-history-conducted-by {
+    color: #777;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
 .log-interview-history-notes {
     color: #555;
     margin-top: 2px;
