@@ -3678,6 +3678,27 @@ function loadYouthTab() {
             <!-- Left Column: Youth & Interviews Navigation -->
             <div class="left-column">
                 <div class="section-header">
+                    <h3>Interviews</h3>
+                </div>
+                <div class="details-section">
+                    <div id="interview-windows">
+                        <div class="stat-item clickable-interview-window" data-interview-window="last_month">
+                            <span class="stat-label">Due Last Month</span>
+                        </div>
+                        <div class="stat-item clickable-interview-window" data-interview-window="this_month">
+                            <span class="stat-label">Due This Month</span>
+                        </div>
+                        <div class="stat-item clickable-interview-window" data-interview-window="next_month">
+                            <span class="stat-label">Due Next Month</span>
+                        </div>
+                        <div class="stat-item clickable-interview-window" data-interview-window="history">
+                            <span class="stat-label">History</span>
+                        </div>
+                    </div>
+                    <button type="button" class="action-btn save-btn" onclick="openLogInterviewModal()" style="margin-top: 12px;">+ Log Interview</button>
+                </div>
+
+                <div class="section-header">
                     <h3>Youth</h3>
                 </div>
                 <div class="details-section">
@@ -3705,27 +3726,6 @@ function loadYouthTab() {
                         </div>
                     </div>
                 </div>
-
-                <div class="section-header">
-                    <h3>Interviews</h3>
-                </div>
-                <div class="details-section">
-                    <div id="interview-windows">
-                        <div class="stat-item clickable-interview-window" data-interview-window="last_month">
-                            <span class="stat-label">Due Last Month</span>
-                        </div>
-                        <div class="stat-item clickable-interview-window" data-interview-window="this_month">
-                            <span class="stat-label">Due This Month</span>
-                        </div>
-                        <div class="stat-item clickable-interview-window" data-interview-window="next_month">
-                            <span class="stat-label">Due Next Month</span>
-                        </div>
-                        <div class="stat-item clickable-interview-window" data-interview-window="history">
-                            <span class="stat-label">History</span>
-                        </div>
-                    </div>
-                    <button type="button" class="action-btn save-btn" onclick="openLogInterviewModal()" style="margin-top: 12px;">+ Log Interview</button>
-                </div>
             </div>
 
             <!-- Right Column: Detail Display -->
@@ -3745,8 +3745,8 @@ function loadYouthTab() {
     addYouthGroupClickHandlers();
     addInterviewWindowClickHandlers();
 
-    // Default to the All Youth table, sorted by birthdate descending
-    showYouthGroupDetails('all');
+    // Default to the Interview History table
+    showInterviewWindow('history');
 }
 
 // Function to add click handlers to youth group items
