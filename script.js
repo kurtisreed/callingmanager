@@ -3987,7 +3987,7 @@ function displayInterviewWindowTable(entries) {
         return;
     }
 
-    let tableHTML = '<table class="detail-table"><thead><tr>';
+    let tableHTML = '<table class="detail-table mobile-cards"><thead><tr>';
     tableHTML += '<th>Youth</th><th>Birthdate</th><th>Type</th><th>Assigned To</th><th>Status</th></tr></thead><tbody>';
 
     entries.forEach(entry => {
@@ -4007,16 +4007,15 @@ function displayInterviewWindowTable(entries) {
         } else {
             statusHTML = `<span class="interview-status-needed">⚠ Needed</span> ` +
                 `<button type="button" class="action-btn save-btn interview-mark-done-btn" ` +
-                `style="padding: 3px 8px; font-size: 11px; margin-left: 6px;" ` +
                 `data-member-id="${entry.member_id}" data-interview-type="${entry.interview_type}">Mark Done</button>`;
         }
 
         tableHTML += '<tr>';
-        tableHTML += `<td><span class="interview-history-link" style="cursor: pointer; color: #0c2238; text-decoration: underline;" data-member-id="${entry.member_id}">${entry.member_name}</span></td>`;
-        tableHTML += `<td>${formatDate(entry.birthdate)}</td>`;
-        tableHTML += `<td>${typeLabel}</td>`;
-        tableHTML += `<td>${entry.assigned_to}</td>`;
-        tableHTML += `<td>${statusHTML}</td>`;
+        tableHTML += `<td data-label=""><span class="interview-history-link" style="cursor: pointer; color: #0c2238; text-decoration: underline;" data-member-id="${entry.member_id}">${entry.member_name}</span></td>`;
+        tableHTML += `<td data-label="Birthdate">${formatDate(entry.birthdate)}</td>`;
+        tableHTML += `<td data-label="Type">${typeLabel}</td>`;
+        tableHTML += `<td data-label="Assigned To">${entry.assigned_to}</td>`;
+        tableHTML += `<td data-label="Status">${statusHTML}</td>`;
         tableHTML += '</tr>';
     });
 
@@ -4070,7 +4069,7 @@ function displayRecentInterviewsTable(history) {
         return;
     }
 
-    let tableHTML = '<table class="detail-table"><thead><tr>';
+    let tableHTML = '<table class="detail-table mobile-cards"><thead><tr>';
     tableHTML += '<th>Youth</th><th>Type</th><th>Date</th><th>Conducted By</th><th>Notes</th></tr></thead><tbody>';
 
     history.forEach(entry => {
@@ -4081,11 +4080,11 @@ function displayRecentInterviewsTable(history) {
             : '—';
 
         tableHTML += '<tr>';
-        tableHTML += `<td><span class="interview-history-link" style="cursor: pointer; color: #0c2238; text-decoration: underline;" data-member-id="${entry.member_id}">${entry.member_name}</span></td>`;
-        tableHTML += `<td>${typeLabel}</td>`;
-        tableHTML += `<td>${formatDate(entry.interview_date)}</td>`;
-        tableHTML += `<td>${byLabel}</td>`;
-        tableHTML += `<td>${entry.notes || ''}</td>`;
+        tableHTML += `<td data-label=""><span class="interview-history-link" style="cursor: pointer; color: #0c2238; text-decoration: underline;" data-member-id="${entry.member_id}">${entry.member_name}</span></td>`;
+        tableHTML += `<td data-label="Type">${typeLabel}</td>`;
+        tableHTML += `<td data-label="Date">${formatDate(entry.interview_date)}</td>`;
+        tableHTML += `<td data-label="Conducted By">${byLabel}</td>`;
+        tableHTML += `<td data-label="Notes">${entry.notes || ''}</td>`;
         tableHTML += '</tr>';
     });
 

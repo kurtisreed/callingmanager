@@ -2430,10 +2430,102 @@ textarea:focus {
     .detail-table {
         font-size: 14px;
     }
-    
+
     .detail-table th,
     .detail-table td {
         padding: 6px;
+    }
+}
+
+.interview-mark-done-btn {
+    padding: 3px 8px;
+    font-size: 11px;
+    margin-left: 6px;
+}
+
+/* On a phone, stack each row as a labeled card. Opt in per table with the
+   `mobile-cards` class: squeezing many columns into ~370px pushes the last
+   column (and any action button in it) off-screen with no way to scroll to
+   it. Tables that stay readable at that width — and whose sortable headers
+   would be lost when thead is hidden — are better left as tables. */
+@media (max-width: 768px) {
+    /* The global mobile table rules above clip cells (nowrap + overflow
+       hidden + table-layout fixed), which is what hides content and buttons
+       in the last column. Cards need that undone. */
+    .detail-table.mobile-cards,
+    .detail-table.mobile-cards tbody,
+    .detail-table.mobile-cards tr,
+    .detail-table.mobile-cards td {
+        display: block;
+        width: auto;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    .detail-table.mobile-cards thead {
+        display: none;
+    }
+
+    .detail-table.mobile-cards tr,
+    .detail-table.mobile-cards tr:nth-child(even) {
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        margin-bottom: 10px;
+        padding: 10px 12px;
+    }
+
+    .detail-table.mobile-cards td {
+        border: none;
+        padding: 3px 0;
+    }
+
+    .detail-table.mobile-cards td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--color-text-muted);
+    }
+
+    /* Cells given an empty label (the card's title row) skip the label line,
+       as do cells with no value — e.g. notes a role isn't allowed to see */
+    .detail-table.mobile-cards td[data-label=""]::before,
+    .detail-table.mobile-cards td:empty::before {
+        display: none;
+    }
+
+    .detail-table.mobile-cards td:empty {
+        padding: 0;
+    }
+
+    .detail-table.mobile-cards td[data-label=""]:first-child {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    /* Give the row's action button a real tap target once stacked */
+    .detail-table.mobile-cards .interview-mark-done-btn {
+        display: inline-block;
+        margin-left: 0;
+        margin-top: 6px;
+        padding: 8px 14px;
+        font-size: 13px;
+    }
+
+    /* The sortable roster stays a table so its column headers remain
+       tappable, but let cells wrap rather than clip — the global rules
+       above otherwise cut names and dates off mid-value. */
+    .detail-table.sortable-table th,
+    .detail-table.sortable-table td {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        word-break: break-word;
     }
 }
 
