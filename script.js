@@ -6136,15 +6136,18 @@ function parseTextContentClientSide(text) {
         text_sample: text.substring(0, 500)
     };
     
-    // LCR "Member List" report row format (confirmed against a real export):
-    //   Name                    Gender  Age  Birth Date
-    //   Adams, Annabelle Jewell F       13   21 Nov 2012
-    // i.e. "Last, First Middle    (M|F)    Age    DD MMM YYYY"
-    const pattern = /^([A-Za-z\s\-\'\.]+),\s*([A-Za-z\s\-\'\.]+?)\s+([MF])\s+\d+\s+(\d{1,2}\s+[A-Za-z]{3}\s+\d{4})/;
+    // LCR "Member List" report row format (confirmed against real exports):
+    //   Name                    Gender  [Age]  Birth Date
+    //   Adams, Annabelle Jewell F       13     21 Nov 2012
+    //   Adams, Annabelle Jewell F              21 Nov 2012
+    // i.e. "Last, First Middle   (M|F)   [Age]   DD MMM YYYY". The Age column
+    // is optional — LCR omits it depending on which columns are selected when
+    // the report is printed, and requiring it matched zero rows.
+    const pattern = /^([A-Za-z\s\-\'\.]+),\s*([A-Za-z\s\-\'\.]+?)\s+([MF])(?:\s+\d+)?\s+(\d{1,2}\s+[A-Za-z]{3}\s+\d{4})/;
 
     for (const line of lines) {
         const cleanLine = line.trim();
-        if (cleanLine.length < 20 || cleanLine.includes('Name   Gender   Age')) continue; // Skip header and short lines
+        if (!cleanLine || cleanLine.startsWith('Name ')) continue; // Skip the column header row
 
         const match = cleanLine.match(pattern);
         if (match) {
