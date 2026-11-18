@@ -20,6 +20,9 @@ $groups = [
     'gatherers-of-light'   => ['gender' => 'F',  'min_age' => 16, 'max_age' => 18],
     'messengers-of-hope'   => ['gender' => 'F',  'min_age' => 14, 'max_age' => 15],
     'builders-of-faith'    => ['gender' => 'F',  'min_age' => 12, 'max_age' => 13],
+    // Not a class: the wider age span offered by the Log Interview youth
+    // picker, so it doesn't change who appears on the Youth tab rosters.
+    'interview-picker'     => ['gender' => null, 'min_age' => 7,  'max_age' => 29],
 ];
 
 $group = $_GET['group'] ?? '';

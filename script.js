@@ -4157,7 +4157,7 @@ function closeLogInterviewModal() {
 }
 
 function loadInterviewYouthMembers() {
-    fetch('get_youth_details.php?group=all')
+    fetch('get_youth_details.php?group=interview-picker')
         .then(response => response.json())
         .then(data => {
             if (data.error) throw new Error(data.message);
