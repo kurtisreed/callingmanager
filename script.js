@@ -6179,21 +6179,19 @@ function extractMemberFromDateMatch(lastName, firstMiddle, gender, dateString) {
     // added with a guessed/defaulted value.
     if (gender !== 'M' && gender !== 'F') return null;
 
+    // Every member on the list is imported regardless of age. Views that
+    // only care about a given age range (Youth tab, interview schedule,
+    // "Adults without callings") apply their own age filter.
     const mysqlDate = convertTextDateToMysql(dateString);
-    if (mysqlDate) {
-        // Check if member will be 12 or older during current calendar year
-        if (isAtLeast12ThisYear(mysqlDate)) {
-            return {
-                first_name: firstName,
-                last_name: lastName,
-                gender: gender,
-                birthdate: mysqlDate,
-                status: 'active'
-            };
-        }
-    }
+    if (!mysqlDate) return null;
 
-    return null;
+    return {
+        first_name: firstName,
+        last_name: lastName,
+        gender: gender,
+        birthdate: mysqlDate,
+        status: 'active'
+    };
 }
 
 function convertDateToMysqlClientSide(dateString) {
@@ -6244,19 +6242,6 @@ function convertTextDateToMysql(dateString) {
     }
     
     return null;
-}
-
-function isAtLeast12ThisYear(birthdateString) {
-    // Calculate if someone will be 12 or older during the current calendar year
-    // birthdateString format: "YYYY-MM-DD"
-    
-    const currentYear = new Date().getFullYear();
-    const birthYear = parseInt(birthdateString.split('-')[0]);
-    
-    // Age they will turn this year (regardless of whether birthday has passed)
-    const ageThisYear = currentYear - birthYear;
-    
-    return ageThisYear >= 12;
 }
 
 async function reconcileWithDatabase(pdfMembers, extractedText) {
