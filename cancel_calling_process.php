@@ -28,6 +28,7 @@ try {
     // Get process details for logging before deletion
     $getProcessSql = "SELECT 
                         cp.id,
+                        cp.calling_id,
                         CONCAT(m.first_name, ' ', m.last_name) AS member_name,
                         c.calling_name,
                         cp.status,
@@ -61,6 +62,22 @@ try {
     if ($stmt->affected_rows === 0) {
         echo json_encode(['success' => false, 'message' => 'No calling process found with that ID']);
     } else {
+        // Adding a process sets the calling's "considering" flag; switch it
+        // back off if cancelling this one leaves the calling with no other
+        // process and no candidates under consideration, so it doesn't keep
+        // showing as being worked on.
+        $calling_id = (int) $process['calling_id'];
+        $clearStmt = $conn->prepare("
+            UPDATE callings
+            SET considering = 0
+            WHERE calling_id = ?
+            AND NOT EXISTS (SELECT 1 FROM calling_process WHERE calling_id = ?)
+            AND NOT EXISTS (SELECT 1 FROM possible_callings WHERE calling_id = ? AND status = 'considered')
+        ");
+        $clearStmt->bind_param("iii", $calling_id, $calling_id, $calling_id);
+        $clearStmt->execute();
+        $clearStmt->close();
+
         // Log the cancellation for audit trail
         logUserActivity('calling_process_canceled', [
             'member_name' => $process['member_name'],
