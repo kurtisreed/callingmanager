@@ -3766,6 +3766,7 @@ let _youthTableState = { data: [], group: null, sortKey: null, sortDir: 'asc' };
 
 function showYouthGroupDetails(group) {
     const label = YOUTH_GROUP_LABELS[group] || group;
+    _currentInterviewWindow = null;
 
     document.getElementById('youth-detail-header').textContent = label;
 
@@ -3901,7 +3902,7 @@ const CONDUCTED_BY_LABELS = {
 };
 
 let _interviewScheduleData = null; // cached response from get_youth_interview_schedule.php
-let _currentInterviewWindow = null; // 'last_month' | 'this_month' | 'next_month'
+let _currentInterviewWindow = null; // 'last_month' | 'this_month' | 'next_month' | 'history'; null while a youth roster is showing
 let allInterviewYouthMembers = []; // cached youth list for the "+ Log Interview" member search
 
 // Clears active-highlight state across both Youth roster items and
@@ -3938,12 +3939,12 @@ function addInterviewWindowClickHandlers() {
 
 // Function to fetch (or reuse cached) interview schedule and display a window
 function showInterviewWindow(windowKey, forceRefresh = false) {
+    _currentInterviewWindow = windowKey;
+
     if (windowKey === 'history') {
         showRecentInterviewsList();
         return;
     }
-
-    _currentInterviewWindow = windowKey;
 
     clearYouthTabActiveStates();
     const activeEl = document.querySelector(`[data-interview-window="${windowKey}"]`);
@@ -4301,10 +4302,18 @@ function saveInterviewLog() {
     .then(result => {
         if (result.success) {
             closeLogInterviewModal();
-            if (_logInterviewReturnTo && _logInterviewReturnTo.type === 'window' && _currentInterviewWindow) {
-                // Refresh the schedule cache and re-render the current due-list window
+
+            // A new interview changes both the due lists and the History
+            // table, so drop the cached schedule and re-render whichever
+            // interview view is currently showing, however the modal was
+            // opened (Mark Done, the general "+ Log Interview" button, or
+            // from a youth's history modal).
+            _interviewScheduleData = null;
+            if (_currentInterviewWindow) {
                 showInterviewWindow(_currentInterviewWindow, true);
-            } else if (_logInterviewReturnTo && _logInterviewReturnTo.type === 'history') {
+            }
+
+            if (_logInterviewReturnTo && _logInterviewReturnTo.type === 'history') {
                 // Reopen the youth's history so the new entry is visible
                 openInterviewHistoryModal(_logInterviewReturnTo.memberId, _logInterviewReturnTo.memberName);
             }
